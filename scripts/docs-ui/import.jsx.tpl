@@ -135,7 +135,7 @@ export const ImportScreen = ({ markers = true }) => {
         setState((s) => {
           const next = Math.min(1, s.fraction + 0.035);
           return next >= 1
-            ? { ...s, stage: "done", fraction: 1, hint: "Transcription terminée : Syntheo rédige le compte rendu si un serveur de synthèse est configuré." }
+            ? { ...s, stage: "done", fraction: 1, hint: "Transcription terminée : Syntheo rédige la synthèse si un serveur de synthèse est configuré." }
             : { ...s, fraction: next, elapsed: s.elapsed + 1 };
         }),
       1000,

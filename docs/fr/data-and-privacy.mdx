@@ -20,7 +20,7 @@ Tout se trouve dans le dossier de données de l'application :
 
 | Donnée | Stockage |
 | --- | --- |
-| Transcriptions, notes, comptes rendus, contacts, dossiers (fil rouge, ordre du jour de la prochaine réunion, modèle par défaut), automatisations, réglages | Base SQLite locale `app.db` |
+| Transcriptions, notes, synthèses, contacts, dossiers (fil rouge, ordre du jour de la prochaine réunion, modèle par défaut), automatisations, réglages | Base SQLite locale `app.db` |
 | Index de recherche plein texte | Dossier de données (copie indexée des transcriptions et des notes) |
 | Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible (clés et jetons, adresses, identifiants) et rotation par taille. Pour un webhook en échec, seul l'hôte est journalisé, jamais le chemin de l'URL |
 | Clés API des serveurs d'inférence et secrets de signature des webhooks | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base. Sans trousseau disponible sous Linux, le secret d'un webhook reste dans la base |
@@ -55,8 +55,8 @@ Conséquence : si la transcription s'interrompt (coupure réseau, serveur injoig
 | Votre serveur de transcription | L'audio de la capture, de la dictée ou du fichier importé | Pendant la transcription |
 | Le programme [Sur ce poste](/fr/on-device-transcription), sur la boucle locale de votre poste | L'audio de l'écoute, s'il est choisi : rien ne quitte le poste | Pendant une écoute « Sur ce poste » |
 | Les sources des modèles de la transcription sur le poste : release GitHub de Syntheo (`github.com`, redirigé vers `release-assets.githubusercontent.com`), puis Hugging Face (`huggingface.co`, redirigé vers ses serveurs de contenu sous `hf.co`) en secours, ou le miroir défini par votre organisation (`speech_models_urls`) ; les redirections HTTPS sont suivies | Des requêtes HTTPS pour les fichiers des modèles, rien de vos réunions ; ces hôtes voient votre adresse IP | Seulement quand vous choisissez **Télécharger les modèles** ; aucune connexion si vous les installez depuis un dossier |
-| Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat | Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation |
-| Les adresses de vos [webhooks](/fr/reference/webhooks) | Les événements de réunion (note, résumés, participants, transcription) | À chaque événement, si vous avez ajouté un point de terminaison |
+| Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de synthèse, question du chat | Synthèse, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation |
+| Les adresses de vos [webhooks](/fr/reference/webhooks) | Les événements de réunion (note, synthèses, participants, transcription) | À chaque événement, si vous avez ajouté un point de terminaison |
 | L'adresse de l'étape webhook d'une [automatisation](/fr/automations) | Le contenu que vous y placez | Quand l'automatisation s'exécute |
 
 Aucun en-tête n'identifie votre appareil. Syntheo ne bascule jamais vers un autre service si votre serveur ne répond pas.
@@ -67,7 +67,7 @@ Choisissez une activité dans le schéma ci-dessous : il indique la destination 
 
 Hors serveurs et adresses que vous configurez (inférence, webhooks) et hors modèles « Sur ce poste » (tableau ci-dessus), seule la mise à jour sort du poste, sans contenu de réunion : Syntheo lit `latest.json` sur GitHub 15 secondes après le démarrage (désactivable) ou quand vous lancez la recherche, et ce fichier porte aussi les notes de la nouvelle version. L'installeur n'est téléchargé que si vous choisissez de mettre à jour.
 
-Une image hébergée sur un autre site, dans un compte rendu, une proposition de modification ou une réponse du chat, n'est jamais chargée : son texte alternatif s'affiche à sa place, et aucune requête ne part vers ce site.
+Une image hébergée sur un autre site, dans une synthèse, une proposition de modification ou une réponse du chat, n'est jamais chargée : son texte alternatif s'affiche à sa place, et aucune requête ne part vers ce site.
 
 Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur. La recherche de mises à jour, activée par défaut et désactivable, ne transmet aucune donnée personnelle ; GitHub voit l'adresse IP du poste. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
 

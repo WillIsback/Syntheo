@@ -82,7 +82,7 @@ const SYN_LABELS = {
   "All Notes": "Toutes les notes",
   "Appearance": "Apparence",
   "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps.": "Applique une consigne (tâches, résumé court, message de suivi) ; le résultat sert aux étapes suivantes.",
-  "Apply to summary": "Appliquer au résumé",
+  "Apply to summary": "Appliquer à la synthèse",
   "Argument {position}": "Argument {position}",
   "Arguments": "Arguments",
   "Ask anything": "Posez toutes vos questions",
@@ -149,7 +149,7 @@ const SYN_LABELS = {
   "Draft a follow-up email to the participants": "Rédigez un e-mail de suivi à l'intention des participants",
   "Draft follow-up email.": "Rédiger un e-mail de suivi.",
   "Each new step runs after the previous one.": "Chaque nouvelle étape s'exécute après la précédente.",
-  "Edit summary — waiting for your review": "Modifier le résumé — en attente de votre validation",
+  "Edit summary — waiting for your review": "Modifier la synthèse — en attente de votre validation",
   "Email": "E-mail",
   "Enable dictation": "Activer la dictée",
   "Enabled": "Activée",
@@ -214,10 +214,10 @@ const SYN_LABELS = {
   "Lock app": "Verrouiller l'application",
   "Low": "Faible",
   "Main language": "Langue principale",
-  "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything.": "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer.",
-  "Make the current summary noticeably shorter than it is now. Keep every decision, owner, deadline, and open question; cut repetition and secondary detail.": "Rendez le résumé actuel nettement plus court qu'il ne l'est actuellement. Conservez chaque décision, chaque responsable, chaque échéance et chaque question ouverte ; supprimez les répétitions et les détails secondaires.",
-  "Make the summary longer.": "Allongez le résumé.",
-  "Make the summary shorter.": "Raccourcissez le résumé.",
+  "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything.": "Rendez la synthèse actuelle plus détaillée qu'elle ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer.",
+  "Make the current summary noticeably shorter than it is now. Keep every decision, owner, deadline, and open question; cut repetition and secondary detail.": "Rendez la synthèse actuelle nettement plus courte qu'elle ne l'est actuellement. Conservez chaque décision, chaque responsable, chaque échéance et chaque question ouverte ; supprimez les répétitions et les détails secondaires.",
+  "Make the summary longer.": "Allongez la synthèse.",
+  "Make the summary shorter.": "Raccourcissez la synthèse.",
   "Manual": "Manuelle",
   "Me": "Moi",
   "Measure rework of summaries": "Mesurer la reprise des synthèses",
@@ -284,8 +284,8 @@ const SYN_LABELS = {
   "Privacy": "Confidentialité",
   "Profile": "Profil",
   "Program": "Programme",
-  "Proposed edit to the summary": "Modification proposée du résumé",
-  "Proposed summary edit": "Modification proposée du résumé",
+  "Proposed edit to the summary": "Modification proposée de la synthèse",
+  "Proposed summary edit": "Modification proposée de la synthèse",
   "Protocol": "Protocole",
   "Put on pause": "Mettre en pause",
   "Ready to dictate": "Prêt à dicter",
@@ -345,9 +345,9 @@ const SYN_LABELS = {
   "Stop listening when your call ends.": "Arrêter l'écoute lorsque votre appel se termine.",
   "Stop when meeting ends": "Arrêter à la fin de la réunion",
   "Storage": "Stockage",
-  "Summary": "Résumé",
-  "Summary edit declined": "Modification du résumé refusée",
-  "Summary updated": "Résumé mis à jour",
+  "Summary": "Synthèse",
+  "Summary edit declined": "Modification de la synthèse refusée",
+  "Summary updated": "Synthèse mise à jour",
   "Syntheo asks for your confirmation the first time this exact command runs. Each argument is passed as is, without a shell; the run stops after 60 seconds.": "Syntheo vous demande confirmation au premier lancement de cette commande exacte. Chaque argument est transmis tel quel, sans interpréteur de commandes ; l'exécution s'arrête au bout de 60 secondes.",
   "Syntheo chains local steps after your meetings. Nothing leaves your computer, except a webhook step if you add one.": "Syntheo enchaîne des étapes locales après vos réunions. Rien ne sort de votre ordinateur, sauf une étape webhook si vous en ajoutez une.",
   "Syntheo runs the automation as it is edited, even unsaved, on the note you choose.": "Syntheo lance l'automatisation telle qu'elle est éditée, même non enregistrée, sur la note que vous choisissez.",
@@ -370,7 +370,7 @@ const SYN_LABELS = {
   "Testing…": "Test en cours…",
   "Text": "Texte",
   "The API key is optional for servers without authentication. It is kept in your system keychain.": "La clé d'API est facultative pour un serveur sans authentification. Elle est gardée dans le trousseau de votre système.",
-  "The language model that writes your meeting notes and answers when you ask a note a question.": "Le modèle de langage qui rédige vos comptes-rendus et répond quand vous interrogez une note.",
+  "The language model that writes your meeting notes and answers when you ask a note a question.": "Le modèle de langage qui rédige vos synthèses et répond quand vous interrogez une note.",
   "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>.": "Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, <0>changez de modèle</0>.",
   "The local model lists the actions to take and adds them to the vault.": "Le modèle local liste les actions à faire et les ajoute au coffre.",
   "The microphone and system audio are muted: nothing is being transcribed.": "Le micro et le son système sont coupés : plus rien n'est transcrit.",
@@ -383,7 +383,7 @@ const SYN_LABELS = {
   "Then": "Ensuite",
   "These steps will be simulated: nothing is written, sent or run.": "Ces étapes seront simulées : rien n'est écrit, envoyé ni lancé.",
   "They describe what they would do, without acting. The local model still generates its text.": "Elles décrivent ce qu'elles feraient, sans agir. Le modèle local génère tout de même son texte.",
-  "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus.",
+  "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos synthèses.",
   "This is a real test: these steps really act.": "C'est un test réel : ces étapes agissent vraiment.",
   "This server answers as {detectedLabel}.": "Ce serveur répond comme {detectedLabel}.",
   "Timezone": "Fuseau horaire",
@@ -404,9 +404,9 @@ const SYN_LABELS = {
   "Updates": "Mises à jour",
   "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
   "Use an https:// address, or http:// only to this computer or a private network, without a user name or password.": "Utilisez une adresse https://, ou http:// seulement vers ce poste ou un réseau privé, sans nom d'utilisateur ni mot de passe.",
-  "Use main language for summaries": "Utiliser la langue principale pour les résumés",
+  "Use main language for summaries": "Utiliser la langue principale pour les synthèses",
   "Use this protocol": "Utiliser ce protocole",
-  "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des résumés.",
+  "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des synthèses.",
   "Uses the local model chosen in Settings › Synthesis. Nothing leaves your computer.": "Utilise le modèle local choisi dans Paramètres › Synthèse. Rien ne sort de votre ordinateur.",
   "Variables are inserted as JSON text, inside quotes. Redirects are not followed; the request stops after 15 seconds.": "Les variables sont insérées comme texte JSON, entre guillemets. Les redirections ne sont pas suivies ; la requête s'arrête au bout de 15 secondes.",
   "Vault folder": "Dossier du coffre",
@@ -414,7 +414,7 @@ const SYN_LABELS = {
   "What to do in the vault": "Que faire dans le coffre",
   "What were the key decisions that have been made?": "Quelles ont été les décisions clés prises ?",
   "When": "Quand",
-  "When off, summaries follow the detected meeting language.": "Lorsque l'option est désactivée, les résumés suivent la langue détectée de la réunion.",
+  "When off, summaries follow the detected meeting language.": "Lorsque l'option est désactivée, les synthèses suivent la langue détectée de la réunion.",
   "When the meeting ends": "Quand la réunion se termine",
   "When the meeting summary is ready": "Quand la synthèse de la réunion est prête",
   "When you launch it from a note": "Quand vous la lancez depuis une note",
@@ -3064,8 +3064,8 @@ const SYN_CHAT_ANSWERS = {
   actions: ["Vos points d'action issus de « Point hebdo produit » :", "1. Prévenir les testeurs du nouveau calendrier de la bêta (avec Camille, mardi).", "2. Relire le message de lancement avant le 21 novembre."],
   mail: ["Objet : Point hebdo produit — décisions", "Bonjour à tous, merci pour ce point. La bêta est décalée au 21 novembre ; Malik vérifie le quota du serveur avant jeudi, Camille prévient les testeurs mardi."],
   decisions: ["Décisions clés :", "— La bêta est décalée au 21 novembre.", "— Le quota du serveur de transcription est vérifié avant jeudi."],
-  shorter: ["Je propose un résumé plus court. Il s'affiche à la place du compte rendu : appliquez-le ou refusez-le."],
-  longer: ["Je propose un résumé plus détaillé. Il s'affiche à la place du compte rendu : appliquez-le ou refusez-le."],
+  shorter: ["Je propose une synthèse plus courte. Elle s'affiche à la place de la synthèse actuelle : appliquez-la ou refusez-la."],
+  longer: ["Je propose une synthèse plus détaillée. Elle s'affiche à la place de la synthèse actuelle : appliquez-la ou refusez-la."],
 };
 
 const SynChatSummary = ({ sections }) => (
@@ -3109,7 +3109,7 @@ const SynChatBot = ({ message, onToggle, onReview }) => (
       {L("Activity")}
       {h(SynIcon, { name: message.open ? I("CaretDown") : I("CaretRight"), size: 12 })}
     </button>
-    {message.open ? <p className="syn-muted syn-small">Lecture de la note ouverte, puis repérage des passages utiles dans le compte rendu.</p> : null}
+    {message.open ? <p className="syn-muted syn-small">Lecture de la note ouverte, puis repérage des passages utiles dans la synthèse.</p> : null}
     {message.lines.map((line) => <p key={line}>{line}</p>)}
     {message.edit ? (
       <div className="syn-chat-tool">
@@ -3909,7 +3909,7 @@ const SYN_TRB_SYMPTOMS = [
   ["server", I("Waveform"), "Le serveur de transcription ou de synthèse est injoignable"],
   ["stops", I("Warning"), "La transcription s'arrête pendant la réunion"],
   ["sound", I("SpeakerHigh"), "Il manque du son : microphone ou audio système"],
-  ["summary", I("FileText"), "Aucun compte rendu n'apparaît"],
+  ["summary", I("FileText"), "Aucune synthèse n'apparaît"],
 ];
 
 /**
@@ -4010,7 +4010,7 @@ export const Troubleshooter = ({ symptom = "server" }) => {
     path = [settings, L("My servers"), L("Synthesis")];
     screen = h(AppSettings, { key: "llm", section: "intelligence", focus: "model" });
     checks = [
-      <>Un compte rendu nécessite un serveur de synthèse : sa pastille doit indiquer « Connecté ».</>,
+      <>Une synthèse nécessite un serveur de synthèse : sa pastille doit indiquer « Connecté ».</>,
       <>Choisissez un modèle sous « {L("Model")} ». Le vôtre n'y est pas ? « {L("Enter another name")} ».</>,
       <>Serveur injoignable : reprenez le premier symptôme.</>,
     ];
@@ -4054,8 +4054,8 @@ const SYN_FLOW_ACTS = [
   ["listen", "Écoute d'une réunion", "stt", "L'audio de la capture : micro et son système.", "Pendant la transcription"],
   ["dictation", "Dictée", "stt", "L'audio de la dictée, produit en mémoire.", "Pendant la transcription"],
   ["import", "Import d'un fichier audio", "stt", "L'audio du fichier, lu à son emplacement d'origine, sans copie.", "Pendant la transcription"],
-  ["summary", "Compte rendu, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat.", "Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
-  ["webhooks", "Webhooks des Paramètres", "hooks", "Les événements de réunion (note, résumés, participants, transcription).", "À chaque événement, si vous avez ajouté un point de terminaison"],
+  ["summary", "Synthèse, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de synthèse, question du chat.", "Synthèse, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
+  ["webhooks", "Webhooks des Paramètres", "hooks", "Les événements de réunion (note, synthèses, participants, transcription).", "À chaque événement, si vous avez ajouté un point de terminaison"],
   ["auto", "Étape webhook d'une automatisation", "auto", "Le contenu que vous y placez.", "Quand l'automatisation s'exécute"],
 ];
 
@@ -4081,7 +4081,7 @@ export const DataFlows = ({ activity = "listen" }) => {
         <div className="syn-flow-box">
           <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>{h(SynIcon, { name: I("Desktop") })}Votre poste</strong>
           <ul>
-            <li><code>app.db</code> : transcriptions, notes, comptes rendus, contacts, dossiers, automatisations, réglages</li>
+            <li><code>app.db</code> : transcriptions, notes, synthèses, contacts, dossiers, automatisations, réglages</li>
             <li>Index de recherche</li>
             <li>Journaux techniques (contenu masqué)</li>
             <li>Clés API : trousseau du système</li>

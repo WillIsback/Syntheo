@@ -268,13 +268,13 @@ const SYN_LABELS = {
   "Test the connection to list the models served.": "Testez la connexion pour lister les modèles servis.",
   "Testing…": "Test en cours…",
   "The API key is optional for servers without authentication. It is kept in your system keychain.": "La clé d'API est facultative pour un serveur sans authentification. Elle est gardée dans le trousseau de votre système.",
-  "The language model that writes your meeting notes and answers when you ask a note a question.": "Le modèle de langage qui rédige vos comptes-rendus et répond quand vous interrogez une note.",
+  "The language model that writes your meeting notes and answers when you ask a note a question.": "Le modèle de langage qui rédige vos synthèses et répond quand vous interrogez une note.",
   "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>.": "Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, <0>changez de modèle</0>.",
   "The one that captures your voice.": "Celui qui capte votre voix.",
   "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again.": "Le serveur n'a pas répondu à {host}. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test.",
   "The server that turns speech into text during your meetings. Audio is never written to disk.": "Le serveur qui transforme la voix en texte, pendant la réunion. L'audio n'est jamais écrit sur le disque.",
   "The server transcribes with the model it loaded, whatever the model chosen here.": "Le serveur transcrit avec le modèle qu'il a chargé, quel que soit le modèle choisi ici.",
-  "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus.",
+  "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos synthèses.",
   "This server answers as {detectedLabel}.": "Ce serveur répond comme {detectedLabel}.",
   "Timezone": "Fuseau horaire",
   "Transcribing…": "Transcription…",
@@ -291,11 +291,11 @@ const SYN_LABELS = {
   "Upload audio": "Téléverser un audio",
   "Upload transcript": "Téléverser une transcription",
   "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
-  "Use main language for summaries": "Utiliser la langue principale pour les résumés",
+  "Use main language for summaries": "Utiliser la langue principale pour les synthèses",
   "Use this protocol": "Utiliser ce protocole",
-  "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des résumés.",
+  "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des synthèses.",
   "Version history": "Historique des versions",
-  "When off, summaries follow the detected meeting language.": "Lorsque l'option est désactivée, les résumés suivent la langue détectée de la réunion.",
+  "When off, summaries follow the detected meeting language.": "Lorsque l'option est désactivée, les synthèses suivent la langue détectée de la réunion.",
   "Words appear in a small bubble while you speak. Text is inserted when you finish.": "Les mots s'affichent dans une petite bulle pendant que vous parlez. Le texte s'insère quand vous avez terminé.",
   "Words specific to you go in your": "Vos mots à vous vont dans votre",
   "Write freely, Syntheo will complete it.": "Écrivez librement, Syntheo complétera.",
@@ -3467,7 +3467,7 @@ export const ImportScreen = ({ markers = true }) => {
         setState((s) => {
           const next = Math.min(1, s.fraction + 0.035);
           return next >= 1
-            ? { ...s, stage: "done", fraction: 1, hint: "Transcription terminée : Syntheo rédige le compte rendu si un serveur de synthèse est configuré." }
+            ? { ...s, stage: "done", fraction: 1, hint: "Transcription terminée : Syntheo rédige la synthèse si un serveur de synthèse est configuré." }
             : { ...s, fraction: next, elapsed: s.elapsed + 1 };
         }),
       1000,

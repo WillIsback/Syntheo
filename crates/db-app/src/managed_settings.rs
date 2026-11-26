@@ -324,7 +324,7 @@ mod tests {
             format!(r#"{{"schema_version":1,"settings":{{"speech_models_urls":{urls}}}}}"#)
         };
         let ok = validate(
-            doc(r#"["https://miroir.drasi.example/modeles/{path}","https://b.example/{name}"]"#)
+            doc(r#"["https://miroir.exemple.fr/modeles/{path}","https://b.example/{name}"]"#)
                 .as_bytes(),
         )
         .unwrap();

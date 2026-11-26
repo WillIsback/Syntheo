@@ -38,7 +38,7 @@ const SYN_TRB_SYMPTOMS = [
   ["server", I("Waveform"), "Le serveur de transcription ou de synthèse est injoignable"],
   ["stops", I("Warning"), "La transcription s'arrête pendant la réunion"],
   ["sound", I("SpeakerHigh"), "Il manque du son : microphone ou audio système"],
-  ["summary", I("FileText"), "Aucun compte rendu n'apparaît"],
+  ["summary", I("FileText"), "Aucune synthèse n'apparaît"],
 ];
 
 /**
@@ -139,7 +139,7 @@ export const Troubleshooter = ({ symptom = "server" }) => {
     path = [settings, L("My servers"), L("Synthesis")];
     screen = h(AppSettings, { key: "llm", section: "intelligence", focus: "model" });
     checks = [
-      <>Un compte rendu nécessite un serveur de synthèse : sa pastille doit indiquer « Connecté ».</>,
+      <>Une synthèse nécessite un serveur de synthèse : sa pastille doit indiquer « Connecté ».</>,
       <>Choisissez un modèle sous « {L("Model")} ». Le vôtre n'y est pas ? « {L("Enter another name")} ».</>,
       <>Serveur injoignable : reprenez le premier symptôme.</>,
     ];
@@ -183,8 +183,8 @@ const SYN_FLOW_ACTS = [
   ["listen", "Écoute d'une réunion", "stt", "L'audio de la capture : micro et son système.", "Pendant la transcription"],
   ["dictation", "Dictée", "stt", "L'audio de la dictée, produit en mémoire.", "Pendant la transcription"],
   ["import", "Import d'un fichier audio", "stt", "L'audio du fichier, lu à son emplacement d'origine, sans copie.", "Pendant la transcription"],
-  ["summary", "Compte rendu, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat.", "Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
-  ["webhooks", "Webhooks des Paramètres", "hooks", "Les événements de réunion (note, résumés, participants, transcription).", "À chaque événement, si vous avez ajouté un point de terminaison"],
+  ["summary", "Synthèse, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de synthèse, question du chat.", "Synthèse, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
+  ["webhooks", "Webhooks des Paramètres", "hooks", "Les événements de réunion (note, synthèses, participants, transcription).", "À chaque événement, si vous avez ajouté un point de terminaison"],
   ["auto", "Étape webhook d'une automatisation", "auto", "Le contenu que vous y placez.", "Quand l'automatisation s'exécute"],
 ];
 
@@ -210,7 +210,7 @@ export const DataFlows = ({ activity = "listen" }) => {
         <div className="syn-flow-box">
           <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>{h(SynIcon, { name: I("Desktop") })}Votre poste</strong>
           <ul>
-            <li><code>app.db</code> : transcriptions, notes, comptes rendus, contacts, dossiers, automatisations, réglages</li>
+            <li><code>app.db</code> : transcriptions, notes, synthèses, contacts, dossiers, automatisations, réglages</li>
             <li>Index de recherche</li>
             <li>Journaux techniques (contenu masqué)</li>
             <li>Clés API : trousseau du système</li>

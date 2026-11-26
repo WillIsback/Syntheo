@@ -67,7 +67,7 @@ msgstr "{0, plural, one {… # autre} other {… # autres}}"
 #. placeholder {0}: approval.transcriptReplacements
 #: src/chat/components/message/tool/approval.tsx
 msgid "{0, plural, one {# change in the transcript} other {# changes in the transcript}}"
-msgstr "{0, plural, one {# modification dans le transcript} other {# modifications dans le transcript}}"
+msgstr "{0, plural, one {# modification dans la transcription} other {# modifications dans la transcription}}"
 
 #. placeholder {0}: folder.meetingCount
 #. placeholder {0}: row.noteCount
@@ -421,7 +421,7 @@ msgstr "Ajoutez au moins une action configurée avant de l'activer."
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Add at least one example summary."
-msgstr "Ajoutez au moins un exemple de résumé."
+msgstr "Ajoutez au moins un exemple de synthèse."
 
 #: src/session/folder-instructions.tsx
 msgid "Add context for this folder"
@@ -666,7 +666,7 @@ msgstr "Appliquer à la note"
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
 msgid "Apply to summary"
-msgstr "Appliquer au résumé"
+msgstr "Appliquer à la synthèse"
 
 #: src/stt/detect-events-helpers.ts
 msgid "Are you in a meeting?"
@@ -733,7 +733,7 @@ msgstr "Joindre du Markdown ou du texte"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach up to three past summaries you like. Syntheo will learn how you prefer meeting notes to be structured and written."
-msgstr "Joignez jusqu'à trois résumés antérieurs que vous appréciez. Syntheo apprendra comment vous préférez que les notes de réunion soient structurées et rédigées."
+msgstr "Joignez jusqu'à trois synthèses antérieures que vous appréciez. Syntheo apprendra comment vous préférez que les notes de réunion soient structurées et rédigées."
 
 #: src/settings/general/index.tsx
 #: src/settings/general/permissions.tsx
@@ -787,7 +787,7 @@ msgstr "Auto"
 
 #: src/templates/auto-form.tsx
 msgid "Auto summary format"
-msgstr "Format de résumé automatique"
+msgstr "Format de synthèse automatique"
 
 #: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
@@ -1238,7 +1238,7 @@ msgstr "Collecter les points d'action"
 #: src/settings/appearance/note-ink.tsx
 #: src/settings/search-index.ts
 msgid "Color my notes in the summary"
-msgstr "Colorer mes notes dans le compte rendu"
+msgstr "Colorer mes notes dans la synthèse"
 
 #: src/settings/appearance/palette.tsx
 msgid "Color palette"
@@ -1931,11 +1931,11 @@ msgstr "Modifier le mémo — en attente de votre validation"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Edit summary"
-msgstr "Modifier le résumé"
+msgstr "Modifier la synthèse"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Edit summary — waiting for your review"
-msgstr "Modifier le résumé — en attente de votre validation"
+msgstr "Modifier la synthèse — en attente de votre validation"
 
 #: src/folders/project/folder-thread-card.tsx
 msgid "Editable: your corrections are kept when the thread is updated."
@@ -2072,7 +2072,7 @@ msgstr "Tout est traité sur votre serveur"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Example summary"
-msgstr "Exemple de résumé"
+msgstr "Exemple de synthèse"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Examples are used only to improve this format. They are not saved or reused for future meetings."
@@ -2315,7 +2315,7 @@ msgstr "Généraux"
 #: src/session/components/capsule/index.tsx
 #: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate the summary"
-msgstr "Générer le compte rendu"
+msgstr "Générer la synthèse"
 
 #: src/automations/labels.ts
 msgid "Generate with the local model"
@@ -2352,7 +2352,7 @@ msgstr "Se déplacer"
 
 #: src/settings/general/notification.tsx
 msgid "Get your attention when a summary is ready in the background."
-msgstr "Soyez averti lorsqu'un résumé est prêt en arrière-plan."
+msgstr "Soyez averti lorsqu'une synthèse est prête en arrière-plan."
 
 #: src/automations/action-runners.ts
 msgid "Give the vault note a title first."
@@ -2556,7 +2556,7 @@ msgstr "Améliorer le format"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Improve summary format"
-msgstr "Améliorer le format du résumé"
+msgstr "Améliorer le format de la synthèse"
 
 #: src/templates/auto-form.tsx
 msgid "Improve with examples"
@@ -2970,19 +2970,19 @@ msgstr "Langue principale"
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything."
-msgstr "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer."
+msgstr "Rendez la synthèse actuelle plus détaillée qu'elle ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer."
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the current summary noticeably shorter than it is now. Keep every decision, owner, deadline, and open question; cut repetition and secondary detail."
-msgstr "Rendez le résumé actuel nettement plus court qu'il ne l'est actuellement. Conservez chaque décision, chaque responsable, chaque échéance et chaque question ouverte ; supprimez les répétitions et les détails secondaires."
+msgstr "Rendez la synthèse actuelle nettement plus courte qu'elle ne l'est actuellement. Conservez chaque décision, chaque responsable, chaque échéance et chaque question ouverte ; supprimez les répétitions et les détails secondaires."
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the summary longer."
-msgstr "Allongez le résumé."
+msgstr "Allongez la synthèse."
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the summary shorter."
-msgstr "Raccourcissez le résumé."
+msgstr "Raccourcissez la synthèse."
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "Manage templates"
@@ -3386,7 +3386,7 @@ msgstr "Déplacer la section {position}"
 #. placeholder {1}: approval.targetTitle
 #: src/chat/components/message/tool/approval.tsx
 msgid "Move the recording, transcript, summaries and notes of “{0}” to “{1}”."
-msgstr "Déplacer l'enregistrement, le transcript, les synthèses et les notes de « {0} » vers « {1} »."
+msgstr "Déplacer l'enregistrement, la transcription, les synthèses et les notes de « {0} » vers « {1} »."
 
 #: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
@@ -3759,7 +3759,7 @@ msgstr "pas assez de mémoire libre (1,5 Go nécessaire)"
 #: src/session/hooks/useGenerateSummary.ts
 #: src/shared/service-error.ts
 msgid "Not enough transcript was recorded to write a summary."
-msgstr "La transcription est trop courte pour rédiger un compte rendu."
+msgstr "La transcription est trop courte pour rédiger une synthèse."
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3970,7 +3970,7 @@ msgstr "Ouvrez une note pour modifier son mémo."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Open a note to edit its summary."
-msgstr "Ouvrez une note pour modifier son résumé."
+msgstr "Ouvrez une note pour modifier sa synthèse."
 
 #: src/shared/export-shortcut.ts
 msgid "Open a note to export it."
@@ -4147,7 +4147,7 @@ msgstr "Coller"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Paste a past summary you like..."
-msgstr "Collez un résumé précédent que vous aimez..."
+msgstr "Collez une synthèse précédente que vous aimez..."
 
 #: src/mesure/measure-dialog.tsx
 msgid "Paste or drop the version you actually sent. It stays in this window: only counts are saved, never text."
@@ -4238,7 +4238,7 @@ msgstr "Contact épinglé"
 
 #: src/settings/general/notification.tsx
 msgid "Play a sound when transcription, summaries, or cloud sync finish."
-msgstr "Émettre un son à la fin de la transcription, des résumés ou de la synchronisation cloud."
+msgstr "Émettre un son à la fin de la transcription, des synthèses ou de la synchronisation cloud."
 
 #: src/settings/search-index.ts
 msgid "position, role, function, job"
@@ -4342,11 +4342,11 @@ msgstr "« Proposer » rédige l'ordre du jour à partir des points ouverts, des
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
-msgstr "Modification proposée du résumé"
+msgstr "Modification proposée de la synthèse"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed summary edit"
-msgstr "Modification proposée du résumé"
+msgstr "Modification proposée de la synthèse"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "protocol"
@@ -4487,6 +4487,10 @@ msgstr "Notes associées"
 #: src/settings/general/update-section.tsx
 msgid "Release page"
 msgstr "Page de la version"
+
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "Reload editor"
+msgstr "Recharger l'éditeur"
 
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
@@ -4709,7 +4713,7 @@ msgstr "Vérifier la note"
 
 #: src/session/components/pending-proposals-banner.tsx
 msgid "Review summary"
-msgstr "Vérifier le compte rendu"
+msgstr "Vérifier la synthèse"
 
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"
@@ -5059,7 +5063,7 @@ msgstr "Serveur qui transcrit la parole en texte"
 
 #: src/session/components/living-document/welcome-card.tsx
 msgid "Server that writes the summary"
-msgstr "Serveur qui rédige le compte-rendu"
+msgstr "Serveur qui rédige la synthèse"
 
 #: src/session/components/title-input-field.tsx
 #: src/settings/automations/markdown-export-options.tsx
@@ -5089,19 +5093,19 @@ msgstr "Configurer"
 
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up a language model (an OpenAI-compatible endpoint on your infrastructure) to generate a summary of this transcript."
-msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de cette transcription."
+msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer une synthèse de cette transcription."
 
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up AI summaries"
-msgstr "Configurez les résumés par IA"
+msgstr "Configurez les synthèses par IA"
 
 #: src/session/hooks/useGenerateSummary.ts
 msgid "Set up AI summaries first."
-msgstr "Configurez d'abord les comptes rendus par l'IA."
+msgstr "Configurez d'abord les synthèses par l'IA."
 
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
-msgstr "Configurez l'IA dans les Paramètres avant de régénérer ce résumé."
+msgstr "Configurez l'IA dans les Paramètres avant de régénérer cette synthèse."
 
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up the model"
@@ -5187,7 +5191,7 @@ msgstr "Afficher l'icône de la zone de notification"
 
 #: src/settings/general/notification.tsx
 msgid "Show when a summary is ready."
-msgstr "Afficher lorsqu'un résumé est prêt."
+msgstr "Afficher lorsqu'une synthèse est prête."
 
 #: src/settings/general/notification.tsx
 msgid "Show when initial cloud sync finishes."
@@ -5245,7 +5249,7 @@ msgstr "Une erreur s'est produite"
 
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Something went wrong while generating the summary."
-msgstr "Une erreur s'est produite lors de la génération du résumé."
+msgstr "Une erreur s'est produite lors de la génération de la synthèse."
 
 #: src/shared/service-error.ts
 msgid "Something went wrong. Try again."
@@ -5470,7 +5474,7 @@ msgstr "Synthèses"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Summary"
-msgstr "Résumé"
+msgstr "Synthèse"
 
 #: src/automations/labels.ts
 msgctxt "automation variable"
@@ -5494,32 +5498,32 @@ msgstr "Synthèse · v{shownVersion}"
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
 msgid "Summary complete"
-msgstr "Résumé terminé"
+msgstr "Synthèse terminée"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary edit declined"
-msgstr "Modification du résumé refusée"
+msgstr "Modification de la synthèse refusée"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary edit failed"
-msgstr "Échec de la modification du résumé"
+msgstr "Échec de la modification de la synthèse"
 
 #: src/templates/auto-form.tsx
 msgid "Summary format"
-msgstr "Format du résumé"
+msgstr "Format de la synthèse"
 
 #: src/templates/auto-form.tsx
 msgid "Summary format cannot be empty."
-msgstr "Le format du résumé ne peut pas être vide."
+msgstr "Le format de la synthèse ne peut pas être vide."
 
 #: src/contacts/details-sections.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Summary generation failed"
-msgstr "Échec de la génération du résumé"
+msgstr "Échec de la génération de la synthèse"
 
 #: src/session/hooks/useGenerateSummary.ts
 msgid "Summary generation is not ready yet."
-msgstr "La génération du compte rendu n'est pas encore prête."
+msgstr "La génération de la synthèse n'est pas encore prête."
 
 #: src/templates/template-preview.tsx
 msgid "Summary preview"
@@ -5527,15 +5531,15 @@ msgstr "Aperçu de la synthèse"
 
 #: src/services/enhancer/summary-notification.ts
 msgid "Summary ready"
-msgstr "Résumé prêt"
+msgstr "Synthèse prête"
 
 #: src/folders/project/folder-template-field.tsx
 msgid "Summary template"
-msgstr "Modèle de compte rendu"
+msgstr "Modèle de synthèse"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary updated"
-msgstr "Résumé mis à jour"
+msgstr "Synthèse mise à jour"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Summary versions"
@@ -5544,7 +5548,7 @@ msgstr "Versions de la synthèse"
 #: src/session/components/note-input/enhanced-actions.ts
 #: src/session/hooks/useAutoEnhance.ts
 msgid "Summary wasn't generated"
-msgstr "Le résumé n'a pas été généré"
+msgstr "La synthèse n'a pas été générée"
 
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Switch to HTTPS"
@@ -5593,11 +5597,11 @@ msgstr "Syntheo CLI"
 
 #: src/onboarding/final.tsx
 msgid "Syntheo completes your notes into a meeting summary."
-msgstr "Syntheo complète vos notes en compte rendu."
+msgstr "Syntheo complète vos notes en synthèse."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Syntheo could not find this summary in the note. Ask again from the note."
-msgstr "Syntheo n'a pas trouvé ce résumé dans la note. Redemandez depuis la note."
+msgstr "Syntheo n'a pas trouvé cette synthèse dans la note. Redemandez depuis la note."
 
 #: src/stt/capture-lifecycle-finalize.ts
 msgid "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
@@ -6027,6 +6031,10 @@ msgstr "Les différences n'ont pas pu être listées."
 msgid "The download was interrupted. Try again."
 msgstr "Le téléchargement a été interrompu. Réessayez."
 
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "The editor failed to render. Your recording is still running."
+msgstr "L'éditeur n'a pas pu s'afficher. L'enregistrement continue."
+
 #: src/mesure/beta-data.tsx
 msgid "The export could not be built or saved."
 msgstr "L'export n'a pas pu être construit ou enregistré."
@@ -6057,7 +6065,7 @@ msgstr "Le modèle de langage n'a pas renvoyé de réponse exploitable. Réessay
 
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
-msgstr "Le modèle de langage qui rédige vos comptes-rendus et répond quand vous interrogez une note."
+msgstr "Le modèle de langage qui rédige vos synthèses et répond quand vous interrogez une note."
 
 #: src/settings/general/single-language-model-hint.tsx
 msgid "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>."
@@ -6099,7 +6107,7 @@ msgstr "La mesure n'a pas abouti : {0}"
 
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "The meeting content (notes, summaries, transcript) would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS."
-msgstr "Le contenu de la réunion (notes, résumés, transcription) passerait en clair sur le réseau. Sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à cette adresse. Préférez HTTPS."
+msgstr "Le contenu de la réunion (notes, synthèses, transcription) passerait en clair sur le réseau. Sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à cette adresse. Préférez HTTPS."
 
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
@@ -6283,11 +6291,11 @@ msgstr "Le raccourci n'a pas été configuré à temps. Réessayez et acceptez l
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
-msgstr "La modification du résumé n'a pas pu être appliquée."
+msgstr "La modification de la synthèse n'a pas pu être appliquée."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be prepared."
-msgstr "La modification du résumé n'a pas pu être préparée."
+msgstr "La modification de la synthèse n'a pas pu être préparée."
 
 #: src/templates/template-generator-bar.tsx
 msgid "The summary server did not respond. Check that it is running, then try again."
@@ -6332,7 +6340,7 @@ msgstr "Le fil rouge se rédige à partir des synthèses des réunions. Il sera 
 #: src/stt/capture-lifecycle-finalize.ts
 #: src/stt/pause-listening.ts
 msgid "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
-msgstr "La transcription est enregistrée, mais Syntheo n'a pas pu lancer le résumé. Relancez sa génération."
+msgstr "La transcription est enregistrée, mais Syntheo n'a pas pu lancer la synthèse. Relancez sa génération."
 
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription is still being written."
@@ -6567,7 +6575,7 @@ msgstr "Ce dossier utilise le modèle {title}"
 
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
-msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
+msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos synthèses."
 
 #: src/settings/general/update-section.tsx
 msgid "This installation (.deb or MSI) is updated by downloading the new package."
@@ -6611,7 +6619,7 @@ msgstr "Ce modèle ne transcrit qu'en direct : la saisie vocale du chat demande 
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "This note has no summary to edit yet."
-msgstr "Cette note n'a pas encore de résumé à modifier."
+msgstr "Cette note n'a pas encore de synthèse à modifier."
 
 #: src/session/components/note-conflict-banner.tsx
 msgid "This note was edited on another device at the same time. The later edit was kept."
@@ -6729,7 +6737,7 @@ msgstr "Transcription copiée"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"
-msgstr "Transcription trop courte pour un résumé ({characterCount}/{minCharacters} caractères minimum)"
+msgstr "Transcription trop courte pour une synthèse ({characterCount}/{minCharacters} caractères minimum)"
 
 #: src/session/components/living-document/index.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -7076,7 +7084,7 @@ msgstr "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un rés
 #: src/settings/general/index.tsx
 #: src/settings/search-index.ts
 msgid "Use main language for summaries"
-msgstr "Utiliser la langue principale pour les résumés"
+msgstr "Utiliser la langue principale pour les synthèses"
 
 #: src/onboarding/permissions.tsx
 msgid "Use system audio to capture other speakers"
@@ -7120,7 +7128,7 @@ msgstr "Utilisé pour les notes de ce dossier, sauf si une note en choisit un au
 
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
-msgstr "Utilisé pour la transcription et la détection automatique de la langue des résumés."
+msgstr "Utilisé pour la transcription et la détection automatique de la langue des synthèses."
 
 #: src/settings/automations/step-forms.tsx
 msgid "Uses the local model chosen in Settings › Synthesis. Nothing leaves your computer."
@@ -7269,7 +7277,7 @@ msgstr "Quand"
 
 #: src/settings/general/index.tsx
 msgid "When off, summaries follow the detected meeting language."
-msgstr "Lorsque l'option est désactivée, les résumés suivent la langue détectée de la réunion."
+msgstr "Lorsque l'option est désactivée, les synthèses suivent la langue détectée de la réunion."
 
 #: src/automations/labels.ts
 msgid "When the meeting ends"
@@ -7405,7 +7413,7 @@ msgstr "vous êtes hors ligne"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "You can use up to three example summaries."
-msgstr "Vous pouvez utiliser jusqu'à trois exemples de résumés."
+msgstr "Vous pouvez utiliser jusqu'à trois exemples de synthèses."
 
 #: src/stt/on-device.ts
 msgid "Your administrator has disabled transcription on this computer."
@@ -7447,7 +7455,7 @@ msgstr "Vos notes ont changé depuis cette synthèse."
 
 #: src/services/enhancer/summary-notification.ts
 msgid "Your summary is ready."
-msgstr "Votre résumé est prêt."
+msgstr "Votre synthèse est prête."
 
 #: src/stt/capture-lifecycle-recovery.ts
 msgid "Your transcript could not be saved"

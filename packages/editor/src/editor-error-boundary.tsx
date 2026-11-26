@@ -1,4 +1,30 @@
-import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
+import {
+  Component,
+  createContext,
+  Fragment,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
+
+/**
+ * Textes de l'écran de secours. Le paquet n'a pas d'i18n : l'application
+ * fournit les textes traduits (issue 636), l'anglais reste le repli.
+ */
+export type EditorErrorTexts = {
+  failed: string;
+  reload: string;
+};
+
+const DEFAULT_EDITOR_ERROR_TEXTS: EditorErrorTexts = {
+  failed: "The editor failed to render. Your recording is still running.",
+  reload: "Reload editor",
+};
+
+const EditorErrorTextsContext = createContext<EditorErrorTexts>(
+  DEFAULT_EDITOR_ERROR_TEXTS,
+);
+
+export const EditorErrorTextsProvider = EditorErrorTextsContext.Provider;
 
 type EditorErrorBoundaryProps = {
   children: ReactNode;
@@ -17,6 +43,9 @@ export class EditorErrorBoundary extends Component<
   EditorErrorBoundaryProps,
   EditorErrorBoundaryState
 > {
+  static contextType = EditorErrorTextsContext;
+  declare context: EditorErrorTexts;
+
   constructor(props: EditorErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, recoveryAttempts: 0, recoveryKey: 0 };
@@ -28,7 +57,7 @@ export class EditorErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // `resetKey` dit quel éditeur a levé : `session_raw_note:<id>` (note),
-    // `enhanced_note:<id>` (résumé) ou `note` (issue 572).
+    // `enhanced_note:<id>` (synthèse) ou `note` (issue 572).
     console.error("Editor render failed", error, info, {
       editor: this.props.resetKey ?? "unknown",
     });
@@ -64,20 +93,19 @@ export class EditorErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
+      const texts = this.context;
       return (
         <div
           role="alert"
           className="border-border bg-muted text-muted-foreground flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
         >
-          <span>
-            The editor failed to render. Your recording is still running.
-          </span>
+          <span>{texts.failed}</span>
           <button
             type="button"
             onClick={this.retry}
             className="border-border bg-card text-muted-foreground hover:bg-accent shrink-0 rounded-md border px-2 py-1 text-xs font-medium"
           >
-            Reload editor
+            {texts.reload}
           </button>
         </div>
       );
