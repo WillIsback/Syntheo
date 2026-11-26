@@ -67,7 +67,8 @@ export function countLines(buffer) {
 const git = (args, input) =>
   execFileSync(resolveExecutable("git"), args, { input, maxBuffer: 1 << 30 });
 
-export function measure(ref) {
+// Fichiers mesurés de la révision `ref` : { path, lines, lang, cat, zone }.
+export function listFiles(ref) {
   const entries = git(["ls-tree", "-r", "-z", ref])
     .toString()
     .split("\0")
@@ -98,7 +99,11 @@ export function measure(ref) {
       zone: zoneOf(entry.path),
     });
   }
-  return summarize(files);
+  return files;
+}
+
+export function measure(ref) {
+  return summarize(listFiles(ref));
 }
 
 export function summarize(files) {
