@@ -55,39 +55,11 @@ const OUTBOUND_BUFFER_CAPACITY: usize = 32;
 const REPLY_SEND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 const SLOW_CLIENT_CLOSE_CODE: u16 = 1013;
 
-/// Commandes que le relay ne transmet jamais (issue 645) : lancer un
-/// programme, lire ou modifier les secrets du trousseau, ouvrir un fichier avec
-/// un programme au choix. Le reste de l'interface reste pilotable.
-/// Les hooks de settings.json, qui lançaient des commandes au début et à la fin
-/// de l'écoute, sont retirés de l'application (issue 675) : leur commande
-/// n'existe plus, il n'y a rien à refuser de ce côté.
-const DENIED_COMMANDS: &[&str] = &[
-    "plugin:local-api|run_automation_command",
-    "plugin:store2|get_secret",
-    "plugin:store2|set_secret",
-    "plugin:store2|delete_secret",
-    "plugin:opener2|open_path",
-    // Mesure de la bêta (issue 671) : réservée à l'écran local, les extraits
-    // du Calibrage ne sortent pas par le relay.
-    "plugin:mesure|measure",
-    "plugin:mesure|measure_differences",
-    // Sonde de la transcription sur le poste (issue 682) : le micro-banc
-    // occupe tous les cœurs ; il ne se déclenche pas à distance.
-    "plugin:transcription|probe_local_transcription",
-    // Modèles de la transcription sur le poste (issue 683) : télécharger
-    // ≈ 1 Go, installer depuis un dossier ou retirer ne se décide pas à
-    // distance.
-    "plugin:transcription|on_device_download_models",
-    "plugin:transcription|on_device_install_models",
-    "plugin:transcription|on_device_cancel_install",
-    "plugin:transcription|on_device_remove_models",
-    // Mise en service (issue 686) : charge tous les cœurs une à deux
-    // minutes ; jamais déclenchée à distance.
-    "plugin:transcription|on_device_commission",
-];
-
-pub(crate) fn is_denied_command(cmd: &str) -> bool {
-    DENIED_COMMANDS.contains(&cmd)
+/// Commandes transmises : la liste d'autorisation de `allowlist.rs` (issue
+/// 664). Les abonnements aux événements sont traités à part.
+pub(crate) fn is_denied_command(cmd: &str, args: &serde_json::Value) -> bool {
+    !matches!(cmd, "plugin:event|listen" | "plugin:event|unlisten")
+        && !crate::allowlist::is_allowed(cmd, args)
 }
 
 #[derive(Deserialize)]
@@ -240,7 +212,13 @@ pub async fn handle_ws<R: Runtime>(socket: WebSocket, app: AppHandle<R>, pending
         request_tasks.spawn(async move {
             let _permit = permit;
             let result = match req.cmd.as_str() {
-                cmd if is_denied_command(cmd) => {
+                cmd if is_denied_command(cmd, &req.args) => {
+                    tracing::info!(
+                        cmd,
+                        reason = crate::allowlist::exclusion_reason(cmd)
+                            .unwrap_or("not on the allowlist"),
+                        "relay_command_refused"
+                    );
                     if let Some((internal_id, _)) = pending_invocation {
                         pending.remove(internal_id).await;
                         active_invokes.lock().await.remove(&internal_id);

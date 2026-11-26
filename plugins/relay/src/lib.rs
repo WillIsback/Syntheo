@@ -1,4 +1,5 @@
 mod access;
+mod allowlist;
 mod commands;
 mod relay;
 mod server;
