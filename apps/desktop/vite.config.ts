@@ -10,6 +10,7 @@ import { relayShim } from "@syntheo/plugin-relay/vite";
 
 import { changelog } from "./plugins/changelog";
 import { reactProfilingAliases } from "./plugins/react-profiling";
+import { thirdPartyLicenses } from "./plugins/third-party-licenses";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -18,6 +19,7 @@ export default defineConfig(() => ({
   plugins: [
     relayShim(),
     changelog(),
+    thirdPartyLicenses(),
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
     lingui(),

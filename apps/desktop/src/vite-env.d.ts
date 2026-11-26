@@ -10,3 +10,12 @@ declare module "virtual:changelog" {
     content: string;
   }>;
 }
+
+// Module virtuel du plugin Vite `plugins/third-party-licenses.ts` : licences
+// des composants tiers, générées au build (issue 747). `error` en
+// développement si la génération a échoué.
+declare module "virtual:third-party-licenses" {
+  import type { ThirdPartyLicenses } from "../../../scripts/third-party-licenses.mjs";
+  const data: ThirdPartyLicenses | { error: string };
+  export default data;
+}
