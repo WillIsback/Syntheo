@@ -180,12 +180,45 @@ function cargoMetadata(manifestPath, target) {
   );
 }
 
+const PNPM_LICENSES_ARGS = ["licenses", "list", "--prod", "--json"];
+
+/**
+ * Commande qui lance `pnpm licenses list`. Sous Windows, `pnpm` est un script
+ * `pnpm.cmd` qu'execFileSync ne lance pas sans shell (`spawnSync pnpm
+ * ENOENT`, alpha 0.8.2-1). Pendant `pnpm build`, `npm_execpath` désigne le
+ * script JavaScript de pnpm en cours : node le lance directement, sans shell,
+ * sur toutes les plateformes. À défaut, `pnpm` passe par un shell sous
+ * Windows seulement, avec des arguments constants. `cargo` et `rustc` sont des
+ * exécutables (`.exe` sous Windows, proxys de rustup compris) : rien à faire.
+ */
+export function pnpmCommand({
+  execPath = process.execPath,
+  npmExecPath = process.env.npm_execpath,
+  platform = process.platform,
+  exists = existsSync,
+} = {}) {
+  if (npmExecPath && /\.c?js$/i.test(npmExecPath) && exists(npmExecPath)) {
+    return {
+      file: execPath,
+      args: [npmExecPath, ...PNPM_LICENSES_ARGS],
+      shell: false,
+    };
+  }
+  return {
+    file: "pnpm",
+    args: [...PNPM_LICENSES_ARGS],
+    shell: platform === "win32",
+  };
+}
+
 function pnpmLicenses() {
+  const command = pnpmCommand();
   return JSON.parse(
-    execFileSync("pnpm", ["licenses", "list", "--prod", "--json"], {
+    execFileSync(command.file, command.args, {
       cwd: join(ROOT, "apps/desktop"),
       encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
+      shell: command.shell,
     }),
   );
 }
