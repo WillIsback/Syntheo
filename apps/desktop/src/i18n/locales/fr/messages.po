@@ -791,6 +791,7 @@ msgstr "Format de synthèse automatique"
 
 #: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/templates/auto-form.tsx
 #: src/templates/template-sidebar.tsx
 msgid "Automatic"
@@ -1032,6 +1033,10 @@ msgstr "Vérifier si ce poste peut transcrire seul (environ 5 s)"
 #: src/settings/general/update-section.tsx
 msgid "Checking for updates…"
 msgstr "Recherche des mises à jour…"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Checking whether the model reads images…"
+msgstr "Vérification : le modèle lit-il les images…"
 
 #: src/shared/long-load-gate.tsx
 msgid "Checking your local database. This is taking longer than expected."
@@ -1795,6 +1800,11 @@ msgstr "Dock, sélecteur d'apps, icône"
 #: src/main/windows-title-bar.tsx
 msgid "Documentation"
 msgstr "Documentation"
+
+#. placeholder {0}: date(entry.detected.checkedAt)
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Does not read images (checked on {0}). Choose Yes if your server serves the vision part of the model."
+msgstr "Ne lit pas les images (vérifié le {0}). Choisissez Oui si votre serveur sert la partie vision du modèle."
 
 #: src/session/components/living-document/transcript-margin.tsx
 #: src/session/components/speaker-naming/dialog.tsx
@@ -3527,6 +3537,10 @@ msgstr "Prochaine réunion"
 msgid "Next view of the note"
 msgstr "Vue suivante de la note"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "No"
+msgstr "Non"
+
 #: src/settings/general/notification-ignored-apps.tsx
 msgid "No apps found."
 msgstr "Aucune application trouvée."
@@ -4373,6 +4387,11 @@ msgstr "Lire les contrôles de réunion et le chat visible."
 #: src/session/components/speaker-naming/dialog.tsx
 msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 msgstr "Lisez ce que chaque intervenant a dit, puis indiquez qui c’est. Tab passe à l’intervenant suivant, Entrée valide."
+
+#. placeholder {0}: date(entry.detected.checkedAt)
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Reads images (checked on {0})."
+msgstr "Lit les images (vérifié le {0})."
 
 #: src/settings/general/update-section.tsx
 msgid "Reads the latest version on GitHub. Nothing is installed without your action."
@@ -5221,6 +5240,10 @@ msgstr "Simulée"
 msgid "since {first}"
 msgstr "depuis le {first}"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Sketches, screenshots and images in the note are attached when the summary is generated."
+msgstr "Croquis, captures et images de la note sont joints à la génération de la synthèse."
+
 #: src/settings/developers/skills.tsx
 msgid "Skill installed"
 msgstr "Compétence installée"
@@ -5894,6 +5917,11 @@ msgstr "Tester ce poste"
 msgid "Test this computer again"
 msgstr "Tester ce poste à nouveau"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Test with an image"
+msgstr "Tester avec une image"
+
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/settings/ai/shared/server-card.tsx
 msgid "Testing…"
 msgstr "Test en cours…"
@@ -6125,6 +6153,18 @@ msgstr "La modification du mémo n'a pas pu être préparée."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "Le micro et le son système sont coupés : plus rien n'est transcrit."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model accepted the test image (two shapes and an arrow)."
+msgstr "Le modèle a accepté l'image de test (deux formes et une flèche)."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model does not accept images."
+msgstr "Le modèle n'accepte pas les images."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model reads images"
+msgstr "Le modèle lit les images"
+
 #: src/stt/on-device.ts
 msgid "The models are not installed or are incomplete."
 msgstr "Les modèles ne sont pas installés ou sont incomplets."
@@ -6154,6 +6194,14 @@ msgstr "Les étapes suivantes n'ont pas été lancées."
 #: src/chat/components/message/tool/approval.tsx
 msgid "The note title"
 msgstr "Le titre de la note"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The note's images are always attached when the summary is generated."
+msgstr "Les images de la note sont toujours jointes à la génération de la synthèse."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The note's images are never attached."
+msgstr "Les images de la note ne sont jamais jointes."
 
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
@@ -6237,6 +6285,14 @@ msgstr "Le serveur répond, mais ni comme un serveur OpenAI ni comme NVIDIA NeMo
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 msgstr "Le serveur répond, mais pas comme une API compatible OpenAI. Vérifiez que l'adresse se termine par /v1, puis relancez le test."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server could not be checked and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+msgstr "Le serveur n'a pas pu être interrogé et « {model} » n'est pas reconnu : ses images ne sont pas jointes. Choisissez Oui si votre serveur sert la partie vision du modèle."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server could not be checked: going by its name, “{model}” reads images."
+msgstr "Le serveur n'a pas pu être interrogé : d'après son nom, « {model} » lit les images."
+
 #: src/shared/service-error.ts
 msgid "The server could not be reached. Check that it is running and that its address in Settings is correct."
 msgstr "Le serveur est injoignable. Vérifiez qu'il est démarré et que son adresse dans les réglages est correcte."
@@ -6248,6 +6304,10 @@ msgstr "Le serveur n'a pas pu traiter la demande ({status}). Vérifiez le modèl
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 msgstr "Le serveur n'a pas répondu à {host}. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server did not give a clear answer. Try again later."
+msgstr "Le serveur n'a pas répondu clairement. Réessayez plus tard."
 
 #: src/shared/service-error.ts
 msgid "The server is busy or the quota is reached. Try again in a few minutes."
@@ -7403,6 +7463,7 @@ msgstr "Écrire"
 msgid "Written by Syntheo"
 msgstr "Rédigé par Syntheo"
 
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/stt/detect-events.ts
 msgid "Yes"
 msgstr "Oui"

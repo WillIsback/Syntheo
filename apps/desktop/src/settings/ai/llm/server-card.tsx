@@ -5,6 +5,10 @@ import { providerCredentialIdentity } from "@syntheo/provider-validation";
 import { cn } from "@syntheo/utils";
 
 import { useConnectionHealth } from "./health";
+import {
+  forgetImageInputDetection,
+  ImageInputSetting,
+} from "./image-input-setting";
 import { connectedModelsLabel } from "./labels";
 import { getPreferredProviderModel } from "./selection";
 import { LLM_BASE_URL_PLACEHOLDER } from "./shared";
@@ -121,7 +125,12 @@ export function LlmServerCard() {
           }
           placeholder={LLM_BASE_URL_PLACEHOLDER}
           testing={state.status === "testing"}
-          onTest={connection.test}
+          onTest={() => {
+            // Le test de connexion refait aussi la détection des images
+            // (issue 754) : le serveur a pu changer de modèle servi.
+            if (model) void forgetImageInputDetection(baseUrl, model);
+            connection.test();
+          }}
           isCurrentProvider={current_llm_provider === PROVIDER_ID}
         />
       </div>
@@ -139,6 +148,14 @@ export function LlmServerCard() {
             }
           />
         </div>
+      ) : null}
+      {baseUrl && model ? (
+        <ImageInputSetting
+          baseUrl={baseUrl}
+          apiKey={apiKey}
+          model={model}
+          connected={state.status === "connected"}
+        />
       ) : null}
       {model && state.status === "connected" && health.status === "error" ? (
         <p role="alert" className="text-alert-foreground text-[13px]">
