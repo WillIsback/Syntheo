@@ -125,6 +125,14 @@ jobs:
       - name: Intégrité du lockfile Cargo
         run: cargo metadata --locked --format-version 1 > /dev/null
 
+      # Page des licences (issue 747) : la liste générée depuis Cargo.lock,
+      # apps/speech/Cargo.lock, pnpm-lock.yaml et les modèles n'est pas vide
+      # et contient les composants connus. Le build de production fait le
+      # même contrôle.
+      - name: Licences des composants tiers
+        timeout-minutes: 10
+        run: node scripts/third-party-licenses.mjs --check
+
   # Job Rust unique : métadonnées, clippy et tests partagent le même target/
   # compilé une seule fois (l'ancien découpage recompilait tout le workspace
   # deux fois, clippy et test étant deux jobs distincts).

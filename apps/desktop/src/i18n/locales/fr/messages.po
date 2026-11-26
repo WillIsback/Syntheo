@@ -357,6 +357,10 @@ msgstr "Une nouvelle proposition remplace vos modifications de l'ordre du jour."
 msgid "A participant declined recording. Syntheo stopped listening."
 msgstr "Un participant a refusé l'enregistrement. Syntheo a arrêté l'écoute."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "About"
+msgstr "À propos"
+
 #: src/stt/batch-eta.ts
 msgid "About {minutes} min remaining"
 msgstr "Environ {minutes} min restantes"
@@ -2825,6 +2829,10 @@ msgstr "Vous prévient quand l'automatisation a terminé."
 msgid "Lexical"
 msgstr "Lexical"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Licenses"
+msgstr "Licences"
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Clair"
@@ -2946,6 +2954,10 @@ msgstr "Chargement de votre espace de travail. Cela ne devrait prendre qu'un ins
 #: src/settings/general/account-profile.tsx
 #: src/settings/general/storage/export-location.tsx
 msgid "Loading..."
+msgstr "Chargement…"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Loading…"
 msgstr "Chargement…"
 
 #: src/automations/labels.ts
@@ -3315,6 +3327,10 @@ msgstr "Nom du modèle"
 msgid "Model name served by your server"
 msgstr "Nom du modèle servi par votre serveur"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Models"
+msgstr "Modèles"
+
 #. placeholder {0}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Models installed ({0})."
@@ -3462,6 +3478,10 @@ msgstr "Nom"
 #: src/shared/open-note-dialog.tsx
 msgid "Name speakers"
 msgstr "Nommer les intervenants"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Native components"
+msgstr "Composants natifs"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Needs setup"
@@ -3913,6 +3933,10 @@ msgstr "notification, alerte, synchronisation, cloud"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Notifications"
 msgstr "Notifications"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "npm packages"
+msgstr "Paquets npm"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "NVIDIA NeMo-Speech.cpp"
@@ -4759,6 +4783,10 @@ msgstr "Lancer cette commande ?"
 msgid "runs the program on your computer"
 msgstr "lance le programme sur votre ordinateur"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Rust crates"
+msgstr "Crates Rust"
+
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "same participants"
 msgstr "mêmes participants"
@@ -4836,6 +4864,10 @@ msgstr "Faire défiler jusqu'en bas"
 #: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Faire défiler jusqu'en haut"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Search a component or a license"
+msgstr "Rechercher un composant ou une licence"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "Search a meeting type"
@@ -5662,9 +5694,21 @@ msgstr "Syntheo n'a pas pu lire ce fichier."
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo n'a pas accès au micro"
 
+#. placeholder {0}: licenses.data.syntheo.origin.project
+#. placeholder {1}: licenses.data.syntheo.origin.url
+#. placeholder {2}: licenses.data.syntheo.origin.holder
+#. placeholder {3}: licenses.data.syntheo.origin.license
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo is derived from {0} ({1}), by {2}, under the {3} license."
+msgstr "Syntheo est dérivé de {0} ({1}), de {2}, sous licence {3}."
+
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"
 msgstr "Syntheo est verrouillé"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo is released under the MIT license. It is derived from Anarlog, by Fastrepl, Inc., also under the MIT license."
+msgstr "Syntheo est distribué sous licence MIT. Il est dérivé d'Anarlog, de Fastrepl, Inc., lui aussi sous licence MIT."
 
 #: src/settings/general/update-section.tsx
 msgid "Syntheo is up to date."
@@ -5673,6 +5717,10 @@ msgstr "Syntheo est à jour."
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
 msgstr "Syntheo continue d'écouter pendant la reconnexion de la transcription en direct. Aucun audio n'est enregistré sur le disque : si la coupure dure, le passage manquant ne sera pas récupéré."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo license (MIT) and origin of the code"
+msgstr "Licence de Syntheo (MIT) et origine du code"
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
@@ -6094,6 +6142,10 @@ msgstr "Le modèle de langage n'a pas renvoyé de réponse exploitable. Réessay
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "Le modèle de langage qui rédige vos synthèses et répond quand vous interrogez une note."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "The list of licenses could not be read."
+msgstr "La liste des licences n'a pas pu être lue."
 
 #: src/settings/general/single-language-model-hint.tsx
 msgid "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>."
@@ -6520,6 +6572,10 @@ msgstr "Elles décrivent ce qu'elles feraient, sans agir. Le modèle local gén�
 msgid "Thinking..."
 msgstr "Réflexion..."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Third-party components included in Syntheo, with their version and license. The transcription models are not shipped with the app: they are downloaded or installed separately."
+msgstr "Composants tiers inclus dans Syntheo, avec leur version et leur licence. Les modèles de transcription ne sont pas livrés avec l'application : ils sont téléchargés ou installés à part."
+
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step runs a program on your computer. It is only added if you confirm."
 msgstr "Cette étape avancée lance un programme sur votre ordinateur. Elle n'est ajoutée que si vous confirmez."
@@ -6692,6 +6748,10 @@ msgstr "Cette note n'a pas encore de synthèse à modifier."
 #: src/session/components/note-conflict-banner.tsx
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "Cette note a été modifiée sur un autre appareil en même temps. La modification la plus récente a été conservée."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "This package ships no license file; its declared license is shown above."
+msgstr "Ce paquet ne fournit pas de fichier de licence ; sa licence déclarée est indiquée ci-dessus."
 
 #: src/shared/service-error.ts
 msgid "This proposal is out of date: the meeting changed after it was created."
