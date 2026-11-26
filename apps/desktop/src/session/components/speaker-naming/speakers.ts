@@ -309,6 +309,27 @@ function distinctiveWordsByLabel(groups: Group[]): Map<string, Set<string>> {
 }
 
 /**
+ * Une capture distingue-t-elle des intervenants (issue 625) ? Sans aucun
+ * index d'intervenant (serveur sans diarisation) et sur un seul canal (micro
+ * seul, ou import mélangé), « Speaker 1 » réunit tout le monde : le nommer
+ * attribuerait la réunion entière à une personne. Avec deux canaux (micro et
+ * participants distants), le canal sépare encore vous des autres.
+ */
+function distinguishesSpeakers(segments: readonly Segment[]): boolean {
+  const spoken = segments.filter((segment) => segment.words.length > 0);
+  if (
+    spoken.some(
+      (segment) =>
+        segment.key.speaker_index != null ||
+        segment.key.speaker_human_id != null,
+    )
+  ) {
+    return true;
+  }
+  return new Set(spoken.map((segment) => segment.key.channel)).size > 1;
+}
+
+/**
  * Une carte par locuteur anonyme et par capture : un même index n'est pas la
  * même personne d'une capture à l'autre (une pause d'écoute, issue 353, crée
  * une nouvelle capture). Ordre : du plus de mots au moins de mots.
@@ -331,6 +352,7 @@ export function buildSpeakerCards(
     groups.some((group) => group.words >= MINOR_SPEAKER_WORDS),
   );
   const cards = withWords.flatMap((capture, captureIndex) => {
+    if (!distinguishesSpeakers(capture.segments)) return [];
     const groups = groupsByCapture[captureIndex] ?? [];
     const distinctive = distinctiveWordsByLabel(groups);
     return groups
