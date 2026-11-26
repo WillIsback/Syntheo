@@ -1331,9 +1331,9 @@ fn function_word_list_is_lowercase_and_unique() {
 }
 
 #[test]
-fn rule_version_is_two() {
-    assert_eq!(RULE_VERSION, 2);
-    assert_eq!(run(GENERATED, GENERATED).rule_version, 2);
+fn rule_version_is_three() {
+    assert_eq!(RULE_VERSION, 3);
+    assert_eq!(run(GENERATED, GENERATED).rule_version, 3);
 }
 
 // Texte brut collé (issue 730, suite) : un titre corrigé d'un mot ouvre

@@ -375,11 +375,142 @@ fn separates_words(name: &str) -> bool {
     matches!(name, "br" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6") || BLOCK_TAGS.contains(&name)
 }
 
+/// Nombre maximal de colonnes (`colspan`) ou de rangées (`rowspan`) couvertes
+/// par une cellule ; HTML en permet 1 000 et 65 534.
+const MAX_HTML_SPAN: usize = 1000;
+
+/// Tableau HTML en cours de lecture (issue 731). Une rangée (`<tr>`) donne
+/// un seul bloc, ses cellules dans l'ordre et séparées par une espace, comme
+/// une ligne de tableau Markdown. Une cellule fusionnée (`rowspan`,
+/// `colspan`) est recopiée dans chaque rangée et chaque colonne qu'elle
+/// couvre, comme le tableau Markdown généré, qui répète la valeur.
+#[derive(Default)]
+struct HtmlTable {
+    /// Profondeur des `<table>` : un tableau imbriqué dans une cellule n'est
+    /// lu que comme du texte de cette cellule.
+    depth: usize,
+    in_row: bool,
+    /// Texte brut (entités non décodées) de la cellule ouverte.
+    cell: Option<String>,
+    span: (usize, usize),
+    row: Vec<String>,
+    /// Cellules des rangées précédentes qui couvrent encore des rangées :
+    /// par colonne, rangées restantes et texte.
+    carried: Vec<Option<(usize, String)>>,
+    /// Caractères encore recopiables : un tableau aux fusions démesurées ne
+    /// fait pas exploser la mémoire, ses copies s'arrêtent là.
+    copy_budget: usize,
+}
+
+impl HtmlTable {
+    fn copy(&mut self, text: &str) -> String {
+        if text.len() <= self.copy_budget {
+            self.copy_budget -= text.len();
+            text.to_owned()
+        } else {
+            String::new()
+        }
+    }
+
+    /// Recopie les cellules des rangées précédentes qui couvrent la colonne
+    /// courante (et les suivantes, tant qu'elles se suivent).
+    fn fill_carried(&mut self) {
+        while let Some(Some((remaining, text))) = self.carried.get(self.row.len()).cloned() {
+            let column = self.row.len();
+            let copy = self.copy(&text);
+            self.row.push(copy);
+            self.carried[column] = (remaining > 1).then(|| (remaining - 1, text));
+        }
+    }
+
+    fn open_cell(&mut self, tag: &str) {
+        self.close_cell();
+        self.in_row = true;
+        let span = |name: &str| {
+            html_attribute(tag, name)
+                .and_then(|v| v.trim().parse::<usize>().ok())
+                .unwrap_or(1)
+                .clamp(1, MAX_HTML_SPAN)
+        };
+        self.span = (span("rowspan"), span("colspan"));
+        self.cell = Some(String::new());
+    }
+
+    fn close_cell(&mut self) {
+        let Some(raw) = self.cell.take() else {
+            return;
+        };
+        self.fill_carried();
+        let (rows, columns) = self.span;
+        for i in 0..columns {
+            let text = if i == 0 { raw.clone() } else { self.copy(&raw) };
+            let column = self.row.len();
+            if rows > 1 {
+                if self.carried.len() <= column {
+                    self.carried.resize(column + 1, None);
+                }
+                self.carried[column] = Some((rows - 1, raw.clone()));
+            }
+            self.row.push(text);
+        }
+    }
+
+    /// Ferme la rangée ouverte : son texte, ou `None` si aucune n'est ouverte.
+    fn close_row(&mut self) -> Option<String> {
+        self.close_cell();
+        if !self.in_row {
+            return None;
+        }
+        self.in_row = false;
+        // Colonnes couvertes par une rangée précédente après la dernière
+        // cellule de celle-ci.
+        while self.row.len() < self.carried.len() {
+            if self.carried[self.row.len()].is_some() {
+                self.fill_carried();
+            } else {
+                self.row.push(String::new());
+            }
+        }
+        let text = self.row.join(" ");
+        self.row.clear();
+        Some(text)
+    }
+}
+
+/// Valeur d'un attribut d'une balise HTML, entre guillemets ou non.
+fn html_attribute<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let lower = tag.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(found) = lower[from..].find(name) {
+        let at = from + found;
+        from = at + name.len();
+        let before_ok = lower[..at].ends_with(|c: char| c.is_whitespace());
+        let after = lower[from..].trim_start();
+        if !before_ok || !after.starts_with('=') {
+            continue;
+        }
+        let value_start = tag.len() - after.len() + 1;
+        let value = tag[value_start..].trim_start();
+        return Some(match value.chars().next() {
+            Some(q @ ('"' | '\'')) => value[1..].split(q).next().unwrap_or(""),
+            _ => value
+                .split(|c: char| c.is_whitespace() || c == '>' || c == '/')
+                .next()
+                .unwrap_or(""),
+        });
+    }
+    None
+}
+
 fn html_blocks(input: &str) -> Vec<Block> {
     let mut out = Vec::new();
     let mut current = String::new();
     let mut heading = false;
     let mut skip_until: Option<&'static str> = None;
+    let mut table = HtmlTable {
+        copy_budget: input.len(),
+        ..HtmlTable::default()
+    };
     // Dans `<pre>`, un retour à la ligne sépare deux blocs ; ailleurs, c'est
     // une espace, comme à l'affichage.
     let mut pre_depth = 0usize;
@@ -400,7 +531,10 @@ fn html_blocks(input: &str) -> Vec<Block> {
     };
     while let Some(lt) = rest.find('<') {
         if skip_until.is_none() {
-            current.push_str(&rest[..lt]);
+            match table.cell.as_mut() {
+                Some(cell) => cell.push_str(&rest[..lt]),
+                None => current.push_str(&rest[..lt]),
+            }
         }
         rest = &rest[lt..];
         if rest.starts_with("<!--") {
@@ -409,7 +543,10 @@ fn html_blocks(input: &str) -> Vec<Block> {
         }
         let Some(gt) = rest.find('>') else {
             if skip_until.is_none() {
-                current.push_str(rest);
+                match table.cell.as_mut() {
+                    Some(cell) => cell.push_str(rest),
+                    None => current.push_str(rest),
+                }
             }
             rest = "";
             break;
@@ -426,6 +563,60 @@ fn html_blocks(input: &str) -> Vec<Block> {
         if let Some(end) = skip_until {
             if closing && name == end {
                 skip_until = None;
+            }
+            continue;
+        }
+        if name == "table" {
+            if closing {
+                if table.depth == 1 {
+                    if let Some(text) = table.close_row() {
+                        out.push(body(decode_entities(&text)));
+                    }
+                    table.carried.clear();
+                    flush(&mut out, &mut current, false, false);
+                } else if let Some(cell) = table.cell.as_mut() {
+                    cell.push(' ');
+                }
+                table.depth = table.depth.saturating_sub(1);
+            } else {
+                if table.depth == 0 {
+                    flush(&mut out, &mut current, heading, pre_depth > 0);
+                    heading = false;
+                    table.carried.clear();
+                } else if let Some(cell) = table.cell.as_mut() {
+                    cell.push(' ');
+                }
+                table.depth += 1;
+            }
+            continue;
+        }
+        if table.depth > 0 {
+            match name.as_str() {
+                "tr" if table.depth == 1 => {
+                    if let Some(text) = table.close_row() {
+                        out.push(body(decode_entities(&text)));
+                    }
+                    table.in_row = !closing;
+                }
+                "td" | "th" if table.depth == 1 => {
+                    if closing {
+                        table.close_cell();
+                    } else {
+                        table.open_cell(tag);
+                    }
+                }
+                // Dans une cellule, un titre, un bloc ou un tableau imbriqué
+                // sépare deux mots sans ouvrir de section ni de bloc.
+                name if table.cell.is_some() && (name == "br" || separates_words(name)) => {
+                    if let Some(cell) = table.cell.as_mut() {
+                        cell.push(' ');
+                    }
+                }
+                // Hors cellule (légende…) : un bloc ordinaire, jamais un titre.
+                name if table.cell.is_none() && BLOCK_TAGS.contains(&name) => {
+                    flush(&mut out, &mut current, false, false);
+                }
+                _ => {}
             }
             continue;
         }
@@ -457,7 +648,14 @@ fn html_blocks(input: &str) -> Vec<Block> {
         }
     }
     if skip_until.is_none() {
-        current.push_str(rest);
+        match table.cell.as_mut() {
+            Some(cell) => cell.push_str(rest),
+            None => current.push_str(rest),
+        }
+    }
+    // Tableau non refermé en fin de texte : sa dernière rangée compte.
+    if let Some(text) = table.close_row() {
+        out.push(body(decode_entities(&text)));
     }
     flush(&mut out, &mut current, heading, pre_depth > 0);
     out
@@ -725,6 +923,71 @@ mod tests {
                 (false, "Point!".into()),
             ]
         );
+    }
+
+    // Issue 731 : une rangée HTML donne un bloc, comme une ligne de tableau
+    // Markdown ; `rowspan` et `colspan` recopient la valeur ; un titre dans
+    // une cellule n'ouvre pas de section.
+    #[test]
+    fn html_table_rows_repeat_merged_cells() {
+        let html = "<h2>Actions</h2><table><caption>Suivi</caption>\
+            <tr><th><h3>Action</h3></th><th>Qui</th><th>Quand</th></tr>\
+            <tr><td>Commander</td><td rowspan=\"2\">Rémi</td><td ROWSPAN='2'>lundi</td></tr>\
+            <tr><td><p>Valider</p><p>le plan</p></td></tr>\
+            <tr><td>Planifier</td><td colspan=2>À&nbsp;confirmer</td></tr>\
+            </table><p>Fin</p>";
+        let markdown = "## Actions\n\nSuivi\n\n| Action | Qui | Quand |\n| --- | --- | --- |\n\
+            | Commander | Rémi | lundi |\n| Valider le plan | Rémi | lundi |\n\
+            | Planifier | À confirmer | À confirmer |\n\nFin\n";
+        let expected = vec![
+            (true, "Actions".to_owned()),
+            (false, "Suivi".into()),
+            (false, "Action Qui Quand".into()),
+            (false, "Commander Rémi lundi".into()),
+            (false, "Valider le plan Rémi lundi".into()),
+            (false, "Planifier À confirmer À confirmer".into()),
+            (false, "Fin".into()),
+        ];
+        assert_eq!(texts(html, Format::Html), expected);
+        assert_eq!(texts(markdown, Format::Markdown), expected);
+    }
+
+    #[test]
+    fn html_rowspan_reaching_past_a_short_row_still_fills_its_column() {
+        let html = "<table><tr><td>a</td><td>b</td><td rowspan=3>c</td></tr>\
+            <tr><td>d</td></tr><tr><td>e</td><td>f</td></tr></table>";
+        assert_eq!(
+            texts(html, Format::Html),
+            vec![
+                (false, "a b c".into()),
+                (false, "d c".into()),
+                (false, "e f c".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn unclosed_html_table_keeps_its_last_row() {
+        assert_eq!(
+            texts("<table><tr><td>a<td>b", Format::Html),
+            vec![(false, "a b".into())]
+        );
+    }
+
+    // Des fusions démesurées ne font pas exploser la mémoire : les copies
+    // s'arrêtent au budget, proportionnel à la taille du texte.
+    #[test]
+    fn html_span_copies_are_bounded() {
+        let cell = "x".repeat(1000);
+        let html = format!(
+            "<table><tr><td rowspan=65534 colspan=1000>{cell}</td></tr>{}</table>",
+            "<tr></tr>".repeat(2000)
+        );
+        let total: usize = blocks(&html, Format::Html)
+            .iter()
+            .map(|b| b.text.len())
+            .sum();
+        assert!(total <= 3 * html.len(), "{total}");
     }
 
     #[test]

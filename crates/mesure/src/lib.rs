@@ -27,7 +27,12 @@ use normalize::{Block, Token};
 ///   729), appariement ordonné des sections et mots des titres comptés
 ///   (issue 730), diff de patience, fusion par mots-outils et appariement
 ///   mot à mot dans un remplacement (issue 732).
-pub const RULE_VERSION: u32 = 2;
+/// - 3 (0.8.2) : tableaux lus rangée par rangée, comme une ligne de tableau
+///   Markdown, cellules fusionnées recopiées (`rowspan`, `colspan`,
+///   `w:vMerge`, `w:gridSpan`) ; dans un `.docx`, une cellule n'ouvre
+///   jamais de section, `mc:Fallback` est ignoré et `w:noBreakHyphen` lu
+///   comme un trait d'union (issue 731).
+pub const RULE_VERSION: u32 = 3;
 /// Version des garde-fous (statut et raisons, issue 733), à reporter avec
 /// chaque résultat. Régler un seuil change cette version, pas
 /// `RULE_VERSION` : les compteurs ne bougent pas.
