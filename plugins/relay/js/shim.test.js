@@ -5,7 +5,7 @@ import vm from "node:vm";
 
 const shim = readFileSync(new URL("./shim.js", import.meta.url), "utf8");
 
-function loadShim() {
+function loadShim(windowOverrides = {}) {
   const timers = [];
   const sockets = [];
   let reloads = 0;
@@ -13,8 +13,9 @@ function loadShim() {
   class FakeWebSocket {
     static OPEN = 1;
 
-    constructor(url) {
+    constructor(url, protocols) {
       this.url = url;
+      this.protocols = protocols;
       this.readyState = 0;
       this.sent = [];
       sockets.push(this);
@@ -25,11 +26,20 @@ function loadShim() {
     }
   }
 
+  // Page servie par le relay (port 1423), comme dans le navigateur.
   const window = {
+    ...windowOverrides,
     location: {
+      protocol: "http:",
+      host: "127.0.0.1:1423",
+      port: "1423",
+      hash: "",
+      pathname: "/",
+      search: "",
       reload() {
         reloads += 1;
       },
+      ...windowOverrides.location,
     },
   };
   vm.runInNewContext(shim, {
@@ -151,3 +161,48 @@ for (const [outcome, settle, expected] of [
     assert.equal(relay.window[`_${callbackId}`], undefined);
   });
 }
+
+// Issue 664 : le secret du canal arrive dans le fragment de l'URL de retour
+// de l'amorçage. Il est gardé pour ce port, retiré de la barre d'adresse et
+// présenté en sous-protocole WebSocket.
+test("the session secret from the bootstrap fragment opens the socket", () => {
+  const secret = "0123456789abcdef0123456789abcdef";
+  const stored = new Map();
+  const replaced = [];
+  const relay = loadShim({
+    location: { hash: `#relay-session=${secret}` },
+    sessionStorage: {
+      getItem: (key) => stored.get(key) ?? null,
+      setItem: (key, value) => stored.set(key, value),
+    },
+    history: { replaceState: (...args) => replaced.push(args) },
+  });
+
+  assert.deepEqual(
+    [...relay.sockets[0].protocols],
+    [`syntheo-relay.${secret}`],
+  );
+  assert.equal(stored.get("syntheo-relay-session"), secret);
+  assert.deepEqual(replaced, [[null, "", "/"]]);
+});
+
+test("a reloaded page reuses the session secret of this port", () => {
+  const secret = "fedcba9876543210fedcba9876543210";
+  const relay = loadShim({
+    sessionStorage: {
+      getItem: (key) => (key === "syntheo-relay-session" ? secret : null),
+      setItem() {},
+    },
+  });
+
+  assert.deepEqual(
+    [...relay.sockets[0].protocols],
+    [`syntheo-relay.${secret}`],
+  );
+});
+
+test("without a session secret, no protocol is offered", () => {
+  const relay = loadShim();
+
+  assert.deepEqual([...relay.sockets[0].protocols], []);
+});

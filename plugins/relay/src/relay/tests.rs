@@ -97,31 +97,110 @@ fn event_subscription_limit_allows_replacements_but_rejects_growth() {
 }
 
 // Issue 645 : commandes jamais transmises par le relay.
+// Issue 664 : liste d'autorisation. Une commande absente est refusée,
+// qu'elle soit dangereuse ou simplement inconnue.
 #[test]
-fn denies_commands_that_run_programs_or_read_secrets() {
+fn only_listed_commands_pass_the_relay() {
+    let none = serde_json::json!({});
     for cmd in [
         "plugin:local-api|run_automation_command",
         "plugin:store2|get_secret",
-        "plugin:store2|set_secret",
-        "plugin:store2|delete_secret",
         "plugin:opener2|open_path",
+        "plugin:export|export_text",
+        "plugin:dictation|insert_text",
+        "plugin:detect|send_meeting_chat_message",
+        "install_agent_skill",
         "plugin:mesure|measure",
-        "plugin:mesure|measure_differences",
-        "plugin:transcription|probe_local_transcription",
-        "plugin:transcription|on_device_download_models",
-        "plugin:transcription|on_device_install_models",
-        "plugin:transcription|on_device_cancel_install",
-        "plugin:transcription|on_device_remove_models",
         "plugin:transcription|on_device_commission",
+        // Inconnues : jamais transmises.
+        "plugin:shell|execute",
+        "plugin:fs|write_file",
+        "plugin:relay|relay_result",
+        "plugin:process|exit",
+        "plugin:clipboard-manager|read_text",
+        "made_up_command",
     ] {
-        assert!(super::is_denied_command(cmd), "{cmd}");
+        assert!(super::is_denied_command(cmd, &none), "{cmd}");
     }
     for cmd in [
         "plugin:db|execute",
-        "plugin:db|execute_proxy",
         "plugin:store2|get_str",
         "plugin:event|listen",
+        "plugin:event|unlisten",
+        "plugin:window|set_title",
+        "plugin:process|restart",
+        "get_pinned_tabs",
     ] {
-        assert!(!super::is_denied_command(cmd), "{cmd}");
+        assert!(!super::is_denied_command(cmd, &none), "{cmd}");
     }
+}
+
+// Contre-visite de l'issue 645 : `open_url` avec `openWith` lançait le
+// programme de son choix. Sans `openWith`, l'adresse s'ouvre normalement.
+#[test]
+fn open_url_passes_only_without_a_chosen_program() {
+    let cmd = "plugin:opener2|open_url";
+    assert!(!super::is_denied_command(
+        cmd,
+        &serde_json::json!({ "url": "https://exemple.fr" })
+    ));
+    assert!(!super::is_denied_command(
+        cmd,
+        &serde_json::json!({ "url": "https://exemple.fr", "openWith": null })
+    ));
+    for args in [
+        serde_json::json!({ "url": "/tmp/x.sh", "openWith": "sh" }),
+        serde_json::json!({ "url": "/tmp/x.sh", "open_with": "sh" }),
+    ] {
+        assert!(super::is_denied_command(cmd, &args), "{args}");
+    }
+}
+
+// Chaque commande des liaisons générées est classée : autorisée ou exclue
+// avec sa raison. Une commande nouvelle sans décision fait échouer ce test.
+#[test]
+fn every_bound_command_is_allowed_or_excluded() {
+    use crate::allowlist::{ALLOWED_COMMANDS, EXCLUDED_COMMANDS};
+    use std::collections::BTreeSet;
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut files = vec![root.join("apps/desktop/src/types/tauri.gen.ts")];
+    for plugin in std::fs::read_dir(root.join("plugins")).unwrap() {
+        let bindings = plugin.unwrap().path().join("js/bindings.gen.ts");
+        if bindings.exists() {
+            files.push(bindings);
+        }
+    }
+    let mut bound = BTreeSet::new();
+    for file in files {
+        let text = std::fs::read_to_string(&file).unwrap();
+        for part in text.split("TAURI_INVOKE(\"").skip(1) {
+            bound.insert(part.split('"').next().unwrap().to_string());
+        }
+    }
+    assert!(bound.len() > 200, "{} commandes lues", bound.len());
+
+    let excluded: BTreeSet<String> = EXCLUDED_COMMANDS
+        .iter()
+        .map(|(cmd, _)| cmd.to_string())
+        .collect();
+    let allowed: BTreeSet<String> = ALLOWED_COMMANDS
+        .iter()
+        .filter(|cmd| {
+            !cmd.starts_with("plugin:process|") && !cmd.starts_with("plugin:clipboard-manager|")
+        })
+        .map(|cmd| cmd.to_string())
+        .collect();
+    assert!(allowed.is_disjoint(&excluded));
+    let classified: BTreeSet<String> = allowed.union(&excluded).cloned().collect();
+    let unclassified: Vec<_> = bound.difference(&classified).collect();
+    let stale: Vec<_> = classified.difference(&bound).collect();
+    assert!(
+        unclassified.is_empty(),
+        "à classer dans allowlist.rs : {unclassified:?}"
+    );
+    assert!(
+        stale.is_empty(),
+        "commandes disparues des liaisons : {stale:?}"
+    );
 }

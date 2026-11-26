@@ -14,15 +14,27 @@ use axum::{
 /// session puis renvoie vers l'interface.
 pub(crate) const BOOTSTRAP_PATH: &str = "/__relay/bootstrap";
 
+/// Préfixe du sous-protocole WebSocket qui porte le secret du canal de
+/// commandes (issue 664) : `syntheo-relay.<secret>`.
+pub(crate) const WS_PROTOCOL_PREFIX: &str = "syntheo-relay.";
+
 // Accès au relay (issue 645). Le jeton d'amorçage est remis hors bande : écrit
 // dans un fichier lisible par le seul utilisateur et affiché en console, jamais
 // déduit d'en-têtes de requête. Il ne sert qu'une fois ; le suivant le
 // remplace aussitôt. Le cookie de session n'est posé que par cet amorçage,
 // jamais sur une réponse transmise depuis le serveur de développement.
+//
+// Issue 664 : un cookie n'est pas isolé par port (RFC 6265), une page d'un
+// autre port de la boucle locale ouverte par l'utilisateur le reçoit aussi.
+// Il ne sert donc qu'aux pages ; le canal de commandes (`/ws`) exige un
+// second secret, remis dans le fragment de l'URL de retour de l'amorçage
+// (jamais envoyé à un serveur, gardé par port dans `sessionStorage`) et
+// présenté en sous-protocole WebSocket.
 #[derive(Clone)]
 pub(crate) struct RelayAccess {
     port: u16,
     secret: String,
+    session: String,
     bootstrap: Arc<Mutex<String>>,
     token_file: Option<PathBuf>,
 }
@@ -32,6 +44,7 @@ impl RelayAccess {
         let access = Self {
             port,
             secret: uuid::Uuid::new_v4().to_string(),
+            session: uuid::Uuid::new_v4().simple().to_string(),
             bootstrap: Arc::new(Mutex::new(String::new())),
             token_file,
         };
@@ -84,6 +97,25 @@ impl RelayAccess {
         ]
         .into_iter()
         .find(|allowed| allowed == host)
+    }
+
+    /// Sous-protocole attendu sur `/ws`.
+    pub(crate) fn ws_protocol(&self) -> String {
+        format!("{WS_PROTOCOL_PREFIX}{}", self.session)
+    }
+
+    fn ws_authenticated(&self, headers: &HeaderMap) -> bool {
+        let expected = self.ws_protocol();
+        headers
+            .get_all(header::SEC_WEBSOCKET_PROTOCOL)
+            .iter()
+            .any(|value| {
+                value.to_str().is_ok_and(|protocols| {
+                    protocols.split(',').any(|protocol| {
+                        constant_time_eq(protocol.trim().as_bytes(), expected.as_bytes())
+                    })
+                })
+            })
     }
 
     fn cookie_name(&self) -> String {
@@ -176,7 +208,10 @@ pub(crate) async fn authorize(
         return (
             StatusCode::SEE_OTHER,
             [
-                (header::LOCATION, "/".to_string()),
+                (
+                    header::LOCATION,
+                    format!("/#relay-session={}", access.session),
+                ),
                 (
                     header::SET_COOKIE,
                     format!(
@@ -191,10 +226,13 @@ pub(crate) async fn authorize(
         )
             .into_response();
     }
-    if path != "/health" && !access.authenticated(req.headers()) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    if path == "/ws" && !same_origin {
+    if path == "/ws" {
+        // Canal de commandes : secret de session en sous-protocole et origine
+        // exacte ; le cookie, partagé entre les ports, n'y suffit pas.
+        if !same_origin || !access.ws_authenticated(req.headers()) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+    } else if path != "/health" && !access.authenticated(req.headers()) {
         return StatusCode::FORBIDDEN.into_response();
     }
 
@@ -315,7 +353,10 @@ mod tests {
 
         let ok = get_with(&router, &format!("{BOOTSTRAP_PATH}?token={first}"), &[]).await;
         assert_eq!(ok.status(), StatusCode::SEE_OTHER);
-        assert_eq!(ok.headers()[header::LOCATION], "/");
+        assert_eq!(
+            ok.headers()[header::LOCATION],
+            format!("/#relay-session={}", access.session)
+        );
         let cookie = format!("{}={}", access.cookie_name(), access.secret);
         assert_eq!(
             ok.headers()[header::SET_COOKIE],
@@ -341,32 +382,55 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
+    // Issue 664 : le canal de commandes exige le secret de session en
+    // sous-protocole et l'origine exacte. Le cookie, qu'une page d'un autre
+    // port de la boucle locale reçoit aussi, ne suffit pas.
     #[tokio::test]
-    async fn websocket_requires_the_cookie_and_its_exact_origin() {
+    async fn websocket_requires_the_session_protocol_and_its_exact_origin() {
         let access = RelayAccess::new(1423, None);
         let cookie = format!("{}={}", access.cookie_name(), access.secret);
+        let protocol = access.ws_protocol();
         let router = router(access);
-        for (origin, credential, expected) in [
-            ("http://127.0.0.1:1423", "", StatusCode::FORBIDDEN),
-            (
-                "https://attacker.example",
-                cookie.as_str(),
-                StatusCode::FORBIDDEN,
-            ),
-            ("", cookie.as_str(), StatusCode::FORBIDDEN),
+        let both = format!("chat, {protocol}");
+        for (origin, credentials, expected) in [
+            ("http://127.0.0.1:1423", vec![], StatusCode::FORBIDDEN),
             (
                 "http://127.0.0.1:1423",
-                "syntheo-relay-1423=forged",
+                vec![("cookie", cookie.as_str())],
                 StatusCode::FORBIDDEN,
             ),
-            ("http://127.0.0.1:1423", cookie.as_str(), StatusCode::OK),
+            (
+                "https://attacker.example",
+                vec![("sec-websocket-protocol", protocol.as_str())],
+                StatusCode::FORBIDDEN,
+            ),
+            (
+                "",
+                vec![("sec-websocket-protocol", protocol.as_str())],
+                StatusCode::FORBIDDEN,
+            ),
+            (
+                "http://127.0.0.1:1423",
+                vec![("sec-websocket-protocol", "syntheo-relay.forged")],
+                StatusCode::FORBIDDEN,
+            ),
+            (
+                "http://127.0.0.1:1423",
+                vec![("sec-websocket-protocol", protocol.as_str())],
+                StatusCode::OK,
+            ),
+            (
+                "http://127.0.0.1:1423",
+                vec![("sec-websocket-protocol", both.as_str())],
+                StatusCode::OK,
+            ),
         ] {
-            let mut headers = vec![("cookie", credential)];
+            let mut headers = credentials.clone();
             if !origin.is_empty() {
                 headers.push(("origin", origin));
             }
             let response = get_with(&router, "/ws", &headers).await;
-            assert_eq!(response.status(), expected, "{origin} {credential}");
+            assert_eq!(response.status(), expected, "{origin} {credentials:?}");
         }
         let wrong_host = router
             .clone()
@@ -374,7 +438,8 @@ mod tests {
                 Request::builder()
                     .uri("/ws")
                     .header(header::HOST, "attacker.example:1423")
-                    .header(header::COOKIE, cookie.as_str())
+                    .header(header::ORIGIN, "http://attacker.example:1423")
+                    .header(header::SEC_WEBSOCKET_PROTOCOL, protocol.as_str())
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -385,24 +450,33 @@ mod tests {
             get_with(&router, "/health", &[]).await.status(),
             StatusCode::OK
         );
+        // Sans jeton, aucune page : le secret du canal n'ouvre pas les pages.
+        let page = get_with(
+            &router,
+            "/",
+            &[("sec-websocket-protocol", protocol.as_str())],
+        )
+        .await;
+        assert_eq!(page.status(), StatusCode::FORBIDDEN);
         let restarted = RelayAccess::new(1423, None);
-        assert!(!restarted.authenticated(&HeaderMap::from_iter([(
-            header::COOKIE,
-            cookie.parse().unwrap()
+        assert!(!restarted.ws_authenticated(&HeaderMap::from_iter([(
+            header::SEC_WEBSOCKET_PROTOCOL,
+            protocol.parse().unwrap()
         )])));
     }
 
     #[tokio::test]
-    async fn websocket_connects_with_the_bootstrapped_cookie() {
+    async fn websocket_connects_with_the_session_protocol() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let access = RelayAccess::new(addr.port(), None);
-        let cookie = format!("{}={}", access.cookie_name(), access.secret);
+        let protocol = access.ws_protocol();
+        let echoed = protocol.clone();
         let router = Router::new()
             .route(
                 "/ws",
-                get(|ws: axum::extract::ws::WebSocketUpgrade| async {
-                    ws.on_upgrade(|mut socket| async move {
+                get(|ws: axum::extract::ws::WebSocketUpgrade| async move {
+                    ws.protocols([echoed]).on_upgrade(|mut socket| async move {
                         if let Some(Ok(message)) = socket.recv().await {
                             socket.send(message).await.unwrap();
                         }
@@ -416,7 +490,7 @@ mod tests {
         let mut request = format!("ws://{addr}/ws").into_client_request().unwrap();
         request
             .headers_mut()
-            .insert(header::COOKIE, cookie.parse().unwrap());
+            .insert(header::SEC_WEBSOCKET_PROTOCOL, protocol.parse().unwrap());
         request
             .headers_mut()
             .insert(header::ORIGIN, "https://attacker.example".parse().unwrap());
@@ -431,6 +505,10 @@ mod tests {
             .insert(header::ORIGIN, format!("http://{addr}").parse().unwrap());
         let (mut socket, response) = tokio_tungstenite::connect_async(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS);
+        assert_eq!(
+            response.headers()[header::SEC_WEBSOCKET_PROTOCOL],
+            protocol.as_str()
+        );
         socket
             .send(Message::Text("authenticated".into()))
             .await
