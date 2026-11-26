@@ -20,6 +20,43 @@ export function isModelsUpdate(models: OnDeviceModels): boolean {
   );
 }
 
+/**
+ * Pourquoi la source « Sur ce poste », choisie et autorisée, ne peut pas
+ * servir faute de module installé : programme compagnon absent, modèles d'une
+ * autre version (mise à jour), ou modèles absents. `null` : module installé.
+ */
+export type OnDeviceUnavailability =
+  | "companion_missing"
+  | "models_update"
+  | "models_missing";
+
+export function onDeviceUnavailability(
+  status: OnDeviceStatus | null | undefined,
+): OnDeviceUnavailability | null {
+  if (!status) return null;
+  if (!status.companion) return "companion_missing";
+  if (status.models.kind === "installed") return null;
+  return isModelsUpdate(status.models) ? "models_update" : "models_missing";
+}
+
+/**
+ * Message de la source « Sur ce poste » qui ne peut pas servir : le même pour
+ * l'état de la transcription, l'avertissement des réglages et le démarrage
+ * d'une écoute (issue 763), jamais « aucun fournisseur ».
+ */
+export function describeOnDeviceUnavailability(
+  reason: OnDeviceUnavailability,
+): string {
+  switch (reason) {
+    case "companion_missing":
+      return t`This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription.`;
+    case "models_update":
+      return t`The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription.`;
+    case "models_missing":
+      return t`The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription.`;
+  }
+}
+
 // Source « Sur ce poste » (issues 684 et 685) : adresse interne réservée,
 // résolue par l'application au lancement du module ; jamais une adresse
 // réelle ni modifiable.

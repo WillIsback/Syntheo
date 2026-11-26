@@ -2626,6 +2626,10 @@ msgstr "Install command copied"
 msgid "Install from a folder…"
 msgstr "Install from a folder…"
 
+#: src/stt/useStartListening.ts
+msgid "Install the models"
+msgstr "Install the models"
+
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Install to all agents"
@@ -3960,8 +3964,13 @@ msgid "On Linux (Wayland or X11)"
 msgstr "On Linux (Wayland or X11)"
 
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/settings/search-index.ts
 msgid "On this computer"
 msgstr "On this computer"
+
+#: src/settings/search-index.ts
+msgid "on this computer, offline, models, download, update, install"
+msgstr "on this computer, offline, models, download, update, install"
 
 #: src/settings/dictation.tsx
 msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
@@ -3992,6 +4001,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
 #: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Open"
 msgstr "Open"
 
@@ -6463,11 +6473,15 @@ msgstr "The transcription is still being written."
 msgid "The transcription models ({0}) are not installed yet."
 msgstr "The transcription models ({0}) are not installed yet."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 msgstr "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 
-#: src/settings/ai/stt/health.tsx
+#: src/sidebar/toast/registry.tsx
+msgid "The transcription models of this computer need an update"
+msgstr "The transcription models of this computer need an update"
+
+#: src/stt/on-device.ts
 msgid "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
 msgstr "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
 
@@ -6785,7 +6799,7 @@ msgstr "This version of Syntheo does not include transcription on this computer,
 msgid "This version of Syntheo does not include transcription on this computer."
 msgstr "This version of Syntheo does not include transcription on this computer."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 msgstr "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 
@@ -6892,6 +6906,10 @@ msgid "Transcription · key refused"
 msgstr "Transcription · key refused"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · models need an update"
+msgstr "Transcription · models need an update"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · no server"
 msgstr "Transcription · no server"
 
@@ -6930,6 +6948,10 @@ msgstr "Transcription interrupted {gaps}"
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "transcription model, Whisper, Nemotron, speech recognition"
+
+#: src/settings/search-index.ts
+msgid "Transcription models"
+msgstr "Transcription models"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
@@ -7150,7 +7172,10 @@ msgstr "up to date as of {coveredDate}"
 msgid "Update"
 msgstr "Update"
 
+#: src/settings/ai/stt/language-warning.tsx
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Update the models"
 msgstr "Update the models"
 

@@ -21,6 +21,7 @@ import {
 } from "~/services/updater/startup";
 import { useUpdater } from "~/services/updater/store";
 import { useIntelligenceDisabled } from "~/settings/managed";
+import { requestSettingFocus } from "~/settings/setting-focus";
 import { useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { useDevtoolsToastPreview } from "~/store/zustand/devtools-toast-preview";
@@ -51,6 +52,7 @@ export function ToastNotifications() {
   const transcription = useUsableTranscription();
   const hasSttConfigured = !transcription.needsProvider;
   const onDeviceNotReady = transcription.onDeviceNotReady;
+  const onDeviceModelsUpdate = transcription.onDeviceModelsUpdate;
 
   const currentTab = useTabs((state) => state.currentTab);
   const devtoolsPreview = useDevtoolsToastPreview((state) => state.preview);
@@ -86,6 +88,12 @@ export function ToastNotifications() {
     openAiTab("transcription");
   }, [openAiTab]);
 
+  // Issue 763 : arrive sur « Mettre à jour les modèles » de la carte.
+  const handleUpdateOnDeviceModels = useCallback(() => {
+    requestSettingFocus("stt-on-device-module");
+    openAiTab("transcription");
+  }, [openAiTab]);
+
   const registry = useMemo(
     () =>
       createToastRegistry({
@@ -95,6 +103,8 @@ export function ToastNotifications() {
         llmManagedOff,
         hasSttConfigured,
         onDeviceNotReady,
+        onDeviceModelsUpdate,
+        onUpdateOnDeviceModels: handleUpdateOnDeviceModels,
         isAiTranscriptionTabActive,
         isAiIntelligenceTabActive,
         onOpenLLMSettings: handleOpenLLMSettings,
@@ -106,6 +116,8 @@ export function ToastNotifications() {
       llmManagedOff,
       hasSttConfigured,
       onDeviceNotReady,
+      onDeviceModelsUpdate,
+      handleUpdateOnDeviceModels,
       isAiTranscriptionTabActive,
       isAiIntelligenceTabActive,
       handleOpenLLMSettings,

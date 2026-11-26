@@ -5,7 +5,7 @@ import { Warning } from "@syntheo/ui/components/icons";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import { useConnectionHealth } from "./health";
+import { type HealthStatus, useConnectionHealth } from "./health";
 import {
   getLanguageSupportIssue,
   resolveLiveLanguageSupportMode,
@@ -16,6 +16,7 @@ import {
   getBaseLanguageDisplayName,
   isAutoMainLanguage,
 } from "~/settings/general/language";
+import { requestSettingFocus } from "~/settings/setting-focus";
 import { useConfigValues } from "~/shared/config";
 import {
   isConfiguredSttModel,
@@ -67,7 +68,22 @@ function readDismissedTranscriptionLanguageWarnings(): string[] {
 
 export function TranscriptionLanguageWarningToast() {
   const { i18n, t } = useLingui();
-  const warning = useTranscriptionLanguageWarning();
+  const health = useConnectionHealth();
+  const warning = useTranscriptionLanguageWarning(health);
+
+  // Modèles « Sur ce poste » d'une autre version (issue 763) : l'avertissement
+  // le dit et mène au bouton « Mettre à jour les modèles » de la carte. Il
+  // disparaît avec la mise à jour ; une fermeture n'est pas retenue.
+  if (health.onDeviceUnavailable === "models_update" && health.message) {
+    return (
+      <TranscriptionLanguageWarningToastLifecycle
+        key="on-device-models-update"
+        description={health.message}
+        actionLabel={t`Update the models`}
+        onAction={() => requestSettingFocus("stt-on-device-module")}
+      />
+    );
+  }
 
   if (!warning || isTranscriptionLanguageWarningDismissed(warning.key)) {
     return null;
@@ -100,13 +116,16 @@ function TranscriptionLanguageWarningToastLifecycle({
   warningKey,
   description,
   actionLabel,
+  onAction,
 }: {
-  warningKey: string;
+  // Clé retenue à la fermeture ; sans clé, la fermeture n'est pas retenue.
+  warningKey?: string;
   description: string;
   actionLabel: string;
+  onAction?: () => void;
 }) {
   useMountEffect(() => {
-    let shouldRememberDismissal = true;
+    let shouldRememberDismissal = !!warningKey;
     toast.warning(description, {
       id: TRANSCRIPTION_LANGUAGE_WARNING_TOAST_ID,
       duration: Infinity,
@@ -115,12 +134,15 @@ function TranscriptionLanguageWarningToastLifecycle({
         label: actionLabel,
         onClick: () => {
           shouldRememberDismissal = false;
-          rememberDismissedTranscriptionLanguageWarning(warningKey);
+          if (warningKey) {
+            rememberDismissedTranscriptionLanguageWarning(warningKey);
+          }
+          onAction?.();
           clearTranscriptionLanguageWarningToast();
         },
       },
       onDismiss: () => {
-        if (shouldRememberDismissal) {
+        if (shouldRememberDismissal && warningKey) {
           rememberDismissedTranscriptionLanguageWarning(warningKey);
         }
       },
@@ -139,7 +161,7 @@ function clearTranscriptionLanguageWarningToast() {
   toast.dismiss(TRANSCRIPTION_LANGUAGE_WARNING_TOAST_ID);
 }
 
-function useTranscriptionLanguageWarning() {
+function useTranscriptionLanguageWarning(health: HealthStatus) {
   const {
     ai_language,
     current_stt_provider,
@@ -151,7 +173,6 @@ function useTranscriptionLanguageWarning() {
     "current_stt_model",
     "spoken_languages",
   ] as const);
-  const health = useConnectionHealth();
 
   const selectedSttModel = isConfiguredSttModel(
     current_stt_provider,

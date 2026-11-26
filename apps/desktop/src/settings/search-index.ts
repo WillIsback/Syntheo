@@ -441,6 +441,18 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`transcription model, Whisper, Nemotron, speech recognition`,
     fallback: "stt-server",
   },
+  {
+    // Modèles « Sur ce poste » : cible de « Mettre à jour les modèles » depuis
+    // un toast ou l'état de la transcription (issue 763). La carte disparaît
+    // quand le réglage géré interdit « Sur ce poste » : l'arrivée cible alors
+    // le serveur, pas une page sans réglage surligné.
+    id: "stt-on-device-module",
+    page: "transcription",
+    section: msg`On this computer`,
+    label: msg`Transcription models`,
+    keywords: msg`on this computer, offline, models, download, update, install`,
+    fallback: "stt-server",
+  },
 
   // Synthèse
   {

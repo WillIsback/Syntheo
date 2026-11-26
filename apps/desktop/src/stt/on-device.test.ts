@@ -2,11 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@syntheo/plugin-transcription", () => ({ commands: {} }));
 
+import type { OnDeviceStatus } from "@syntheo/plugin-transcription";
+
 import {
   afterColon,
+  describeOnDeviceUnavailability,
   isEligible,
   isOnDeviceUsable,
   ON_DEVICE_BASE_URL,
+  onDeviceUnavailability,
 } from "./on-device";
 import { resolveOnDeviceConnection } from "./useSTTConnection";
 
@@ -125,5 +129,58 @@ describe("afterColon", () => {
     expect(afterColon("Syntheo cannot start.")).toBe("Syntheo cannot start.");
     expect(afterColon("AVX2 is missing.")).toBe("AVX2 is missing.");
     expect(afterColon("")).toBe("");
+  });
+});
+
+// Issue 763 : la source choisie qui ne peut pas servir dit pourquoi, jamais
+// « aucun fournisseur ».
+describe("onDeviceUnavailability", () => {
+  const base: OnDeviceStatus = {
+    allowed: true,
+    companion: true,
+    models: { kind: "installed", totalBytes: 10 },
+    downloadable: true,
+  };
+
+  it("tells a models update from missing models and a missing companion", () => {
+    expect(onDeviceUnavailability(base)).toBeNull();
+    expect(onDeviceUnavailability(null)).toBeNull();
+    expect(onDeviceUnavailability({ ...base, companion: false })).toBe(
+      "companion_missing",
+    );
+    expect(
+      onDeviceUnavailability({
+        ...base,
+        models: {
+          kind: "partial",
+          presentBytes: 4,
+          totalBytes: 10,
+          resumable: false,
+        },
+      }),
+    ).toBe("models_update");
+    expect(
+      onDeviceUnavailability({
+        ...base,
+        models: {
+          kind: "partial",
+          presentBytes: 4,
+          totalBytes: 10,
+          resumable: true,
+        },
+      }),
+    ).toBe("models_missing");
+    expect(
+      onDeviceUnavailability({
+        ...base,
+        models: { kind: "missing", totalBytes: 10 },
+      }),
+    ).toBe("models_missing");
+  });
+
+  it("describes the update without mentioning a provider or an endpoint", () => {
+    const message = describeOnDeviceUnavailability("models_update");
+    expect(message).toContain("need an update");
+    expect(message).not.toMatch(/provider|endpoint/i);
   });
 });
