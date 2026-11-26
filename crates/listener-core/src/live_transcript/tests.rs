@@ -160,6 +160,68 @@ fn checkpointed_engine_ignores_replayed_words_and_keeps_segments_continuous() {
     );
 }
 
+// Issue 629, scénario de la QA (alpha 0.7.4-1) : le flux est coupé pendant
+// « Et la en personne… », le provisoire est validé à l'arrêt avec un
+// horodatage un peu tôt, puis le flux rouvert retranscrit les 5 s de contexte.
+// Avant le correctif : « Et la en personne personne en charge de chaque tâche ».
+#[test]
+fn a_listener_reopened_mid_sentence_does_not_double_words() {
+    let mut engine = LiveTranscriptEngine::new("openai", &[], Some("self"));
+    let response = |words: Vec<Word>, is_final: bool| {
+        let start = words.first().map_or(0.0, |w| w.start);
+        let end = words.last().map_or(0.0, |w| w.end);
+        let transcript = words
+            .iter()
+            .map(|w| format!(" {}", w.word))
+            .collect::<String>();
+        transcript_response_at(&transcript, words, is_final, 0, start, end - start)
+    };
+    let mut text = String::new();
+    let mut collect = |update: Option<LiveTranscriptUpdate>| {
+        if let Some(update) = update {
+            for word in update.transcript_delta.new_words {
+                text.push_str(&word.text);
+            }
+        }
+    };
+
+    collect(engine.process(&response(
+        vec![word("Et", 0.2, 0.4), word("la", 0.4, 0.7)],
+        true,
+    )));
+    collect(engine.process(&response(
+        vec![word("en", 1.0, 1.2), word("personne", 1.2, 1.5)],
+        false,
+    )));
+    collect(engine.checkpoint());
+
+    // Flux rouvert : rejeu du contexte, horodatages exacts.
+    collect(engine.process(&response(
+        vec![
+            word("la", 0.43, 0.73),
+            word("en", 0.9, 1.3),
+            word("personne", 1.5, 2.1),
+        ],
+        false,
+    )));
+    collect(engine.process(&response(
+        vec![
+            word("Et", 0.23, 0.43),
+            word("la", 0.43, 0.73),
+            word("en", 0.9, 1.3),
+            word("personne", 1.5, 2.1),
+            word("en", 2.1, 2.3),
+            word("charge", 2.3, 2.7),
+            word("de", 2.7, 2.8),
+            word("chaque", 2.8, 3.1),
+            word("tâche", 3.1, 3.5),
+        ],
+        true,
+    )));
+    collect(engine.flush());
+    assert_eq!(text, " Et la en personne en charge de chaque tâche");
+}
+
 #[test]
 fn updating_attendance_does_not_merge_remote_voices() {
     let mut engine = LiveTranscriptEngine::new("openai", &[], Some("self"));
