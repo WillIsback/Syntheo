@@ -26,18 +26,28 @@ function showToast(
 }
 
 describe("sidebar toast registry", () => {
-  it.each([
-    ["missing-llm", { hasLLMConfigured: false }],
-    ["missing-stt", { hasSttConfigured: false }],
-  ] as const)(
-    "requires %s setup even if it was dismissed previously",
-    (id, overrides) => {
-      const toast = showToast(overrides, (toast) => toast.id === id);
+  it("requires missing-stt setup even if it was dismissed previously", () => {
+    const toast = showToast(
+      { hasSttConfigured: false },
+      (toast) => toast.id === "missing-stt",
+    );
 
-      expect(toast?.id).toBe(id);
-      expect(toast?.lifecycle).toEqual({ type: "condition-bound" });
-    },
-  );
+    expect(toast?.id).toBe("missing-stt");
+    expect(toast?.lifecycle).toEqual({ type: "condition-bound" });
+  });
+
+  // Issue 632 : la demande de modèle de langage se ferme pour la session
+  // (elle recouvrait la capsule dans une fenêtre étroite) et revient au
+  // lancement suivant.
+  it("lets the missing-llm notice be closed for the session only", () => {
+    const toast = showToast({ hasLLMConfigured: false });
+
+    expect(toast?.id).toBe("missing-llm");
+    expect(toast?.lifecycle).toEqual({
+      type: "persistent",
+      dismissal: "session",
+    });
+  });
 
   // Issue 707 : synthèse coupée par l'administration.
   it("never asks for a language model when synthesis is managed off", () => {
