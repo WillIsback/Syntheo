@@ -2635,6 +2635,10 @@ msgid "Install to all agents"
 msgstr "Installer pour tous les agents"
 
 #: src/stt/on-device.ts
+msgid "Installation cancelled."
+msgstr "Installation annulée."
+
+#: src/stt/on-device.ts
 msgid "Installation cancelled. A download resumes where it stopped."
 msgstr "Installation annulée. Un téléchargement reprend là où il s'est arrêté."
 
@@ -3596,6 +3600,14 @@ msgstr "Aucun journal des modifications disponible pour cette version."
 #: src/templates/details.tsx
 msgid "No community templates available"
 msgstr "Aucun modèle communautaire disponible"
+
+#: src/stt/on-device.ts
+msgid "No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected."
+msgstr "Aucune connexion au serveur de téléchargement : rien n'a été téléchargé et les modèles actuels sont conservés. Réessayez une fois la connexion rétablie."
+
+#: src/stt/on-device.ts
+msgid "No connection to the download server: nothing was downloaded. Try again once connected."
+msgstr "Aucune connexion au serveur de téléchargement : rien n'a été téléchargé. Réessayez une fois la connexion rétablie."
 
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
@@ -6235,7 +6247,12 @@ msgstr "Les modèles ne sont pas installés ou sont incomplets."
 msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
 msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez : le téléchargement reprend là où il s'est arrêté."
 
+#: src/stt/on-device.ts
+msgid "The models could not be downloaded (network or server). Try again."
+msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez."
+
 #. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message, leftover)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The models were not installed: {0}"
 msgstr "Les modèles n'ont pas été installés : {0}"

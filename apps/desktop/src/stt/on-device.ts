@@ -65,7 +65,7 @@ export const ON_DEVICE_BASE_URL = "syntheo-speech://local";
 const ON_DEVICE_ENGINE = "parakeet_onnx" as const;
 export const ON_DEVICE_STATUS_QUERY_KEY = ["on-device-status"] as const;
 
-async function loadOnDeviceStatus(): Promise<OnDeviceStatus> {
+export async function loadOnDeviceStatus(): Promise<OnDeviceStatus> {
   const result = await transcriptionCommands.onDeviceStatus();
   if (result.status === "error") throw new Error(result.error);
   return result.data;
@@ -150,10 +150,48 @@ export async function runOnDeviceProbe(): Promise<Probe> {
 }
 
 /**
- * Message clair pour un code d'erreur du module (commandes du plugin, état
- * « refusé ») : jamais de texte technique affiché tel quel.
+ * Ce qu'un téléchargement interrompu laisse (issue 764) : un téléchargement
+ * partiel à reprendre (`.part` ou fichiers terminés pendant l'essai), ou
+ * rien, les modèles déjà en place (d'une autre version) étant gardés ou non.
  */
-export function describeOnDeviceError(code: string): string {
+export type DownloadLeftover = "partial" | "nothing_models_kept" | "nothing";
+
+function presentBytes(models: OnDeviceModels): number {
+  if (models.kind === "missing") return 0;
+  if (models.kind === "partial") return models.presentBytes;
+  return models.totalBytes;
+}
+
+/**
+ * Compare l'état des modèles avant l'essai et après l'échec. `undefined` :
+ * état illisible, rien à affirmer.
+ */
+export function downloadLeftover(
+  before: OnDeviceModels | null | undefined,
+  after: OnDeviceModels | null | undefined,
+): DownloadLeftover | undefined {
+  if (!after) return undefined;
+  if (after.kind === "partial" && after.resumable) return "partial";
+  if (!before) return undefined;
+  if (presentBytes(after) > presentBytes(before)) return "partial";
+  // « Modèles actuels gardés » seulement pour de vrais modèles d'une autre
+  // version en place avant l'essai, pas pour n'importe quel octet présent.
+  return isModelsUpdate(before) && presentBytes(after) > 0
+    ? "nothing_models_kept"
+    : "nothing";
+}
+
+/**
+ * Message clair pour un code d'erreur du module (commandes du plugin, état
+ * « refusé ») : jamais de texte technique affiché tel quel. Pour un
+ * téléchargement interrompu, `leftover` dit s'il reprendra : « reprend là où
+ * il s'est arrêté » seulement s'il existe un téléchargement partiel
+ * (issue 764).
+ */
+export function describeOnDeviceError(
+  code: string,
+  leftover?: DownloadLeftover,
+): string {
   switch (code) {
     case "capture_in_progress":
       return t`Stop the recording first.`;
@@ -182,9 +220,20 @@ export function describeOnDeviceError(code: string): string {
     case "no_download_source":
       return t`Downloading the models is not available: install them from a folder.`;
     case "network":
-      return t`The models could not be downloaded (network or server). Try again: the download resumes where it stopped.`;
+      switch (leftover) {
+        case "partial":
+          return t`The models could not be downloaded (network or server). Try again: the download resumes where it stopped.`;
+        case "nothing_models_kept":
+          return t`No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected.`;
+        case "nothing":
+          return t`No connection to the download server: nothing was downloaded. Try again once connected.`;
+        default:
+          return t`The models could not be downloaded (network or server). Try again.`;
+      }
     case "cancelled":
-      return t`Installation cancelled. A download resumes where it stopped.`;
+      return leftover === "partial"
+        ? t`Installation cancelled. A download resumes where it stopped.`
+        : t`Installation cancelled.`;
     case "measuring":
       return t`A measurement is already in progress.`;
     case "invalid":
@@ -225,8 +274,11 @@ export function afterColon(sentence: string): string {
 }
 
 /** Message d'erreur du module, à insérer après deux-points. */
-export function describeOnDeviceErrorAfterColon(code: string): string {
-  return afterColon(describeOnDeviceError(code));
+export function describeOnDeviceErrorAfterColon(
+  code: string,
+  leftover?: DownloadLeftover,
+): string {
+  return afterColon(describeOnDeviceError(code, leftover));
 }
 
 // Refus de lancement qui arrête une mise en service (codes de l'hôte) : la

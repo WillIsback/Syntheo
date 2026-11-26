@@ -6,7 +6,9 @@ import type { OnDeviceStatus } from "@syntheo/plugin-transcription";
 
 import {
   afterColon,
+  describeOnDeviceError,
   describeOnDeviceUnavailability,
+  downloadLeftover,
   isEligible,
   isOnDeviceUsable,
   ON_DEVICE_BASE_URL,
@@ -182,5 +184,75 @@ describe("onDeviceUnavailability", () => {
     const message = describeOnDeviceUnavailability("models_update");
     expect(message).toContain("need an update");
     expect(message).not.toMatch(/provider|endpoint/i);
+  });
+});
+
+// Issue 764 : « reprend là où il s'est arrêté » seulement s'il existe un
+// téléchargement partiel.
+describe("describeOnDeviceError after a failed download", () => {
+  const oldModels = {
+    kind: "partial",
+    presentBytes: 400,
+    totalBytes: 1000,
+    resumable: false,
+  } as const;
+
+  it("says no connection and keeps the current models when nothing was downloaded", () => {
+    const leftover = downloadLeftover(oldModels, oldModels);
+    expect(leftover).toBe("nothing_models_kept");
+    const message = describeOnDeviceError("network", leftover);
+    expect(message).toMatch(/No connection/);
+    expect(message).toMatch(/current models are kept/);
+    expect(message).toMatch(/Try again/);
+    expect(message).not.toMatch(/resumes where it stopped/);
+
+    const fresh = { kind: "missing", totalBytes: 1000 } as const;
+    expect(downloadLeftover(fresh, fresh)).toBe("nothing");
+    // Sans modèles d'une autre version avant l'essai, rien n'est « gardé ».
+    const installed = { kind: "installed", totalBytes: 1000 } as const;
+    expect(downloadLeftover(installed, installed)).toBe("nothing");
+    const resumableBefore = {
+      kind: "partial",
+      presentBytes: 300,
+      totalBytes: 1000,
+      resumable: true,
+    } as const;
+    expect(
+      downloadLeftover(resumableBefore, {
+        ...resumableBefore,
+        resumable: false,
+      }),
+    ).toBe("nothing");
+    const none = describeOnDeviceError("network", "nothing");
+    expect(none).toMatch(/nothing was downloaded/);
+    expect(none).not.toMatch(/current models|resumes/);
+  });
+
+  it("promises to resume only when a partial download exists", () => {
+    const leftover = downloadLeftover(oldModels, {
+      ...oldModels,
+      presentBytes: 600,
+      resumable: true,
+    });
+    expect(leftover).toBe("partial");
+    expect(describeOnDeviceError("network", leftover)).toMatch(
+      /resumes where it stopped/,
+    );
+    // Un fichier terminé pendant l'essai, sans `.part` : il est gardé.
+    expect(
+      downloadLeftover(oldModels, { ...oldModels, presentBytes: 700 }),
+    ).toBe("partial");
+    expect(describeOnDeviceError("cancelled", "partial")).toMatch(
+      /resumes where it stopped/,
+    );
+    expect(describeOnDeviceError("cancelled", "nothing")).toBe(
+      "Installation cancelled.",
+    );
+  });
+
+  it("claims nothing when the state cannot be read", () => {
+    expect(downloadLeftover(oldModels, undefined)).toBeUndefined();
+    const message = describeOnDeviceError("network");
+    expect(message).not.toMatch(/resumes|nothing was downloaded/);
   });
 });
