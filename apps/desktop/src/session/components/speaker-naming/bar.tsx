@@ -12,6 +12,7 @@ import {
 import {
   clearSpeakerNamed,
   consumeSpeakerNamingRequest,
+  namedSinceSummary,
   setSpeakerNamingAvailable,
   useSpeakerNamingStore,
 } from "./store";
@@ -30,18 +31,25 @@ export function SpeakerNamingBar({
   sessionId,
   enhancedNoteId,
   summaryMarkdown,
+  summaryGeneratedAt,
 }: {
   sessionId: string;
   enhancedNoteId: string;
   summaryMarkdown: string;
+  /** Heure de génération de la synthèse affichée (ISO), si connue. */
+  summaryGeneratedAt: string | null;
 }) {
   const listening = useListener(
     (state) =>
       state.live.sessionId === sessionId && state.live.status !== "inactive",
   );
   const { cards, ready } = useSpeakerCards(sessionId, !listening);
+  // Un nom donné avant la dernière synthèse est déjà dedans : seule une
+  // synthèse plus ancienne que le dernier nom justifie de proposer d'en
+  // refaire une (issue 773). Pendant la génération, la barre est démontée
+  // (vue de streaming) : la comparaison d'heures ne dépend pas d'elle.
   const named = useSpeakerNamingStore((state) =>
-    Boolean(state.named[sessionId]),
+    namedSinceSummary(state.named[sessionId], summaryGeneratedAt),
   );
   const requested = useSpeakerNamingStore(
     (state) => state.requested === sessionId,
@@ -73,13 +81,16 @@ export function SpeakerNamingBar({
     [requested],
   );
 
-  // Synthèse coupée (issue 707) : pas de régénération proposée.
+  // Synthèse coupée (issue 707) : pas de régénération proposée. Il faut qu'au
+  // moins un intervenant ait été nommé depuis la dernière synthèse : une note
+  // sans diarisation n'a rien à nommer, même si sa synthèse parle
+  // d'« intervenants » (issue 773).
   const proposeRegenerate =
     ready &&
     !isGenerating &&
     !summaryOff &&
-    summaryMentionsAnonymousSpeakers(summaryMarkdown) &&
-    (count === 0 || named);
+    named &&
+    summaryMentionsAnonymousSpeakers(summaryMarkdown);
 
   const handleRegenerate = () => {
     clearSpeakerNamed(sessionId);

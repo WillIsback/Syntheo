@@ -74,12 +74,18 @@ function card(id: string, minor = false): SpeakerCard {
   };
 }
 
-function renderBar(summaryMarkdown = "Compte rendu sans locuteur.") {
+const SUMMARY_AT = "2025-06-02T09:00:00.000Z";
+
+function renderBar(
+  summaryMarkdown = "Compte rendu sans locuteur.",
+  summaryGeneratedAt: string | null = SUMMARY_AT,
+) {
   return render(
     <SpeakerNamingBar
       sessionId="session-1"
       enhancedNoteId="note-1"
       summaryMarkdown={summaryMarkdown}
+      summaryGeneratedAt={summaryGeneratedAt}
     />,
   );
 }
@@ -212,6 +218,7 @@ describe("SpeakerNamingBar", () => {
   });
 
   it("offers to regenerate when everyone is named but the summary is not", () => {
+    act(() => markSpeakerNamed("session-1"));
     renderBar("- **Speaker 2** : accord");
 
     expect(
@@ -222,9 +229,40 @@ describe("SpeakerNamingBar", () => {
     ).not.toBeNull();
   });
 
+  // Issue 773 : note transcrite sans diarisation, aucun intervenant à nommer.
+  it("offers nothing for a note without diarization", () => {
+    const { container } = renderBar("- **Speaker 2** : accord");
+
+    expect(container.textContent).toBe("");
+    expect(
+      screen.queryByRole("button", { name: "Regenerate summary with names" }),
+    ).toBeNull();
+  });
+
+  // Issue 773 : un nom donné avant la synthèse affichée y est déjà.
+  it("ignores names given before the summary was generated", () => {
+    mocks.cards = [card("t1:Speaker 2")];
+    act(() => markSpeakerNamed("session-1", Date.parse(SUMMARY_AT) - 60_000));
+    renderBar("- **Speaker 2** : accord");
+
+    expect(
+      screen.queryByRole("button", { name: "Regenerate summary with names" }),
+    ).toBeNull();
+  });
+
+  it("counts any name for a summary without a generation time", () => {
+    act(() => markSpeakerNamed("session-1", Date.parse(SUMMARY_AT)));
+    renderBar("- **Speaker 2** : accord", null);
+
+    expect(
+      screen.getByRole("button", { name: "Regenerate summary with names" }),
+    ).not.toBeNull();
+  });
+
   // Synthèse coupée (issue 707) : pas de régénération proposée.
   it("hides the proposal when summaries are turned off", () => {
     mocks.summaryOff = true;
+    act(() => markSpeakerNamed("session-1"));
     renderBar("- **Speaker 2** : accord");
 
     expect(
@@ -234,6 +272,7 @@ describe("SpeakerNamingBar", () => {
 
   it("hides the proposal while a summary is being generated", () => {
     mocks.isGenerating = true;
+    act(() => markSpeakerNamed("session-1"));
     renderBar("- **Speaker 2** : accord");
 
     expect(
