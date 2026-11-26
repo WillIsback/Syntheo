@@ -273,6 +273,8 @@ vi.mock("~/stt/queries", () => ({
 
 const SESSION = "session-1";
 const DISCLOSURE_TEXT =
+  "J'utilise Syntheo pour transcrire cette réunion ; la transcription est conservée sur mon poste.";
+const PREVIOUS_DISCLOSURE_TEXT =
   "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.";
 
 // Configuration par défaut : langue « en », envois automatiques coupés,
@@ -1489,7 +1491,7 @@ describe("useStartListening", () => {
       await waitFor(() => {
         expect(m.startMeetingChatCapture).toHaveBeenCalledWith({
           sessionId: SESSION,
-          excludedTexts: [DISCLOSURE_TEXT],
+          excludedTexts: [DISCLOSURE_TEXT, PREVIOUS_DISCLOSURE_TEXT],
           onParticipantDeclined: expect.any(Function),
         });
       });

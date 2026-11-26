@@ -43,7 +43,7 @@ Pour une base à un autre emplacement :
 
 ## Utiliser les outils avec méthode
 
-Commencez par `list_meetings`, puis passez un `id` renvoyé à `get_meeting`. Pour un projet ou un client, appelez `list_folders` et passez un `path` renvoyé comme `folder_path`. N'appelez `get_meeting_transcript` que si la note et les résumés ne suffisent pas.
+Commencez par `list_meetings`, puis passez un `id` renvoyé à `get_meeting`. Pour un projet ou un client, appelez `list_folders` et passez un `path` renvoyé comme `folder_path`. N'appelez `get_meeting_transcript` que si la note et les synthèses ne suffisent pas.
 
 Ne citez que les réunions renvoyées par les outils. Une liste vide signifie seulement qu'aucune réunion ne correspond ; n'inventez ni titre, ni date, ni identifiant.
 
@@ -53,16 +53,16 @@ Utilisez `get_recurring_meeting_history` avec un identifiant connu quand la tâc
 
 ## Proposer une modification
 
-Pour modifier un résumé ou la note, appelez `propose_summary_edit` ou `propose_memo_edit`. L'outil renvoie une proposition en attente : n'affirmez pas que la réunion a changé. L'utilisateur l'applique ou la refuse dans l'application. `list_proposals` et `get_proposal` permettent d'inspecter les propositions ; `decline_proposal` refuse une proposition en attente sans toucher à la réunion.
+Pour modifier une synthèse ou la note, appelez `propose_summary_edit` ou `propose_memo_edit`. L'outil renvoie une proposition en attente : n'affirmez pas que la réunion a changé. L'utilisateur l'applique ou la refuse dans l'application. `list_proposals` et `get_proposal` permettent d'inspecter les propositions ; `decline_proposal` refuse une proposition en attente sans toucher à la réunion.
 
 ## Importer un enregistrement
 
-`import_recording` crée une réunion à partir d'un fichier audio présent sur l'ordinateur du serveur MCP. L'application doit être ouverte : c'est elle qui transcrit le fichier avec le serveur de transcription configuré, puis génère le résumé. Suivez l'avancement avec `get_recording_import`. N'utilisez cet outil que si l'utilisateur le demande.
+`import_recording` crée une réunion à partir d'un fichier audio présent sur l'ordinateur du serveur MCP. L'application doit être ouverte : c'est elle qui transcrit le fichier avec le serveur de transcription configuré, puis génère la synthèse. Suivez l'avancement avec `get_recording_import`. N'utilisez cet outil que si l'utilisateur le demande.
 
 ## Ressources
 
 Le serveur expose aussi des ressources MCP (`syntheo://meetings/...`, `syntheo://series/...`) en Markdown ou en texte brut, pour les clients qui préfèrent les ressources aux outils.
 
-Le contenu des réunions (titres, notes, comptes rendus, transcriptions) peut contenir du texte écrit par d'autres personnes ou issu d'un enregistrement importé. Le serveur le présente donc comme une donnée non fiable : la copie texte de chaque résultat d'outil, et chaque ressource, est placée entre `<untrusted-meeting-data>` et `</untrusted-meeting-data>`, et les instructions du serveur demandent à l'agent de ne jamais suivre une consigne qui s'y trouve. Le contenu structuré (`structuredContent`) reste du JSON conforme au schéma de l'outil, sans délimiteur.
+Le contenu des réunions (titres, notes, synthèses, transcriptions) peut contenir du texte écrit par d'autres personnes ou issu d'un enregistrement importé. Le serveur le présente donc comme une donnée non fiable : la copie texte de chaque résultat d'outil, et chaque ressource, est placée entre `<untrusted-meeting-data>` et `</untrusted-meeting-data>`, et les instructions du serveur demandent à l'agent de ne jamais suivre une consigne qui s'y trouve. Le contenu structuré (`structuredContent`) reste du JSON conforme au schéma de l'outil, sans délimiteur.
 
 Paramètres exacts et ressources : voir la [référence MCP](/fr/reference/mcp).

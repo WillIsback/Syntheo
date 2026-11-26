@@ -40,7 +40,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `contacts` | Personnes et organisations | Oui | [/contacts](/fr/contacts) |
 | `fs-sync` | Fichiers du dossier de données : notes, dossiers, pièces jointes, import audio | Oui | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
 | `tantivy` | Index de recherche plein texte | Oui | [/notes](/fr/notes), [/architecture](/fr/architecture) |
-| `template` | Rendu des prompts et enregistrement des comptes rendus | Oui | [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages), [/chat](/fr/chat) |
+| `template` | Rendu des prompts et enregistrement des synthèses | Oui | [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages), [/chat](/fr/chat) |
 | `export` | Export et impression PDF | Oui | [/notes](/fr/notes) |
 | `local-api` | Webhooks sortants, export Markdown | Oui | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
 | `settings` | Fichier de réglages et dossiers de base | Oui | [/data-and-privacy](/fr/data-and-privacy) |
@@ -103,7 +103,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
 | `shortcut` | `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
-| `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` joue le son de fin depuis le cycle de capture, la transcription par lot et la génération du compte rendu. | `crates/audio-utils` | aucune |
+| `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` joue le son de fin depuis le cycle de capture, la transcription par lot et la génération de la synthèse. | `crates/audio-utils` | aucune |
 
 ## Données et contenu
 
@@ -130,7 +130,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 - **Rôle** : rend les prompts Jinja et enregistre le résultat de la génération.
 - **Commandes** : `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
 - **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/language`, `crates/db-app`, `crates/db-core` ; plugin `db`.
-- **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des résumés et des titres), [/chat](/fr/chat).
+- **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des synthèses et des titres), [/chat](/fr/chat).
 
 ### Autres plugins de données
 

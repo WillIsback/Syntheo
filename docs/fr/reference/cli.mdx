@@ -41,7 +41,7 @@ syntheo meetings --source local list
 | --- | --- | --- |
 | `meetings list` | `-q, --query TEXTE`, `--series-id ID`, `--folder CHEMIN`, `--limit 1..200`, `--offset N` | Réunions, 20 par défaut. La recherche ignore la casse et porte sur le titre et l'identifiant. `--folder` inclut les sous-dossiers. Chaque réunion contient `folder_path`, `null` hors dossier. |
 | `meetings folders` | `-q, --query TEXTE`, `--limit 1..200`, `--offset N` | Dossiers, avec `path`, `name` et `parent_path`, y compris les dossiers vides et parents. 100 par défaut. |
-| `meetings get ID` | — | Métadonnées, note canonique, résumés, participants et actions. |
+| `meetings get ID` | — | Métadonnées, note canonique, synthèses, participants et actions. |
 | `meetings note ID` | `--kind note\|summary\|all` | Les documents demandés. `note` par défaut. |
 | `meetings transcript ID` | `--limit 1..500`, `--offset N` | Une page bornée de la transcription, en mots. 200 mots depuis l'offset 0 par défaut. |
 | `meetings history ID` | `--limit 1..200`, `--offset N` | Une page des réunions de la même série récurrente. 20 depuis l'offset 0 par défaut. |
@@ -62,14 +62,14 @@ syntheo --json meetings get MEETING_ID
 | `meetings import FICHIER` | `--title TITRE`, `--folder CHEMIN`, `--request-key CLÉ`, `--wait`, `--timeout SECONDES` | Crée une réunion et met en file la transcription du fichier par l'application. |
 | `meetings import-status ID` | — | État durable d'une tâche d'import. |
 
-L'application doit être ouverte sur la même base : sans elle, l'import est refusé. Elle transcrit le fichier avec le serveur de transcription configuré dans l'application, puis génère le résumé avec le LLM configuré. L'audio est envoyé à ce serveur.
+L'application doit être ouverte sur la même base : sans elle, l'import est refusé. Elle transcrit le fichier avec le serveur de transcription configuré dans l'application, puis génère la synthèse avec le LLM configuré. L'audio est envoyé à ce serveur.
 
 - Formats acceptés : WAV, MP3, OGG, MP4, M4A, FLAC, WebM, AAC. Le fichier doit être non vide et lisible sur la machine qui exécute la CLI. Les fichiers de sous-titres ou de transcription ne sont pas acceptés.
 - Le fichier n'est pas copié : l'application le lit à son emplacement d'origine. Ne le déplacez pas et ne le supprimez pas avant la fin de la tâche.
 - `--title` vaut par défaut le nom du fichier sans extension. `--folder` doit désigner un dossier existant (voir `meetings folders`).
 - `--request-key` (1 à 200 octets) rend l'import rejouable : réutilisez la même clé pour réessayer le même import, et il renvoie la tâche et la réunion d'origine, même après un échec. Un nouvel import exige une nouvelle clé.
 
-Le résultat contient `meeting_id`, `job_id`, `processing_status`, `summary_status` et `error` (éventuellement `null`). `processing_status` passe par `queued`, `importing`, `transcribing`, `summarizing`, puis `done` ou `failed`. `summary_status` vaut `pending`, `done`, `skipped_no_model`, `skipped_too_short` ou `failed` : `done` pour le traitement ne garantit donc pas qu'un résumé a été généré.
+Le résultat contient `meeting_id`, `job_id`, `processing_status`, `summary_status` et `error` (éventuellement `null`). `processing_status` passe par `queued`, `importing`, `transcribing`, `summarizing`, puis `done` ou `failed`. `summary_status` vaut `pending`, `done`, `skipped_no_model`, `skipped_too_short` ou `failed` : `done` pour le traitement ne garantit donc pas qu'une synthèse a été générée.
 
 `--wait` attend un état final. `--timeout` vaut 3600 secondes par défaut (de 1 à 86400). Codes de sortie : 0 pour une soumission ou une fin réussie, 1 pour un échec, 2 si l'attente expire. L'expiration ou l'interruption de la CLI n'annule pas la tâche : continuez avec `import-status`. Une tâche interrompue en cours de route est marquée `failed` ; les données déjà produites sont conservées.
 
@@ -81,7 +81,7 @@ Ces commandes créent ou consultent des modifications en attente. Elles n'appliq
 
 | Commande | Options | Résultat |
 | --- | --- | --- |
-| `proposals create` | `--meeting ID`, `--kind summary\|memo`, `--target ID`, `--content TEXTE` ou `--content-file FICHIER` | Prépare un remplacement en attente. `--target` est obligatoire quand la réunion a plusieurs résumés. |
+| `proposals create` | `--meeting ID`, `--kind summary\|memo`, `--target ID`, `--content TEXTE` ou `--content-file FICHIER` | Prépare un remplacement en attente. `--target` est obligatoire quand la réunion a plusieurs synthèses. |
 | `proposals list` | `--meeting ID`, `--status pending\|applied\|declined\|all`, `--limit 1..200`, `--offset N` | Propositions, des plus récentes aux plus anciennes. Par défaut, celles en attente, 20 résultats. |
 | `proposals show ID` | — | Métadonnées de la proposition et diff unifié. |
 | `proposals decline ID` | — | Refuse une proposition en attente. La réunion ne change pas. |

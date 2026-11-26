@@ -1,5 +1,5 @@
 ---
-title: "Notes, comptes rendus et transcriptions"
+title: "Notes, synthèses et transcriptions"
 description: "Relisez une réunion, corrigez les détails et exportez le résultat."
 ---
 
@@ -7,13 +7,13 @@ import { AppPalette, Kbd, NoteActions, SettingsPath } from "/snippets/organize.g
 
 Une fois l'écoute terminée, la note passe à l'étape **Synthèse**. Tout tient dans un seul document :
 
-- **le compte rendu**, rédigé par votre serveur de synthèse ;
-- **vos notes**, celles que vous avez prises vous-même, dans l'onglet « Mes notes » : dans le compte rendu, les phrases qui en viennent sont en vert, et elles ne forment un bloc « Vos notes » sous le compte rendu que si « Colorer mes notes dans le compte rendu » est désactivé ;
+- **la synthèse**, rédigée par votre serveur de synthèse ;
+- **vos notes**, celles que vous avez prises vous-même, dans l'onglet « Mes notes » : dans la synthèse, les phrases qui en viennent sont en vert, et elles ne forment un bloc « Vos notes » sous la synthèse que si « Colorer mes notes dans la synthèse » est désactivé ;
 - **la transcription**, que vous affichez dans la marge de droite.
 
-Une légende « Provenance du texte » rappelle qui a écrit quoi : vos notes sont en vert (« Vos notes »), le texte de Syntheo est à l'encre normale (« Complété par Syntheo »). Le sceau 記 en bas du compte rendu indique qu'il est terminé.
+Une légende « Provenance du texte » rappelle qui a écrit quoi : vos notes sont en vert (« Vos notes »), le texte de Syntheo est à l'encre normale (« Complété par Syntheo »). Le sceau 記 en bas de la synthèse indique qu'elle est terminée.
 
-Vous modifiez le compte rendu et vos notes comme un texte ordinaire.
+Vous modifiez la synthèse et vos notes comme un texte ordinaire.
 
 <Note>
   Syntheo ne conserve jamais l'audio. Il n'y a donc ni lecteur audio, ni retranscription après coup : la transcription produite pendant la capture est la seule trace de la conversation.
@@ -23,7 +23,7 @@ Vous modifiez le compte rendu et vos notes comme un texte ordinaire.
 
 La capsule en bas de la fenêtre regroupe les actions de l'étape Synthèse :
 
-- **« Copier »** copie le compte rendu affiché dans le presse-papiers, au format Markdown (ou vos notes, s'il n'y a pas encore de compte rendu).
+- **« Copier »** copie la synthèse affichée dans le presse-papiers, au format Markdown (ou vos notes, s'il n'y a pas encore de synthèse).
 - **« Exporter »** (<Kbd keys="Ctrl+P" />) ouvre la fenêtre d'export (voir plus bas).
 - **« Automatisations »** lance sur cette note une automatisation prête. Le bouton n'apparaît que si au moins une automatisation est prête. Voir [Automatisations](/fr/automations).
 - **« Demander à la note »** (<Kbd keys="Ctrl+J" />) ouvre le chat sur cette réunion. Voir [Discuter avec vos réunions](/fr/chat).
@@ -44,9 +44,9 @@ Essayez ci-dessous : ouvrez le menu **•••** (1), puis cliquez sur « Expor
 
 ## Vérifier une modification proposée
 
-Quand le chat, la CLI ou le serveur MCP local propose de remplacer le compte rendu, la proposition s'affiche à sa place, à l'étape Synthèse : « Modification proposée du résumé ». Le texte retiré est barré, le texte ajouté est surligné. Choisissez « Appliquer au résumé » ou « Refuser ». Tant que vous ne l'appliquez pas, le compte rendu reste inchangé.
+Quand le chat, la CLI ou le serveur MCP local propose de remplacer la synthèse, la proposition s'affiche à sa place, à l'étape Synthèse : « Modification proposée de la synthèse ». Le texte retiré est barré, le texte ajouté est surligné. Choisissez « Appliquer à la synthèse » ou « Refuser ». Tant que vous ne l'appliquez pas, la synthèse reste inchangée.
 
-Une proposition en attente affiche aussi le bandeau « 1 modification en attente » en haut de la note, avec « Vérifier le compte rendu » ou, pour vos notes, « Vérifier la note ».
+Une proposition en attente affiche aussi le bandeau « 1 modification en attente » en haut de la note, avec « Vérifier la synthèse » ou, pour vos notes, « Vérifier la note ».
 
 ## Afficher et corriger la transcription
 
@@ -56,22 +56,22 @@ Une proposition en attente affiche aussi le bandeau « 1 modification en attente
 - Sélectionnez plusieurs blocs pour les réattribuer d'un coup avec « Modifier l'orateur », les « Fusionner » ou les « Supprimer » (en mode édition).
 - Cliquez sur le nom d'un locuteur pour choisir un participant existant ou « Créer un nouvel intervenant ». Cochez « Appliquer à tout » pour mettre à jour tous les segments de ce locuteur.
 
-## Choisir la forme du compte rendu
+## Choisir la forme de la synthèse
 
-Le type de réunion choisi à l'étape Préparer fixe le modèle du compte rendu. Sans choix sur la note, Syntheo utilise le modèle du dossier de la note, s'il en a un. À l'étape Synthèse, le nom du modèle utilisé s'affiche dans la ligne d'informations sous le titre.
+Le type de réunion choisi à l'étape Préparer fixe le modèle de la synthèse. Sans choix sur la note, Syntheo utilise le modèle du dossier de la note, s'il en a un. À l'étape Synthèse, le nom du modèle utilisé s'affiche dans la ligne d'informations sous le titre.
 
-À droite de cette ligne, « Mes notes » et « Synthèse · v1 » basculent entre vos notes et le compte rendu. La flèche à côté (« Versions de la synthèse ») ouvre un menu :
+À droite de cette ligne, « Mes notes » et « Synthèse · v1 » basculent entre vos notes et la synthèse. La flèche à côté (« Versions de la synthèse ») ouvre un menu :
 
-- « Versions » liste les versions du compte rendu ; la version en cours est marquée « Actuelle » ;
-- « Régénérer » rédige à nouveau le compte rendu ;
-- « Changer de modèle… » ouvre le sélecteur : recherchez un modèle (« Rechercher des modèles... ») et sélectionnez-le pour remplacer le compte rendu par un nouveau, rédigé selon ce modèle. « Voir tous les modèles » ouvre l'éditeur de modèles ;
-- « Copier » copie le compte rendu.
+- « Versions » liste les versions de la synthèse ; la version en cours est marquée « Actuelle » ;
+- « Régénérer » rédige à nouveau la synthèse ;
+- « Changer de modèle… » ouvre le sélecteur : recherchez un modèle (« Rechercher des modèles... ») et sélectionnez-le pour remplacer la synthèse par une nouvelle, rédigée selon ce modèle. « Voir tous les modèles » ouvre l'éditeur de modèles ;
+- « Copier » copie la synthèse.
 
-Consultez [Personnaliser les comptes rendus](/fr/customize-summaries) pour créer vos propres modèles.
+Consultez [Personnaliser les synthèses](/fr/customize-summaries) pour créer vos propres modèles.
 
 ## Compléter une note existante
 
-Une note restée sans compte rendu, par exemple parce que vous avez quitté Syntheo pendant une pause, propose dans sa capsule « Reprendre l'écoute » et « Générer le compte rendu ». « Reprendre l'écoute » ajoute une nouvelle capture à la même note. Pour une pause en cours de réunion, utilisez plutôt « Mettre en pause » dans la capsule : voir [Faire une pause](/fr/meetings#faire-une-pause).
+Une note restée sans synthèse, par exemple parce que vous avez quitté Syntheo pendant une pause, propose dans sa capsule « Reprendre l'écoute » et « Générer la synthèse ». « Reprendre l'écoute » ajoute une nouvelle capture à la même note. Pour une pause en cours de réunion, utilisez plutôt « Mettre en pause » dans la capsule : voir [Faire une pause](/fr/meetings#faire-une-pause).
 
 Dans une note vide, le même menu propose aussi « Téléverser un audio » et « Téléverser une transcription ». Voir [Importer un enregistrement](/fr/import-recordings).
 
@@ -79,7 +79,7 @@ Dans une note vide, le même menu propose aussi « Téléverser un audio » et �
 
 1. Cliquez sur « Exporter » dans la capsule, ou appuyez sur <Kbd keys="Ctrl+P" />. Sur l'accueil, vous pouvez aussi faire un clic droit sur une note de « Reprendre » et choisir « Exporter… », sans l'ouvrir.
 2. Sous « Format de fichier », choisissez PDF, TXT, Markdown ou Org.
-3. Sous « Inclure », cochez « Mémo », « Résumé » et « Transcription », dans la combinaison de votre choix.
+3. Sous « Inclure », cochez « Mémo », « Synthèse » et « Transcription », dans la combinaison de votre choix.
 
 4. Cliquez sur « Enregistrer ». « Imprimer… » ouvre toujours un PDF dans votre lecteur, quel que soit le format choisi : choisissez-y Imprimer.
 

@@ -4488,6 +4488,10 @@ msgstr "Related Notes"
 msgid "Release page"
 msgstr "Release page"
 
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "Reload editor"
+msgstr "Reload editor"
+
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
 msgid "Remind participants about recording"
@@ -6026,6 +6030,10 @@ msgstr "The differences could not be listed."
 #: src/settings/general/update-section.tsx
 msgid "The download was interrupted. Try again."
 msgstr "The download was interrupted. Try again."
+
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "The editor failed to render. Your recording is still running."
+msgstr "The editor failed to render. Your recording is still running."
 
 #: src/mesure/beta-data.tsx
 msgid "The export could not be built or saved."

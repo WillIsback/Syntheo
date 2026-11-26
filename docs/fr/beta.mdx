@@ -13,7 +13,7 @@ La participation est volontaire. La mesure est désactivée par défaut, se calc
 | --- | --- |
 | **Éprouvé, hors du champ de la bêta** | La transcription en direct en français. |
 | **Conçu ainsi, hors du champ de la bêta** | Syntheo est conçu pour ne garder aucun audio et n'envoyer les réunions qu'aux serveurs configurés ; aucun flux automatique n'a été trouvé par l'audit statique. Voir [Données et confidentialité](/fr/data-and-privacy) et [Sécurité](/fr/security). |
-| **Observé une seule fois** | Un compte rendu construit avec Syntheo et partagé après une retouche partielle, par son concepteur. Un seul utilisateur, qui connaît l'outil : ce n'est pas une preuve. |
+| **Observé une seule fois** | Une synthèse construite avec Syntheo et partagée après une retouche partielle, par son concepteur. Un seul utilisateur, qui connaît l'outil : ce n'est pas une preuve. |
 | **Jamais vérifié : c'est l'objet de la bêta** | Qu'une autre personne obtienne, sur ses propres réunions, une synthèse envoyable avec peu de reprise de fond. Que l'ajout d'un terme au dictionnaire réduise les corrections de noms propres et de sigles. |
 
 ## La méthode en clair
@@ -39,7 +39,7 @@ Le calcul est déterministe : les mêmes textes donnent toujours les mêmes nomb
 
 Chaque mesure garde la version de la règle de calcul. Quand la règle change, une synthèse mesurée seulement sous une ancienne règle affiche « Mesure à refaire (règle mise à jour) » dans son menu, et ses anciennes mesures ne sont pas exportées : seule compte la première mesure faite sous la règle en vigueur.
 
-Des garde-fous jugent aussi chaque mesure, avec des seuils provisoires, réglés plus tard sur un jeu de comptes rendus de référence. Une mesure est **refusée**, sans chiffre affiché ni exporté, si un code HTML reste illisible dans la version envoyée ou si moins de la moitié des mots générés y sont retrouvés. Elle est **douteuse**, chiffres grisés et raison affichée, si moins de la moitié des titres sont retrouvés ou si plus de 10 % des mots générés sont dans des sections non retrouvées.
+Des garde-fous jugent aussi chaque mesure, avec des seuils provisoires, réglés plus tard sur un jeu de synthèses de référence. Une mesure est **refusée**, sans chiffre affiché ni exporté, si un code HTML reste illisible dans la version envoyée ou si moins de la moitié des mots générés y sont retrouvés. Elle est **douteuse**, chiffres grisés et raison affichée, si moins de la moitié des titres sont retrouvés ou si plus de 10 % des mots générés sont dans des sections non retrouvées.
 
 Deux indicateurs en découlent, pour 1 000 mots générés :
 
@@ -157,7 +157,7 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
 | `status` | `ok`, ou `doubtful` si la mesure est douteuse. Une mesure refusée n'est jamais exportée. | `"ok"` |
 | `status_reasons` | Raisons d'un statut douteux : `global_alignment` (moins de la moitié des titres retrouvés, mesure sur le texte entier) ou `unmatched_sections` (plus de 10 % des mots générés dans des sections non retrouvées). Vide si `ok`. | `[]` |
 | `controls` | Métriques de contrôle, des nombres : `generated_kept_words` (mots générés retrouvés tels quels), `sections_matched_exact` et `sections_matched_near` (sections retrouvées par un titre identique ou proche), `deleted_section_words` (mots des sections générées non retrouvées), `residual_entities` (toujours `0` dans un export). | `{"generated_kept_words": 22, …}` |
-| `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de compte rendu, `other` sinon), `matched` (retrouvée ou non) et `counters` (ses compteurs, voir ci-dessous). Jamais son titre. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
+| `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de synthèse, `other` sinon), `matched` (retrouvée ou non) et `counters` (ses compteurs, voir ci-dessous). Jamais son titre. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
 
 **Compteurs (`total` et `counters` de chaque section)**
 

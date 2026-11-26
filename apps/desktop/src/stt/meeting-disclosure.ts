@@ -13,7 +13,23 @@ import { persistDisclosureAttempt } from "./meeting-consent-store";
 import { copyText } from "~/settings/developers/clipboard";
 
 export const MEETING_DISCLOSURE_MESSAGE =
-  "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.";
+  "J'utilise Syntheo pour transcrire cette réunion ; la transcription est conservée sur mon poste.";
+
+/**
+ * Textes des versions précédentes du message (issue 635) : déjà postés dans
+ * des réunions en cours ou passées, ils restent exclus de la transcription et
+ * ne comptent jamais comme une réponse d'un participant.
+ */
+const PREVIOUS_MEETING_DISCLOSURE_MESSAGES = [
+  // syntheo-disclosure-v2
+  "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.",
+];
+
+/** Message actuel et anciennes versions, à ignorer dans le chat de la réunion. */
+export const MEETING_DISCLOSURE_TEXTS: readonly string[] = [
+  MEETING_DISCLOSURE_MESSAGE,
+  ...PREVIOUS_MEETING_DISCLOSURE_MESSAGES,
+];
 
 const MEETING_DISCLOSURE_MAX_ATTEMPTS = 30;
 const MEETING_DISCLOSURE_RETRY_INTERVAL_MS = 1_000;

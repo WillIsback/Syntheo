@@ -15,7 +15,7 @@ import { useListener } from "./contexts";
 import { notifyListeningElsewhere } from "./listening-elsewhere";
 import { startMeetingChatCapture } from "./meeting-chat-capture";
 import {
-  MEETING_DISCLOSURE_MESSAGE,
+  MEETING_DISCLOSURE_TEXTS,
   startMeetingRecordingDisclosure,
 } from "./meeting-disclosure";
 import { startMeetingScreenCapture } from "./meeting-screen-capture";
@@ -332,7 +332,7 @@ export function useStartListeningState(
 
     const stopChatCapture = startMeetingChatCapture({
       sessionId,
-      excludedTexts: [MEETING_DISCLOSURE_MESSAGE],
+      excludedTexts: [...MEETING_DISCLOSURE_TEXTS],
       onParticipantDeclined: () => {
         toast.warning(
           t`A participant declined recording. Syntheo stopped listening.`,

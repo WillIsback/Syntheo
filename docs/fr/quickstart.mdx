@@ -5,7 +5,7 @@ description: "Installez Syntheo, branchez vos serveurs de transcription et de sy
 
 import { AppHome, AppPalette, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
 
-Syntheo n'utilise aucun service cloud d'IA : les comptes rendus passent par votre serveur de modèle de langage, et la transcription par votre serveur ou, si vous l'installez, par la source [Sur ce poste](/fr/on-device-transcription). Configurez-les avant votre premier enregistrement : sans source de transcription, Syntheo refuse de démarrer l'écoute.
+Syntheo n'utilise aucun service cloud d'IA : les synthèses passent par votre serveur de modèle de langage, et la transcription par votre serveur ou, si vous l'installez, par la source [Sur ce poste](/fr/on-device-transcription). Configurez-les avant votre premier enregistrement : sans source de transcription, Syntheo refuse de démarrer l'écoute.
 
 <Steps>
   <Step title="Installer Syntheo">
@@ -24,13 +24,13 @@ Syntheo n'utilise aucun service cloud d'IA : les comptes rendus passent par votr
     Choisissez un modèle de transcription **en temps réel** : Syntheo ne conserve pas l'audio et ne peut donc pas transcrire après coup une capture en direct.
   </Step>
   <Step title="Configurer la synthèse">
-    Dans le même groupe, ouvrez **Synthèse** et saisissez l'adresse de votre serveur de modèle de langage compatible OpenAI (vLLM, SGLang, llama.cpp, Ollama, LM Studio ou TGI). Cliquez sur « Tester la connexion » : Syntheo lit la liste des modèles servis. Ce modèle rédige les comptes rendus et répond quand vous interrogez une note.
+    Dans le même groupe, ouvrez **Synthèse** et saisissez l'adresse de votre serveur de modèle de langage compatible OpenAI (vLLM, SGLang, llama.cpp, Ollama, LM Studio ou TGI). Cliquez sur « Tester la connexion » : Syntheo lit la liste des modèles servis. Ce modèle rédige les synthèses et répond quand vous interrogez une note.
   </Step>
   <Step title="Vérifier l'audio">
     Syntheo capte votre microphone et l'audio système (les autres participants). Si votre système vous demande une autorisation d'accès au microphone, acceptez-la. Vous pouvez vérifier l'état des accès dans **Paramètres → Avancé → Autorisations**.
   </Step>
   <Step title="Lancer un premier enregistrement">
-    Sur l'accueil, cliquez sur « Démarrer une réunion » (<Kbd keys="Ctrl+N" />). La note s'ouvre à l'étape **Préparer**. Cliquez sur « Commencer l'écoute » dans la capsule en bas de la fenêtre. Parlez quelques secondes : la transcription s'affiche dans la marge de droite. Cliquez sur « Terminer ». Le compte rendu apparaît à l'étape **Synthèse**.
+    Sur l'accueil, cliquez sur « Démarrer une réunion » (<Kbd keys="Ctrl+N" />). La note s'ouvre à l'étape **Préparer**. Cliquez sur « Commencer l'écoute » dans la capsule en bas de la fenêtre. Parlez quelques secondes : la transcription s'affiche dans la marge de droite. Cliquez sur « Terminer ». La synthèse apparaît à l'étape **Synthèse**.
   </Step>
 </Steps>
 

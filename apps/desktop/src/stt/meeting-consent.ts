@@ -1,4 +1,4 @@
-export const MEETING_DISCLOSURE_MESSAGE_VERSION = "syntheo-disclosure-v2";
+export const MEETING_DISCLOSURE_MESSAGE_VERSION = "syntheo-disclosure-v3";
 
 type DisclosureDelivery = "sent" | "not_sent" | "cancelled";
 
@@ -46,13 +46,19 @@ const CONSENT_PATTERN = /\b(i\s+consent|i\s+agree\s+to\s+(being\s+)?record)/i;
 
 export function interpretChatAsConsentResponse(
   text: string,
-  disclosureMessage: string,
+  disclosureMessages: readonly string[],
 ): ParticipantConsentStatus | null {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) {
     return null;
   }
-  if (normalized === disclosureMessage.replace(/\s+/g, " ").trim()) {
+  // Le message d'information lui-même, dans sa version actuelle ou une
+  // ancienne (issue 635), n'est jamais une réponse.
+  if (
+    disclosureMessages.some(
+      (message) => normalized === message.replace(/\s+/g, " ").trim(),
+    )
+  ) {
     return null;
   }
   if (DECLINE_PATTERN.test(normalized)) {

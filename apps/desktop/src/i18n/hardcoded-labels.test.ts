@@ -92,7 +92,7 @@ describe("libellés hors composant en français", () => {
         wordCount: 30,
       }),
     ).toBe(
-      "Transcription trop courte pour un résumé (120/160 caractères minimum)",
+      "Transcription trop courte pour une synthèse (120/160 caractères minimum)",
     );
   });
 });
