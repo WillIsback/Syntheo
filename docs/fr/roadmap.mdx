@@ -1,29 +1,53 @@
 ---
 title: "Feuille de route"
-description: "Les prochaines évolutions prévues pour Syntheo."
+description: "Ce que Syntheo a livré et les prochaines versions prévues."
 icon: "map"
 ---
 
-Syntheo est en construction (bêta). Cette page liste les chantiers prévus, sans engagement de date. L'état actuel du produit est décrit dans [Architecture](/fr/architecture).
+Syntheo est en construction (bêta). Cette page présente les grandes étapes du produit : celles déjà livrées et celles qui viennent, sans engagement de date. L'état actuel du produit est décrit dans [Architecture](/fr/architecture).
 
 Quelle que soit la forme du produit, les principes restent les mêmes : inférence uniquement sur les serveurs que vous choisissez, aucun audio conservé, ni compte imposé, ni télémétrie.
 
-## Chantiers prévus
-
 <Steps>
-  <Step title="CLI">
-    Une interface en ligne de commande distribuée avec l'application, pour consulter et exploiter vos réunions depuis un terminal ou un agent. Aujourd'hui, la CLI se compile depuis les sources : voir [Installer la CLI](/fr/installation).
+  <Step title="0.7.0 · Projets, fil rouge et dossiers · livré">
+    Les réunions se rangent dans des dossiers de projet, avec un fil rouge qui relie les réunions d'un même sujet et prépare la suivante. Voir [Dossiers](/fr/folders) et les [notes de version 0.7.0](https://github.com/WillIsback/Syntheo/releases/tag/v0.7.0).
   </Step>
-  <Step title="API REST">
-    Une API REST pour intégrer Syntheo à vos outils et automatisations.
+  <Step title="0.8.0 · Transcription native sur le poste · livré">
+    Un programme de transcription livré avec l'application transcrit les réunions directement sur l'ordinateur, sans serveur, quand le poste le permet. Voir [Transcrire sur ce poste](/fr/on-device-transcription) et les [notes de version 0.8.0](https://github.com/WillIsback/Syntheo/releases/tag/v0.8.0).
   </Step>
-  <Step title="Version mobile">
-    Une application mobile.
+  <Step title="0.9.0 · Mode Dessin et images · prochaine version">
+    Pendant la réunion, un mode Dessin ouvre dans la note une surface de type tableau blanc : crayon, formes, flèches, texte. On y saisit à la main un schéma, un plan ou une idée, sans chercher à faire joli.
+
+    À la génération de la synthèse, le modèle de langue lit ce croquis et les images collées dans la note, puis les reproduit proprement dans la synthèse finale. Le croquis d'origine reste joint et consultable, et le schéma reproduit est signalé « à vérifier ». Il faut un modèle avec vision sur votre serveur de synthèse.
   </Step>
-  <Step title="Version web">
-    Une version utilisable depuis un navigateur.
+  <Step title="1.0.0 · Version mobile synchronisée">
+    Une application mobile synchronisée avec l'ordinateur : vous enregistrez un appel depuis votre téléphone et vous prenez la note en même temps sur l'ordinateur, les deux restant liés à la même réunion.
   </Step>
 </Steps>
+
+## Aperçu de la 0.9.0
+
+Maquettes de travail : l'interface finale peut évoluer.
+
+<Frame caption="Pendant l'écoute, le dessin s'ouvre dans la note, à côté de la transcription. La capsule gagne un bouton crayon.">
+  <img className="block dark:hidden" src="/images/roadmap/ecouter-dessin-light.webp" alt="Note en cours d'écoute avec un croquis à main levée et la barre d'outils de dessin" />
+  <img className="hidden dark:block" src="/images/roadmap/ecouter-dessin-dark.webp" alt="Note en cours d'écoute avec un croquis à main levée et la barre d'outils de dessin" />
+</Frame>
+
+<Frame caption="La commande « / » insère un dessin à l'endroit du curseur, comme une image ou une liste.">
+  <img className="block dark:hidden" src="/images/roadmap/inserer-dessin-light.webp" alt="Menu des commandes ouvert avec l'entrée Dessin" />
+  <img className="hidden dark:block" src="/images/roadmap/inserer-dessin-dark.webp" alt="Menu des commandes ouvert avec l'entrée Dessin" />
+</Frame>
+
+<Frame caption="Dans la synthèse, le schéma est reproduit proprement et signalé « à vérifier », avec le croquis d'origine à portée de clic.">
+  <img className="block dark:hidden" src="/images/roadmap/synthese-schema-light.webp" alt="Synthèse contenant un schéma reproduit à partir du croquis" />
+  <img className="hidden dark:block" src="/images/roadmap/synthese-schema-dark.webp" alt="Synthèse contenant un schéma reproduit à partir du croquis" />
+</Frame>
+
+<Frame caption="Un réglage indique si le modèle de synthèse lit les images, avec un test d'image.">
+  <img className="block dark:hidden" src="/images/roadmap/reglage-vision-light.webp" alt="Carte du serveur de synthèse avec le réglage de lecture des images" />
+  <img className="hidden dark:block" src="/images/roadmap/reglage-vision-dark.webp" alt="Carte du serveur de synthèse avec le réglage de lecture des images" />
+</Frame>
 
 ## Proposer une idée
 
