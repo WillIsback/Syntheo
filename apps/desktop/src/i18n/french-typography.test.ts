@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { WELCOME_NOTES } from "~/onboarding/welcome-note.constants";
+
 /**
  * Typographie française du catalogue fr (issue 765) : une espace insécable
  * (U+00A0 ou U+202F) précède « : ; ! ? » et suit « / précède ». Une espace
@@ -16,6 +18,17 @@ const CATALOG = join(
   "messages.po",
 );
 const NON_BREAKING = /[  ]/u;
+
+/**
+ * Textes français écrits en dur hors du catalogue, contrôlés de la même façon.
+ * Restent hors liste : le message d'annonce posté dans les réunions
+ * (stt/meeting-disclosure.ts), reconnu tel quel dans le chat de la réunion, et
+ * les modèles de synthèse par défaut, recopiés par une migration de la base.
+ */
+const HARDCODED_FRENCH_TEXTS: Record<string, string> = {
+  "onboarding/welcome-note.constants.ts (titre)": WELCOME_NOTES.fr.title,
+  "onboarding/welcome-note.constants.ts (texte)": WELCOME_NOTES.fr.body,
+};
 
 /** Retire ce qui n'est pas de la prose : URL, entités HTML, variables, balises. */
 function stripNonProse(text: string): string {
@@ -106,6 +119,19 @@ describe("typographie française du catalogue fr", () => {
       findFrenchTypographyIssues("Codes HTML (comme &eacute;) restants"),
     ).toEqual([]);
     expect(findFrenchTypographyIssues("Raccourci {shortcut}")).toEqual([]);
+  });
+
+  // Issue 765 : la note de bienvenue (texte en dur) gardait des espaces simples.
+  it("n'a aucune espace simple dans les textes français écrits en dur", () => {
+    const offenders = Object.entries(HARDCODED_FRENCH_TEXTS)
+      .map(([source, text]) => ({
+        source,
+        issues: findFrenchTypographyIssues(text),
+      }))
+      .filter(({ issues }) => issues.length > 0)
+      .map(({ source, issues }) => `${source} ${JSON.stringify(issues)}`);
+
+    expect(offenders).toEqual([]);
   });
 
   it("n'a aucune espace simple devant « : ; ! ? » ni dans « … » dans les msgstr", () => {
