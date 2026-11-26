@@ -1,2 +1,10 @@
 [general]
 dirs = ["assets"]
+
+# Issue 772 : askama échappe en HTML les gabarits `.jinja` par défaut
+# (« l'équipe » devenait « l&#39;équipe »). Les prompts sont du texte brut
+# pour le modèle : aucun échappement pour toute l'extension `jinja`.
+# Les échappeurs déclarés ici passent avant ceux d'askama.
+[[escaper]]
+path = "askama::filters::Text"
+extensions = ["jinja"]
