@@ -192,7 +192,7 @@ describe("messages en français", () => {
     });
 
     expect(paused).toBe(
-      "Transcription en direct en pause : NVIDIA NeMo-Speech.cpp subit une panne. Aucun audio n'est enregistré sur le disque : si la coupure dure, ce passage manquera à la transcription. Reconnexion…",
+      "Transcription en direct en pause\u00a0: NVIDIA NeMo-Speech.cpp subit une panne. Aucun audio n'est enregistré sur le disque\u00a0: si la coupure dure, ce passage manquera à la transcription. Reconnexion…",
     );
     expect(paused).not.toMatch(/transcript\b/i);
     expect(getLiveTranscriptResumedMessage()).toBe(
@@ -209,6 +209,8 @@ describe("messages en français", () => {
         sttProvider: null,
         online: false,
       }),
-    ).toMatch(/^Transcription en direct en pause : vous êtes hors ligne\./);
+    ).toMatch(
+      /^Transcription en direct en pause\u00a0: vous êtes hors ligne\./,
+    );
   });
 });
