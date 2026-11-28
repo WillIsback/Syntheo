@@ -6,6 +6,11 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
 import {
+  clearImportPending,
+  listPendingImports,
+  recordTranscriptionFailure,
+} from "~/session/transcription-failure";
+import {
   acknowledgeCompletedBatch,
   recoverRunningBatchSessions,
 } from "~/store/zustand/listener/general-batch";
@@ -93,7 +98,13 @@ function ResumeBatchTranscription({
         resume: { provider: session.provider, model: session.model },
       })
       .then(() =>
-        getEnhancerService()?.queueAutoEnhanceIfSummaryEmpty(sessionId),
+        // Comme useUploadFile : une erreur du résumé n'est pas un échec de la
+        // transcription, qui est déjà enregistrée.
+        getEnhancerService()
+          ?.queueAutoEnhanceIfSummaryEmpty(sessionId)
+          .catch((error: unknown) => {
+            console.error("[listener] failed to queue auto summary", error);
+          }),
       )
       .catch(async (error) => {
         if (isStoppedTranscriptionError(error)) return;
@@ -107,12 +118,34 @@ function ResumeBatchTranscription({
         // Transcription, et un toast le signale une fois.
         listenerStore.getState().handleBatchFailed(sessionId, message);
         await acknowledgeCompletedBatch(sessionId);
+        // Gardé dans la note, comme un import direct (issue 559), pour un
+        // import par l'interface seulement (marqueur « import en cours ») :
+        // l'échec d'un import d'agent est écrit par son worker.
+        const pending = await listPendingImports().catch(() => []);
+        if (pending.some((item) => item.sessionId === sessionId)) {
+          await recordTranscriptionFailure(sessionId, error).catch(
+            (persistError: unknown) => {
+              console.error(
+                "[listener] failed to record resumed import failure",
+                persistError,
+              );
+            },
+          );
+        }
         notifyResumedImportAbandoned({
           sessionId,
           name: fileName(session.file_path) ?? (record.title || null),
           error,
         });
-      });
+      })
+      // Issue 822 : succès, échec ou arrêt, comme useUploadFile, le marqueur
+      // « import en cours » est retiré ; sinon le lancement suivant annonce
+      // l'import interrompu alors que la reprise a abouti.
+      .finally(() =>
+        clearImportPending(sessionId).catch((error: unknown) => {
+          console.error("[listener] failed to clear import pending", error);
+        }),
+      );
   }, [connectionLoading, record, session, sessionId]);
 
   return null;
