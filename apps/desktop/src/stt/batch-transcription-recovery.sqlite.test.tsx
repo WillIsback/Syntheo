@@ -37,6 +37,9 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastWarning: vi.fn(),
   sessions: [] as TranscriptionSession[],
+  enhancer: null as null | {
+    queueAutoEnhanceIfSummaryEmpty: () => Promise<unknown>;
+  },
 }));
 
 function query(sql: string, params: unknown[] = []) {
@@ -93,7 +96,9 @@ vi.mock("~/store/zustand/tabs", () => ({
 vi.mock("~/session/queries", () => ({
   useSession: (id: string) => ({ id, title: "Entretien Atelier Brun" }),
 }));
-vi.mock("~/services/enhancer", () => ({ getEnhancerService: () => null }));
+vi.mock("~/services/enhancer", () => ({
+  getEnhancerService: () => mocks.enhancer,
+}));
 vi.mock("~/stt/useSTTConnection", () => ({
   useSTTConnection: () => ({ isLoading: false }),
 }));
@@ -158,6 +163,7 @@ describe("resumed audio import and its pending marker", () => {
     );
     mocks.database = database;
     mocks.sessions = [SESSION];
+    mocks.enhancer = null;
     await markImportPending("session-1", "entretien.mp4");
   });
 
@@ -208,5 +214,40 @@ describe("resumed audio import and its pending marker", () => {
     await nextLaunch();
     expect(metadata()).not.toHaveProperty("transcription_failure");
     expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("does not turn a summary error into a transcription failure", async () => {
+    mocks.runBatch.mockResolvedValue(undefined);
+    mocks.enhancer = {
+      queueAutoEnhanceIfSummaryEmpty: async () => {
+        throw new Error("database is locked");
+      },
+    };
+
+    await resumeAfterReload();
+    expect(metadata()).not.toHaveProperty("transcription_pending");
+    expect(metadata()).not.toHaveProperty("transcription_failure");
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  // Un import d'agent repris n'a pas de marqueur : son échec est écrit par le
+  // worker d'import, que la reprise ne doit pas écraser.
+  it("leaves the failure of an agent import to its worker", async () => {
+    mocks.database!.exec(
+      `UPDATE sessions SET metadata_json = json_set(metadata_json,
+         '$.transcription_failure', json('{"code":"agent_import","message":"agent import interrupted"}'))
+       WHERE id = 'session-1'`,
+    );
+    mocks.database!.exec(
+      `UPDATE sessions SET metadata_json = json_remove(metadata_json, '$.transcription_pending')
+       WHERE id = 'session-1'`,
+    );
+    mocks.runBatch.mockRejectedValue(new Error("Server error (500)."));
+
+    render(<BatchTranscriptionRecovery />);
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledTimes(1));
+    expect((metadata().transcription_failure as { code: unknown }).code).toBe(
+      "agent_import",
+    );
   });
 });
