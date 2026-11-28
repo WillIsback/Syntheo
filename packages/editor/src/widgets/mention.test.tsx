@@ -1,7 +1,11 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { type MentionItem, useMentionSearch } from "./mention";
+import {
+  type MentionItem,
+  mentionDescriptionClass,
+  useMentionSearch,
+} from "./mention";
 
 function deferredSearch() {
   const pending = new Map<
@@ -60,5 +64,22 @@ describe("useMentionSearch", () => {
     });
     expect(result.current.items).toEqual([]);
     expect(result.current.selectedIndex).toBe(0);
+  });
+});
+
+describe("mentionDescriptionClass", () => {
+  it("garde entier le compteur des seules lignes de dossier (issue 815)", () => {
+    const row = (type: string): MentionItem => ({
+      id: type,
+      type,
+      label: "Carrelune RH",
+      description: "3 réunions",
+    });
+    expect(mentionDescriptionClass(row("folder")).split(" ")).toContain(
+      "mention-count",
+    );
+    for (const type of ["session", "human", "organization"]) {
+      expect(mentionDescriptionClass(row(type))).toBe("mention-description");
+    }
   });
 });

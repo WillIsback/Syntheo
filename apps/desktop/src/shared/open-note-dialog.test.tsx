@@ -539,8 +539,8 @@ describe("recherche commune dans la palette", () => {
     expect(parentOf("Comité")).toBeUndefined();
   });
 
-  // Issue 792 : un parent long se réduit avant le nom du sous-dossier, et
-  // l'infobulle donne le chemin complet.
+  // Issues 792 et 815 : un parent long se réduit avant le nom du
+  // sous-dossier, et l'infobulle donne le chemin complet.
   it("réduit le parent avant le nom et donne le chemin complet en infobulle", () => {
     const longParent = "Comptes rendus du comité de pilotage trimestriel";
     setCatalog(notes, [longParent, `${longParent}/Ateliers`, "Comité"]);
@@ -560,19 +560,27 @@ describe("recherche commune dans la palette", () => {
 
     const name = option?.querySelector("[data-testid=palette-folder-name]");
     const parent = option?.querySelector("[data-testid=palette-folder-parent]");
-    const shrinkOf = (element: Element | null | undefined) => {
-      const classes = element?.getAttribute("class")?.split(/\s+/) ?? [];
-      if (classes.includes("shrink-0")) return 0;
-      const custom = classes
-        .map((name) => /^shrink-\[(\d+)\]$/.exec(name)?.[1])
-        .find(Boolean);
-      return custom ? Number(custom) : 1;
-    };
-    // Le nom peut encore se réduire (sinon il déborderait de la palette),
-    // mais le parent cède la place bien avant lui.
-    expect(name?.getAttribute("class")).toContain("min-w-0");
-    expect(shrinkOf(name)).toBeGreaterThan(0);
-    expect(shrinkOf(parent)).toBeGreaterThanOrEqual(100 * shrinkOf(name));
+    const classesOf = (element: Element | null | undefined) =>
+      element?.getAttribute("class")?.split(/\s+/) ?? [];
+    // Issue 815 : le nom ne rétrécit jamais, même d'un facteur infime (le
+    // rétrécissement pondéré lui prenait une fraction de pixel, d'où une
+    // ellipse avec un parent encore large). Plafonné à la boîte qu'il
+    // partage avec le parent, il ne se tronque qu'une fois le parent à zéro.
+    expect(classesOf(name)).toEqual(
+      expect.arrayContaining(["shrink-0", "max-w-full", "truncate"]),
+    );
+    expect(classesOf(parent)).toEqual(
+      expect.arrayContaining(["min-w-0", "truncate"]),
+    );
+    expect(classesOf(parent).some((name) => name.startsWith("shrink-"))).toBe(
+      false,
+    );
+    const box = name?.parentElement;
+    expect(box).toBe(parent?.parentElement);
+    expect(box).not.toBe(option);
+    expect(classesOf(box)).toEqual(
+      expect.arrayContaining(["flex", "min-w-0", "overflow-hidden"]),
+    );
 
     type("comité");
     const rootOption = screen
