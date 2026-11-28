@@ -93,12 +93,19 @@ fn parse_cue_text(input: &str) -> Vec<VoiceRun> {
         };
         push_text(&mut runs, &rest[..open], in_ruby_text);
         let after_open = &rest[open + 1..];
-        let Some(close) = after_open.find('>') else {
-            // Balise non fermée : le parseur WebVTT l'ignore jusqu'à la fin.
-            break;
+        // Un `<` qui n'ouvre pas une balise reste du texte. La conversion
+        // SubRip le laisse tel quel (« x < 3 », « <3 »), et un .vtt écrit à la
+        // main en contient aussi : on ne perd pas la fin de la réplique.
+        let Some(tag) = after_open
+            .find('>')
+            .map(|close| &after_open[..close])
+            .filter(|tag| looks_like_tag(tag))
+        else {
+            push_text(&mut runs, "<", in_ruby_text);
+            rest = after_open;
+            continue;
         };
-        let tag = &after_open[..close];
-        rest = &after_open[close + 1..];
+        rest = &after_open[tag.len() + 1..];
 
         if let Some(end_tag) = tag.strip_prefix('/') {
             match tag_name(end_tag) {
@@ -142,6 +149,21 @@ fn parse_cue_text(input: &str) -> Vec<VoiceRun> {
         }
     }
     cleaned
+}
+
+/// Vrai si le contenu entre `<` et `>` a la forme d'une balise WebVTT :
+/// balise ouvrante ou fermante dont le nom commence par une lettre, ou
+/// horodatage (`00:00:01.000`).
+fn looks_like_tag(tag: &str) -> bool {
+    let name = tag.strip_prefix('/').unwrap_or(tag);
+    if name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return true;
+    }
+    !tag.starts_with('/')
+        && tag.contains(':')
+        && tag
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == ':' || c == '.')
 }
 
 /// Nom d'une balise, sans ses classes (`v.loud Alice` -> `v`).
@@ -284,6 +306,46 @@ mod tests {
             vec![
                 (None, "Première ligne\nseconde ligne".to_string(), 0, 1500),
                 (None, "Suite.".to_string(), 1500, 3000),
+            ]
+        );
+    }
+
+    #[test]
+    fn srt_lone_angle_bracket_keeps_the_rest_of_the_line() {
+        // « a < b et b > c » n'est pas testé ici : la conversion SubRip
+        // d'aspasia retire déjà « < b et b > » comme une balise HTML, avant ce
+        // module, comme avant l'issue 785.
+        let tokens = parse(
+            ".srt",
+            "1\n00:00:00,000 --> 00:00:01,000\nSi x < 3 alors on arrete.\n\n2\n00:00:01,000 --> 00:00:02,000\nJe t'aime <3\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![
+                (None, "Si x < 3 alors on arrete.".to_string(), 0, 1000),
+                (None, "Je t'aime <3".to_string(), 1000, 2000),
+            ]
+        );
+    }
+
+    #[test]
+    fn vtt_lone_angle_bracket_is_kept_as_text() {
+        let tokens = parse(
+            ".vtt",
+            "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Alice>Si x < 3 on arrete <3</v>\n\n00:00:01.000 --> 00:00:02.000\n<v Bruno>Donc a < b et b > c.</v>\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![
+                (some("Alice"), "Si x < 3 on arrete <3".to_string(), 0, 1000),
+                (
+                    some("Bruno"),
+                    "Donc a < b et b > c.".to_string(),
+                    1000,
+                    2000
+                ),
             ]
         );
     }
