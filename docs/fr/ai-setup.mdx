@@ -65,7 +65,11 @@ La pastille d'état prend l'une de ces valeurs :
 | « Connecté · … ms » | Le serveur répond ; la pastille indique la latence mesurée. Pour la synthèse, elle indique plutôt le nombre de modèles disponibles (« Connecté · … modèles disponibles »). |
 | « Injoignable » | Le serveur n'a pas répondu. |
 | « Clé refusée » | Le serveur a refusé la clé d'API. |
+| « Route absente » | Le serveur répond, mais pas sur la route attendue : l'adresse ne mène pas à l'API (par exemple sans `/v1` pour la synthèse). |
+| « Erreur du serveur » | Le serveur a répondu par une erreur (HTTP 5xx) ; il est peut-être encore en train de démarrer. |
 | « Adresse invalide » | Une adresse enregistrée auparavant n'est plus acceptée (voir la note ci-dessus). À la saisie, une adresse refusée n'est pas enregistrée : le motif s'affiche sous le champ, par exemple « Saisissez une URL de base valide. ». |
+
+Le rappel en bas du menu des paramètres reprend la même raison, par exemple « Transcription · route absente ».
 
 En cas d'échec, un message sous le titre de la carte dit quoi faire, par exemple : « Le serveur n'a pas répondu à localhost:8000/v1. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. »
 
@@ -193,6 +197,8 @@ Les clés API sont rangées dans le trousseau du système, jamais en clair dans 
 | « Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé. » | L'hôte n'est pas reconnu comme privé : passez en HTTPS (reverse proxy, VPN) ou utilisez une adresse privée. |
 | La pastille indique « Injoignable » | Le serveur n'a pas répondu. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. |
 | La pastille indique « Clé refusée » | Vérifiez la clé dans « Avancé », puis relancez le test. |
+| La pastille indique « Route absente » | Vérifiez l'adresse (pour la synthèse, elle se termine par `/v1`), puis relancez le test. |
+| La pastille indique « Erreur du serveur » | Le serveur démarre peut-être encore : attendez une minute, puis relancez le test. |
 | La liste des modèles de synthèse est vide | Vérifiez que `URL de base/models` répond (par exemple `curl http://localhost:11434/v1/models`) et que l'adresse se termine bien par `/v1`. |
 | La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter et rejoue une coupure courte de mémoire ; après une coupure plus longue, le passage manquant ne sera pas transcrit, faute d'audio enregistré sur le disque. |
 | Impossible de démarrer une écoute | Aucun serveur de transcription n'est configuré, ou le modèle choisi est un modèle « fichier ». |

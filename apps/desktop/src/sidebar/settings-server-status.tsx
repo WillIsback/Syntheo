@@ -8,6 +8,7 @@ import {
   type ServerKind,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
+import { useServerFailureLabel } from "~/settings/ai/shared/server-failure-label";
 import { requestSettingFocus } from "~/settings/setting-focus";
 import { useTabs } from "~/store/zustand/tabs";
 import { useUsableTranscription } from "~/stt/usable-transcription";
@@ -38,21 +39,24 @@ function StatusPip({ tone }: { tone: Tone }) {
   );
 }
 
-// Échec : même distinction que la pastille de la carte serveur (passe QA
-// 0.8.1-1, issue 713) ; une clé refusée n'est pas un serveur injoignable.
+// Échec : même raison que la pastille de la carte serveur, par la même
+// fonction (issue 713, issue 786) ; une clé refusée, une route absente ou
+// une erreur du serveur ne sont pas un serveur injoignable.
+function lowerFirst(label: string) {
+  return label.charAt(0).toLocaleLowerCase() + label.slice(1);
+}
+
 function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
   const { t } = useLingui();
-  const reason = state.status === "failed" ? state.failure.reason : null;
+  const failureLabel = useServerFailureLabel();
+  const reason =
+    state.status === "failed" ? lowerFirst(failureLabel(state.failure)) : "";
   if (kind === "stt") {
     switch (state.status) {
       case "connected":
         return t`Transcription · connected`;
       case "failed":
-        return reason === "unauthorized"
-          ? t`Transcription · key refused`
-          : reason === "invalid_url"
-            ? t`Transcription · invalid address`
-            : t`Transcription · unreachable`;
+        return t`Transcription · ${reason}`;
       case "testing":
         return t`Transcription · testing…`;
       case "untested":
@@ -65,11 +69,7 @@ function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
     case "connected":
       return t`Synthesis · connected`;
     case "failed":
-      return reason === "unauthorized"
-        ? t`Synthesis · key refused`
-        : reason === "invalid_url"
-          ? t`Synthesis · invalid address`
-          : t`Synthesis · unreachable`;
+      return t`Synthesis · ${reason}`;
     case "testing":
       return t`Synthesis · testing…`;
     case "untested":

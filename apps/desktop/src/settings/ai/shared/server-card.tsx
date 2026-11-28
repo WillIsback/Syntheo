@@ -5,6 +5,7 @@ import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import type { ServerConnectionState, ServerFailure } from "./server-connection";
+import { useServerFailureLabel } from "./server-failure-label";
 
 // Briques de la « carte serveur » (identite.md) : une carte par serveur,
 // adresse en mono, « Tester la connexion », pastille d'état, modèles en
@@ -41,6 +42,7 @@ export function ServerStatusChip({
   connectedLabel?: string;
 }) {
   const { t } = useLingui();
+  const failureLabel = useServerFailureLabel();
   const chip = (tone: "good" | "bad" | "wait", label: string, busy = false) => (
     <span
       role="status"
@@ -76,14 +78,7 @@ export function ServerStatusChip({
         connectedLabel ?? t`Connected · ${state.latencyMs} ms`,
       );
     case "failed":
-      return chip(
-        "bad",
-        state.failure.reason === "unauthorized"
-          ? t`Key refused`
-          : state.failure.reason === "invalid_url"
-            ? t`Invalid address`
-            : t`Unreachable`,
-      );
+      return chip("bad", failureLabel(state.failure));
   }
 }
 
