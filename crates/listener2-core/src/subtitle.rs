@@ -17,22 +17,101 @@ pub struct Subtitle {
 
 impl From<TimedSubtitleFile> for Subtitle {
     fn from(sub: TimedSubtitleFile) -> Self {
-        let vtt: WebVttSubtitle = sub.into();
-
-        let tokens = vtt
-            .events()
-            .iter()
-            .flat_map(|cue| {
-                cue_tokens(
-                    &cue.text,
-                    i64::from(cue.start) as u64,
-                    i64::from(cue.end) as u64,
-                )
-            })
-            .collect();
+        let tokens = match sub {
+            // Le SubRip est lu tel quel : sa conversion en WebVTT par aspasia
+            // retire tout ce qui ressemble à une balise HTML, y compris un
+            // texte comme « a < b et b > c » (issue 791).
+            TimedSubtitleFile::SubRip(srt) => srt
+                .events()
+                .iter()
+                .filter_map(|event| {
+                    srt_cue_token(
+                        &event.text,
+                        i64::from(event.start) as u64,
+                        i64::from(event.end) as u64,
+                    )
+                })
+                .collect(),
+            other => {
+                let vtt: WebVttSubtitle = other.into();
+                vtt.events()
+                    .iter()
+                    .flat_map(|cue| {
+                        cue_tokens(
+                            &cue.text,
+                            i64::from(cue.start) as u64,
+                            i64::from(cue.end) as u64,
+                        )
+                    })
+                    .collect()
+            }
+        };
 
         Self { tokens }
     }
+}
+
+/// Le jeton d'un cue SubRip : son texte sans les balises de mise en forme,
+/// sans locuteur (le SubRip n'a pas de balise de voix).
+fn srt_cue_token(text: &str, start_time: u64, end_time: u64) -> Option<Token> {
+    let text = strip_srt_formatting(text);
+    let text = text.trim();
+    // Comme pour le WebVTT, un cue sans lettre ni chiffre n'est pas une réplique.
+    if !text.chars().any(char::is_alphanumeric) {
+        return None;
+    }
+    Some(Token {
+        text: text.to_string(),
+        start_time,
+        end_time,
+        speaker: None,
+    })
+}
+
+/// Retire les seules balises de mise en forme SubRip : `<i>`, `<b>`, `<u>`,
+/// `<font …>` et leurs fermetures (sans tenir compte de la casse), leurs
+/// équivalents `{i}`, `{b}`, `{u}`, et les commandes de position `{\an8}`.
+/// Tout le reste, chevrons et accolades compris, est gardé tel quel.
+fn strip_srt_formatting(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut rest = input;
+    while let Some(open) = rest.find(['<', '{']) {
+        output.push_str(&rest[..open]);
+        let (close, is_markup): (char, fn(&str) -> bool) = if rest[open..].starts_with('<') {
+            ('>', is_srt_html_tag)
+        } else {
+            ('}', is_srt_bracket_tag)
+        };
+        let after_open = &rest[open + 1..];
+        match after_open.find(close) {
+            Some(end) if is_markup(&after_open[..end]) => {
+                rest = &after_open[end + 1..];
+            }
+            _ => {
+                output.push_str(&rest[open..open + 1]);
+                rest = after_open;
+            }
+        }
+    }
+    output.push_str(rest);
+    output
+}
+
+/// Vrai pour le contenu d'une balise `<…>` de mise en forme SubRip.
+fn is_srt_html_tag(tag: &str) -> bool {
+    let closing = tag.starts_with('/');
+    let name = tag.strip_prefix('/').unwrap_or(tag).to_ascii_lowercase();
+    matches!(name.as_str(), "i" | "b" | "u" | "font")
+        || (!closing
+            && name
+                .strip_prefix("font")
+                .is_some_and(|attributes| attributes.starts_with(char::is_whitespace)))
+}
+
+/// Vrai pour le contenu d'une balise `{…}` de mise en forme SubRip.
+fn is_srt_bracket_tag(tag: &str) -> bool {
+    let name = tag.strip_prefix('/').unwrap_or(tag);
+    matches!(name, "i" | "b" | "u") || (!tag.starts_with('/') && tag.starts_with('\\'))
 }
 
 /// Une portion de cue dite par une même voix.
@@ -44,8 +123,8 @@ struct VoiceRun {
 
 /// Les jetons d'un cue : un par voix, dans l'ordre du texte.
 ///
-/// L'identifiant du cue n'est pas un locuteur : la conversion SubRip y met le
-/// numéro de ligne. Seules les balises de voix `<v Nom>` nomment un
+/// L'identifiant du cue n'est pas un locuteur : une conversion en WebVTT peut
+/// y mettre un numéro de ligne. Seules les balises de voix `<v Nom>` nomment un
 /// intervenant. Quand un cue porte plusieurs voix, sa durée est partagée entre
 /// elles au prorata de la longueur du texte, pour garder leur ordre.
 fn cue_tokens(text: &str, start_time: u64, end_time: u64) -> Vec<Token> {
@@ -93,9 +172,9 @@ fn parse_cue_text(input: &str) -> Vec<VoiceRun> {
         };
         push_text(&mut runs, &rest[..open], in_ruby_text);
         let after_open = &rest[open + 1..];
-        // Un `<` qui n'ouvre pas une balise reste du texte. La conversion
-        // SubRip le laisse tel quel (« x < 3 », « <3 »), et un .vtt écrit à la
-        // main en contient aussi : on ne perd pas la fin de la réplique.
+        // Un `<` qui n'ouvre pas une balise reste du texte : un .vtt écrit à
+        // la main en contient (« x < 3 », « <3 »), on ne perd pas la fin de la
+        // réplique.
         let Some(tag) = after_open
             .find('>')
             .map(|close| &after_open[..close])
@@ -312,9 +391,6 @@ mod tests {
 
     #[test]
     fn srt_lone_angle_bracket_keeps_the_rest_of_the_line() {
-        // « a < b et b > c » n'est pas testé ici : la conversion SubRip
-        // d'aspasia retire déjà « < b et b > » comme une balise HTML, avant ce
-        // module, comme avant l'issue 785.
         let tokens = parse(
             ".srt",
             "1\n00:00:00,000 --> 00:00:01,000\nSi x < 3 alors on arrete.\n\n2\n00:00:01,000 --> 00:00:02,000\nJe t'aime <3\n",
@@ -347,6 +423,63 @@ mod tests {
                     2000
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn srt_two_separate_angle_brackets_are_kept_as_text() {
+        let tokens = parse(
+            ".srt",
+            "1\n00:00:00,000 --> 00:00:02,000\nDonc a < b et b > c, rien ne se perd.\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![(
+                None,
+                "Donc a < b et b > c, rien ne se perd.".to_string(),
+                0,
+                2000
+            )]
+        );
+    }
+
+    #[test]
+    fn srt_formatting_tags_are_removed() {
+        let tokens = parse(
+            ".srt",
+            "1\n00:00:00,000 --> 00:00:01,000\n<i>Bonjour</i> <B>à</B> <u>tous</u>.\n\n\
+             2\n00:00:01,000 --> 00:00:02,000\n<font color=\"#ffff00\">Jaune</font> et <font face=\"Serif\" size=\"3\">serif</FONT>.\n\n\
+             3\n00:00:02,000 --> 00:00:03,000\n{\\an8}{i}En haut{/i} <3\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![
+                (None, "Bonjour à tous.".to_string(), 0, 1000),
+                (None, "Jaune et serif.".to_string(), 1000, 2000),
+                (None, "En haut <3".to_string(), 2000, 3000),
+            ]
+        );
+    }
+
+    #[test]
+    fn srt_unknown_tags_and_voice_tags_stay_as_text() {
+        // Le SubRip n'a pas de balise de voix : `<v Alice>` y reste du texte,
+        // comme toute balise qui n'est pas de mise en forme.
+        let tokens = parse(
+            ".srt",
+            "1\n00:00:00,000 --> 00:00:01,000\n<v Alice>Si <x> vaut 2 & {y} vaut 3.\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![(
+                None,
+                "<v Alice>Si <x> vaut 2 & {y} vaut 3.".to_string(),
+                0,
+                1000
+            )]
         );
     }
 
