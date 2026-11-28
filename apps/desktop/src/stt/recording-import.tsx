@@ -9,9 +9,16 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { executeTransaction, liveQueryClient } from "~/db";
 import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
+import {
+  AGENT_IMPORT_FAILED_CODE,
+  agentImportInterruptedFailureStatement,
+  recordTranscriptionFailure,
+} from "~/session/transcription-failure";
 import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
+import { errorText, sanitizeErrorText } from "~/shared/service-error";
 import { discardAudioUpload } from "~/stt/audio-upload-stream";
+import { isNoSpeechDetectedError } from "~/stt/no-speech-error";
 import { useRunBatch } from "~/stt/useRunBatch";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
@@ -20,6 +27,8 @@ const workerId = crypto.randomUUID();
 // than 90 s (`crates/agent-access`). Each beat is a SQLite write, so it stays
 // sparse: every 5 s kept the WAL busy even when the app was idle (issue 271).
 const RECORDING_IMPORT_HEARTBEAT_MS = 30_000;
+// A running job refreshes its row every 10 s; past this age it was interrupted.
+const STALE_JOB_SECONDS = 120;
 type ImportJob = { id: string; meeting_id: string; file_path: string };
 
 /** Formats acceptés pour un import demandé par un agent (même liste que la
@@ -44,7 +53,7 @@ export function isAgentRecordingPath(path: string): boolean {
   );
 }
 
-async function heartbeat() {
+export async function recordingImportHeartbeat() {
   const vault = await settingsCommands.vaultBase();
   if (vault.status === "error") throw new Error(vault.error);
   await executeTransaction([
@@ -53,12 +62,13 @@ async function heartbeat() {
         ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at, vault_path = excluded.vault_path`,
       params: [workerId, vault.data],
     },
+    agentImportInterruptedFailureStatement(STALE_JOB_SECONDS),
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed',
         error = 'Desktop processing was interrupted. The meeting and any completed transcript were preserved.',
         updated_at = unixepoch()
-        WHERE processing_status IN ('importing', 'transcribing', 'summarizing') AND updated_at < unixepoch() - 120`,
-      params: [],
+        WHERE processing_status IN ('importing', 'transcribing', 'summarizing') AND updated_at < unixepoch() - ?`,
+      params: [STALE_JOB_SECONDS],
     },
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed', error = 'Meeting was deleted.', updated_at = unixepoch()
@@ -83,7 +93,7 @@ async function heartbeat() {
 
 export function RecordingImportWorker() {
   useMountEffect(() => {
-    const tick = () => void heartbeat().catch(console.error);
+    const tick = () => void recordingImportHeartbeat().catch(console.error);
     tick();
     const timer = setInterval(tick, RECORDING_IMPORT_HEARTBEAT_MS);
     return () => {
@@ -226,7 +236,27 @@ async function processImport(
       );
     const summary = await enhancer.enhanceAndWait(job.meeting_id);
     await update("done", summary);
-  } catch {
+  } catch (error) {
+    // Issue 794 : l'échec n'était visible nulle part. Le journal reçoit la
+    // phase (seul le libellé entre crochets est gardé dans app.log) et une
+    // raison nettoyée : adresses réduites à l'hôte, jetons masqués, bornée.
+    const reason = sanitizeErrorText(errorText(error));
+    console.error(`[recording-import:${phase}] agent import failed`, reason);
+    // Avant le résumé, la réunion reste vide : l'échec est gardé dans la note,
+    // comme pour un fichier déposé (issue 559). Un résumé en échec a déjà son
+    // propre état dans la note, et la transcription y est.
+    if (phase !== "summarizing") {
+      await recordTranscriptionFailure(
+        job.meeting_id,
+        new Error(reason),
+        isNoSpeechDetectedError(error) ? "no_speech" : AGENT_IMPORT_FAILED_CODE,
+      ).catch((persistError: unknown) => {
+        console.error(
+          "[recording-import] failed to record failure",
+          persistError,
+        );
+      });
+    }
     // Provider errors may contain credentials; keep externally readable job errors bounded and generic.
     await update(
       "failed",
