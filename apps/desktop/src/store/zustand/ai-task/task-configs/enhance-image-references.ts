@@ -42,6 +42,32 @@ export function collectImageReferences(rawContent: string): ImageReference[] {
   return collectMarkdownImageReferences(trimmed);
 }
 
+type NoteJsonNode = {
+  type?: unknown;
+  text?: unknown;
+  attrs?: Record<string, unknown>;
+  content?: unknown[];
+};
+
+/**
+ * Image de la note : nœud `image`, ou pièce jointe dont le type ou
+ * l'extension désigne une image. Même règle pour la collecte des images et
+ * pour leur remplacement dans le texte, pour que leurs numéros concordent.
+ */
+function isNoteImageNode(node: NoteJsonNode): boolean {
+  if (node.type !== "image" && node.type !== "fileAttachment") {
+    return false;
+  }
+  const mimeType =
+    typeof node.attrs?.mimeType === "string" ? node.attrs.mimeType : "";
+  const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
+  return (
+    node.type === "image" ||
+    mimeType.startsWith("image/") ||
+    !!getImageMimeType(getPathExtension(src))
+  );
+}
+
 function collectJsonImageReferences(node: unknown): ImageReference[] {
   const references: ImageReference[] = [];
 
@@ -50,23 +76,9 @@ function collectJsonImageReferences(node: unknown): ImageReference[] {
       return;
     }
 
-    const node = value as {
-      type?: unknown;
-      attrs?: Record<string, unknown>;
-      content?: unknown[];
-    };
-    if (node.type === "image" || node.type === "fileAttachment") {
-      const mimeType =
-        typeof node.attrs?.mimeType === "string" ? node.attrs.mimeType : "";
-      const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
-      const isImage =
-        node.type === "image" ||
-        mimeType.startsWith("image/") ||
-        !!getImageMimeType(getPathExtension(src));
-
-      if (isImage) {
-        references.push(referenceFromAttrs(node.attrs));
-      }
+    const node = value as NoteJsonNode;
+    if (isNoteImageNode(node)) {
+      references.push(referenceFromAttrs(node.attrs));
     }
 
     node.content?.forEach(visit);
@@ -74,6 +86,47 @@ function collectJsonImageReferences(node: unknown): ImageReference[] {
 
   visit(node);
   return references;
+}
+
+/** Blocs de texte : une image y est en ligne, au fil du texte. */
+const TEXTBLOCK_TYPES = new Set(["paragraph", "heading"]);
+
+/**
+ * Copie du contenu JSON de la note où chaque image devient un texte lisible
+ * (issue 750) : `label(position)` reçoit la position de l'image dans la note
+ * (0, 1…), dans l'ordre de `collectImageReferences`. Sans ce remplacement, le
+ * Markdown de la note porte `![]( "char-editor-width=80")` : l'image jointe par
+ * identifiant n'a pas d'adresse. Une image en bloc (hors d'un paragraphe ou
+ * d'un titre) devient un paragraphe : un simple texte entre deux blocs serait
+ * collé au paragraphe suivant dans le Markdown (issue 770).
+ */
+export function replaceNoteImages(
+  doc: unknown,
+  label: (position: number) => string,
+): unknown {
+  let position = 0;
+
+  function visit(value: unknown, parentType: unknown): unknown {
+    if (!value || typeof value !== "object") {
+      return value;
+    }
+    const node = value as NoteJsonNode;
+    if (isNoteImageNode(node)) {
+      const text = { type: "text", text: label(position++) };
+      return typeof parentType === "string" && TEXTBLOCK_TYPES.has(parentType)
+        ? text
+        : { type: "paragraph", content: [text] };
+    }
+    if (!Array.isArray(node.content)) {
+      return node;
+    }
+    return {
+      ...node,
+      content: node.content.map((child) => visit(child, node.type)),
+    };
+  }
+
+  return visit(doc, undefined);
 }
 
 function collectMarkdownImageReferences(markdown: string): ImageReference[] {

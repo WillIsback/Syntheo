@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,11 +24,16 @@ const mocks = vi.hoisted(() => ({
   commission: vi.fn(),
   commissioning: null as unknown,
   progress: null as unknown,
+  // Lecture de l'état retenue tant que la promesse n'est pas résolue.
+  statusGate: null as Promise<void> | null,
 }));
 
 vi.mock("@syntheo/plugin-transcription", () => ({
   commands: {
-    onDeviceStatus: async () => ({ status: "ok", data: mocks.status }),
+    onDeviceStatus: async () => {
+      if (mocks.statusGate) await mocks.statusGate;
+      return { status: "ok", data: mocks.status };
+    },
     probeLocalTranscription: async () => ({ status: "ok", data: mocks.probe }),
     onDeviceDownloadModels: mocks.download,
     onDeviceInstallModels: mocks.install,
@@ -87,6 +93,7 @@ beforeEach(() => {
   mocks.cancel.mockResolvedValue({ status: "ok", data: null });
   mocks.installProgress = null;
   mocks.progress = null;
+  mocks.statusGate = null;
   mocks.commissioning = {
     profile: "two_streams_diarized",
     measures: [],
@@ -213,6 +220,83 @@ describe("OnDeviceCard", () => {
     expect(alert.textContent).not.toMatch(/models_mismatch/);
   });
 
+  // Issue 764 : mise à jour lancée hors ligne, rien de téléchargé : pas de
+  // promesse de reprise, les modèles actuels restent en place.
+  it("does not promise a resume when an offline update downloaded nothing", async () => {
+    mocks.status = {
+      ...mocks.status,
+      models: {
+        kind: "partial",
+        presentBytes: 409_549,
+        totalBytes: 1_066_110_000,
+        resumable: false,
+      },
+    };
+    mocks.download.mockResolvedValue({ status: "error", error: "network" });
+    setup();
+    fireEvent.click(await screen.findByText("Update the models"));
+    const alert = await screen.findByText(/models were not installed:/);
+    expect(alert.textContent).toMatch(/no connection to the download server/);
+    expect(alert.textContent).toMatch(/current models are kept/);
+    expect(alert.textContent).not.toMatch(/resumes where it stopped/);
+    // Une seule phrase, un seul deux-points (issue 783).
+    expect(alert.textContent?.split(":")).toHaveLength(2);
+  });
+
+  it("promises a resume when the failed download left a partial file", async () => {
+    mocks.download.mockImplementation(async () => {
+      mocks.status = {
+        ...mocks.status,
+        models: {
+          kind: "partial",
+          presentBytes: 340_000_000,
+          totalBytes: 1_066_000_000,
+          resumable: true,
+        },
+      };
+      return { status: "error", error: "network" };
+    });
+    setup();
+    fireEvent.click(await screen.findByText("Download the models (1.1 GB)"));
+    const alert = await screen.findByText(/models were not installed:/);
+    expect(alert.textContent).toMatch(/resumes where it stopped/);
+  });
+
+  // Issue 764 : le message neutre s'affiche dès l'échec, puis il est précisé
+  // quand l'état relu arrive.
+  it("shows the neutral message at once, then refines it with the fresh status", async () => {
+    let release: () => void = () => {};
+    mocks.download.mockImplementation(async () => {
+      mocks.statusGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      mocks.status = {
+        ...mocks.status,
+        models: {
+          kind: "partial",
+          presentBytes: 340_000_000,
+          totalBytes: 1_066_000_000,
+          resumable: true,
+        },
+      };
+      return { status: "error", error: "network" };
+    });
+    setup();
+    fireEvent.click(await screen.findByText("Download the models (1.1 GB)"));
+    const neutral = await screen.findByText(/models were not installed:/);
+    expect(neutral.textContent).toMatch(/network or server/);
+    expect(neutral.textContent).not.toMatch(
+      /resumes where it stopped|no connection/,
+    );
+
+    release();
+    await waitFor(() =>
+      expect(
+        screen.getByText(/models were not installed:/).textContent,
+      ).toMatch(/resumes where it stopped/),
+    );
+  });
+
   it("shows the progress of the download and cancels it", async () => {
     let finish: (value: unknown) => void = () => {};
     mocks.download.mockReturnValue(
@@ -264,6 +348,27 @@ describe("OnDeviceCard", () => {
     expect(screen.queryByText(/partly installed/)).toBeNull();
     fireEvent.click(screen.getByText("Update the models"));
     await waitFor(() => expect(mocks.download).toHaveBeenCalled());
+  });
+
+  // Issue 698 : source choisie, modèles d'une version précédente. L'encart
+  // dit « mise à jour », comme la carte, pas « modèles non installés ».
+  it("says the models need an update in the paused-transcription alert", async () => {
+    mocks.status = {
+      ...mocks.status,
+      models: {
+        kind: "partial",
+        presentBytes: 409_549,
+        totalBytes: 1_066_110_000,
+        resumable: false,
+      },
+    };
+    mocks.config = { stt_on_device: true };
+    setup();
+    const alert = await screen.findByTestId("on-device-missing");
+    expect(alert.textContent).toMatch(/its models need an update/);
+    expect(alert.textContent).not.toMatch(/not installed/);
+    expect(within(alert).getByText("Update the models")).toBeTruthy();
+    expect(within(alert).queryByText("Download the models")).toBeNull();
   });
 
   it("never shows a non-empty remaining size as 0 MB", async () => {

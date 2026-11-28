@@ -12315,7 +12315,9 @@ dependencies = [
 name = "tauri-plugin-syntheo-tray"
 version = "0.1.0"
 dependencies = [
+ "ashpd",
  "brand",
+ "futures-util",
  "intercept",
  "libloading 0.9.1",
  "objc2",

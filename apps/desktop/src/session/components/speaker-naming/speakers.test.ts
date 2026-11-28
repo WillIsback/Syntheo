@@ -404,3 +404,48 @@ describe("displaySpeakerLabel", () => {
     expect(displaySpeakerLabel("Speaker 2 bis")).toBe("Speaker 2 bis");
   });
 });
+
+// Issue 625 : serveur sans diarisation. Tout le monde est sous « Speaker 1 » :
+// la note ne propose pas de le nommer, en direct (micro seul) comme à
+// l'import (canal mélangé). Avec deux canaux, le canal distingue encore.
+describe("buildSpeakerCards without diarization", () => {
+  const sentence = "Nous validons le budget du projet avant la fin du mois";
+
+  it.each(["DirectMic", "MixedCapture"] as const)(
+    "offers no card when one %s channel has no speaker index",
+    (channel) => {
+      const cards = buildSpeakerCards([
+        {
+          transcriptId: "t1",
+          segments: [
+            segment("Speaker 1", sentence, { channel, speakerIndex: null }),
+            segment("Speaker 1", `${sentence} encore`, {
+              channel,
+              speakerIndex: null,
+            }),
+          ],
+        },
+      ]);
+      expect(cards).toEqual([]);
+    },
+  );
+
+  it("keeps the cards when the channels still tell people apart", () => {
+    const cards = buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment("Speaker 1", sentence, {
+            channel: "DirectMic",
+            speakerIndex: null,
+          }),
+          segment("Speaker 2", `${sentence} aussi`, {
+            channel: "RemoteParty",
+            speakerIndex: null,
+          }),
+        ],
+      },
+    ]);
+    expect(cards.map((card) => card.number).sort()).toEqual(["1", "2"]);
+  });
+});

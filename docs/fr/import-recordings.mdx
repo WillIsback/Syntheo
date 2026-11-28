@@ -8,7 +8,7 @@ import { ImportScreen } from "/snippets/capture.gen.jsx";
 Vous pouvez utiliser Syntheo avec une conversation enregistrée ailleurs :
 
 - importez un **fichier audio** pour le faire transcrire par votre serveur ;
-- importez une **transcription** SRT ou VTT existante pour en tirer un compte rendu.
+- importez une **transcription** SRT ou VTT existante pour en tirer une synthèse.
 
 Tout se passe en local : Syntheo lit les fichiers sur votre ordinateur et n'utilise aucun service d'import en ligne.
 
@@ -38,7 +38,7 @@ L'audio n'est pas conservé dans la note. Syntheo choisit la façon d'envoyer le
 
 Si Syntheo a été fermé après la fin de la transcription par le serveur, la note est complétée au lancement suivant. S'il a été fermé avant, l'import est perdu : au lancement suivant, « Import de l'audio interrompu » s'affiche une fois, et la note indique que Syntheo a été fermé avant la fin ; importez à nouveau le fichier. Si ce résultat est inutilisable, par exemple parce qu'aucune parole n'a été détectée, Syntheo abandonne l'import au lieu de le retenter à chaque lancement : « L'import de l'audio a échoué » s'affiche une fois avec le bouton « Ouvrir la note », et la note indique « Échec de la transcription ».
 
-Quand la transcription est terminée, Syntheo rédige un compte rendu si un serveur est configuré dans **Paramètres → Synthèse**.
+Quand la transcription est terminée, Syntheo rédige une synthèse si un serveur est configuré dans **Paramètres → Synthèse**.
 
 <Note>
   Si votre modèle ne sait transcrire un fichier ni par lots ni en direct, le menu « Téléverser un audio » apparaît grisé. Cliquez dessus pour afficher « Impossible d'importer cet audio » avec la cause et le bouton « Réglages de transcription ».
@@ -52,7 +52,7 @@ Les menus « Téléverser un audio » et « Téléverser une transcription » n'
 2. Ouvrez le menu **•••** et choisissez « Téléverser une transcription ».
 3. Sélectionnez un fichier WebVTT (`.vtt`) ou SubRip (`.srt`).
 
-Syntheo ajoute le texte horodaté à la note, puis rédige un compte rendu si un serveur de synthèse est configuré et si la note n'en a pas encore.
+Syntheo ajoute le texte horodaté à la note, puis rédige une synthèse si un serveur de synthèse est configuré et si la note n'en a pas encore.
 
 ## Si un import ne démarre pas
 

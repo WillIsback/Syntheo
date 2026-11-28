@@ -301,6 +301,136 @@ fn checkpoint_keeps_replayed_words_from_finalizing_twice() {
     );
 }
 
+fn raw(text: &str, start_ms: i64, end_ms: i64) -> RawWord {
+    RawWord {
+        text: text.to_string(),
+        start_ms,
+        end_ms,
+        channel: 0,
+        speaker: None,
+    }
+}
+
+fn texts(words: &[FinalizedWord]) -> String {
+    words.iter().map(|word| word.text.as_str()).collect()
+}
+
+/// Session des tests de jonction : « Et la » finalisé, « en personne » encore
+/// provisoire, horodaté un peu tôt (fin à 1,5 s au lieu de 2,1 s), validé par
+/// le `checkpoint` de l'arrêt du flux.
+fn checkpointed_mid_sentence() -> (TranscriptProcessor, String) {
+    let mut processor = TranscriptProcessor::new();
+    let channel = processor
+        .channels
+        .entry(0)
+        .or_insert_with(ChannelState::new);
+    let mut delivered = channel.apply_final(
+        vec![raw(" Et", 200, 400), raw(" la", 400, 700)],
+        WordState::Final,
+        true,
+        true,
+    );
+    channel.apply_partial(
+        vec![raw(" en", 1_000, 1_200), raw(" personne", 1_200, 1_500)],
+        true,
+    );
+    delivered.extend(processor.checkpoint().new_words);
+    (processor, texts(&delivered))
+}
+
+// Issue 629 : le flux rouvert en pleine phrase retranscrit les 5 s de
+// contexte avec ses propres horodatages ; un mot validé au checkpoint avec un
+// horodatage un peu tôt passait le filtre temporel et revenait une seconde
+// fois (« en personne personne en charge »).
+#[test]
+fn a_stream_reopened_mid_sentence_does_not_double_the_checkpointed_words() {
+    let (mut processor, mut text) = checkpointed_mid_sentence();
+    assert_eq!(text, " Et la en personne");
+
+    let channel = processor.channels.get_mut(&0).expect("channel survives");
+    let preview = channel.apply_partial(
+        vec![
+            raw(" la", 400, 700),
+            raw(" en", 900, 1_300),
+            raw(" personne", 1_500, 2_100),
+            raw(" en", 2_100, 2_300),
+        ],
+        true,
+    );
+    assert!(preview.is_empty());
+    assert!(
+        processor
+            .channels
+            .get(&0)
+            .unwrap()
+            .current_partials()
+            .all(|word| word.text != " personne"),
+        "the preview does not show the word again either"
+    );
+    let channel = processor.channels.get_mut(&0).unwrap();
+    let finals = channel.apply_final(
+        vec![
+            raw(" Et", 230, 430),
+            raw(" la", 430, 730),
+            raw(" en", 900, 1_300),
+            raw(" personne", 1_500, 2_100),
+            raw(" en", 2_100, 2_300),
+            raw(" charge", 2_300, 2_700),
+            raw(" de", 2_700, 2_800),
+            raw(" chaque", 2_800, 3_100),
+            raw(" tâche", 3_100, 3_500),
+        ],
+        WordState::Final,
+        true,
+        true,
+    );
+    text.push_str(&texts(&finals));
+    text.push_str(&texts(&processor.flush().new_words));
+    assert_eq!(text, " Et la en personne en charge de chaque tâche");
+}
+
+// La jonction ne retire qu'une reprise du texte déjà livré : une parole
+// nouvelle qui commence par le même mot, loin de la reprise, reste entière.
+#[test]
+fn speech_well_after_the_junction_keeps_a_repeated_word() {
+    let (mut processor, mut text) = checkpointed_mid_sentence();
+    let channel = processor.channels.get_mut(&0).unwrap();
+    let finals = channel.apply_final(
+        vec![
+            raw(" personne", 6_000, 6_400),
+            raw(" ne", 6_400, 6_600),
+            raw(" répond", 6_600, 7_000),
+        ],
+        WordState::Final,
+        true,
+        true,
+    );
+    text.push_str(&texts(&finals));
+    text.push_str(&texts(&processor.flush().new_words));
+    assert_eq!(text, " Et la en personne personne ne répond");
+}
+
+// Un mot coupé en morceaux par le fournisseur n'est jamais tronqué : la
+// reprise ne s'arrête qu'à une frontière de mot.
+#[test]
+fn the_junction_never_cuts_inside_a_word() {
+    let (mut processor, mut text) = checkpointed_mid_sentence();
+    let channel = processor.channels.get_mut(&0).unwrap();
+    let finals = channel.apply_final(
+        vec![
+            raw(" person", 1_500, 1_800),
+            raw("nel", 1_800, 2_100),
+            raw(" et", 2_100, 2_300),
+        ],
+        WordState::Final,
+        true,
+        true,
+    );
+    text.push_str(&texts(&finals));
+    text.push_str(&texts(&processor.flush().new_words));
+    assert_eq!(text, " Et la en personne personnel et");
+}
+
 #[test]
 fn no_final_stream_promotes_oldest_partials_without_losing_words() {
     let mut processor = TranscriptProcessor::new();

@@ -2,6 +2,7 @@ import type { OnDeviceStatus } from "@syntheo/plugin-transcription";
 
 import { useConfigValues } from "~/shared/config";
 import {
+  isModelsUpdate,
   isOnDeviceUsable,
   useOnDeviceCommissioning,
   useOnDeviceStatus,
@@ -23,6 +24,9 @@ export type UsableTranscription = {
    * absents ou poste non mesuré. L'écoute est alors refusée, même avec un
    * serveur configuré : elle ne repasse pas par lui. */
   onDeviceNotReady: boolean;
+  /** « Sur ce poste » pas prêt parce que ses modèles viennent d'une autre
+   * version : l'état et le toast proposent la mise à jour (issue 763). */
+  onDeviceModelsUpdate: boolean;
   /** Aucune source : ni serveur, ni « Sur ce poste » choisi. Seul cas où il
    * faut demander un fournisseur (toast « Fournisseur requis ») ; « Sur ce
    * poste » choisi mais pas prêt a son propre toast. */
@@ -60,6 +64,7 @@ export function resolveUsableTranscription({
       active: null,
       serverConfigured,
       onDeviceNotReady: false,
+      onDeviceModelsUpdate: false,
       needsProvider: false,
       isLoading: true,
     };
@@ -71,6 +76,10 @@ export function resolveUsableTranscription({
       active: ready ? "on_device" : null,
       serverConfigured,
       onDeviceNotReady: !ready,
+      onDeviceModelsUpdate:
+        !ready &&
+        !!onDeviceStatus?.companion &&
+        isModelsUpdate(onDeviceStatus.models),
       needsProvider: false,
       isLoading: false,
     };
@@ -80,6 +89,7 @@ export function resolveUsableTranscription({
     active: serverConfigured ? "server" : null,
     serverConfigured,
     onDeviceNotReady: false,
+    onDeviceModelsUpdate: false,
     needsProvider: !serverConfigured,
     isLoading: false,
   };

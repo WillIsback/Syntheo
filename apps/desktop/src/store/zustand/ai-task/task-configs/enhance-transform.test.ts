@@ -6,7 +6,7 @@ import { noteFingerprint } from "~/session/note-fingerprint";
 import { assertCanonicalTemplateSections } from "~/templates/codec";
 
 const mocks = vi.hoisted(() => ({
-  collectEnhanceImageContext: vi.fn(),
+  collectEnhanceImages: vi.fn(),
   getTemplateById: vi.fn(),
   formatMeetingChatContext: vi.fn(),
   loadMeetingChatRecords: vi.fn(),
@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./enhance-images", () => ({
-  collectEnhanceImageContext: mocks.collectEnhanceImageContext,
+  collectEnhanceImages: mocks.collectEnhanceImages,
 }));
 
 vi.mock("~/templates/queries", () => ({
@@ -476,7 +476,7 @@ describe("enhanceTransform.transformArgs", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.collectEnhanceImageContext.mockResolvedValue([]);
+    mocks.collectEnhanceImages.mockResolvedValue([]);
     mocks.getTemplateById.mockResolvedValue(null);
     mocks.formatMeetingChatContext.mockReturnValue("");
     mocks.loadMeetingChatRecords.mockResolvedValue([]);
@@ -852,11 +852,36 @@ describe("enhanceTransform.transformArgs", () => {
       },
     );
 
-    expect(mocks.collectEnhanceImageContext).toHaveBeenCalledWith("session-1", [
-      "![pre](asset://localhost/pre.png)",
-      "![post](asset://localhost/post.png)",
+    expect(mocks.collectEnhanceImages).toHaveBeenCalledWith("session-1", [
+      { filename: "pre.png" },
+      { filename: "post.png" },
     ]);
   });
+
+  // Issue 699 : la transcription affiche « Locuteur 4 » ; une synthèse en
+  // français ne doit pas recevoir, donc citer, « Speaker 4 ».
+  it.each([
+    ["fr", "Locuteur 4"],
+    ["en", "Speaker 4"],
+  ])(
+    "names anonymous speakers in the summary language (%s)",
+    async (language, expected) => {
+      renderTranscript(
+        [
+          renderedSegment("Speaker 4", "on valide le budget", 0, 100),
+          renderedSegment("Alice", "d'accord", 100, 200),
+        ],
+        { started_at: 100, ended_at: 200 },
+      );
+
+      const result = await transformWithoutTemplate({ ai_language: language });
+
+      expect(result.transcripts[0]?.segments.map((s) => s.speaker)).toEqual([
+        expected,
+        "Alice",
+      ]);
+    },
+  );
 
   it("uses Rust-rendered transcript segments in summary context", async () => {
     const segment = (

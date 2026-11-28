@@ -11,7 +11,7 @@ Syntheo n'appelle aucun service cloud d'IA. Il se connecte à **vos** serveurs d
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
 | **Transcription** | Transforme l'audio de la réunion, de la dictée ou d'un fichier importé en texte | OpenAI Realtime et `/v1/audio/transcriptions`, ou NVIDIA NeMo-Speech.cpp (WebSocket en direct, REST pour l'import) |
-| **Synthèse** | Rédige les comptes rendus, répond dans le chat et propose les sections des modèles de compte rendu | API OpenAI-compatible (`/v1/chat/completions`, modèles lus dans `/v1/models`) |
+| **Synthèse** | Rédige les synthèses, répond dans le chat et propose les sections des modèles de synthèse | API OpenAI-compatible (`/v1/chat/completions`, modèles lus dans `/v1/models`) |
 
 Aucune URL n'est imposée : vous saisissez celle de votre serveur. Sans serveur de transcription configuré et joignable, Syntheo ne transcrit rien, et comme l'audio n'est jamais conservé, il ne peut pas rattraper la transcription plus tard.
 
@@ -117,7 +117,7 @@ Pendant une écoute, si le poste prend plus de 2 s de retard, Syntheo espace la 
 
 La transcription sur le poste ne sert qu'à la transcription en direct d'une écoute : la dictée et la transcription d'un fichier importé passent toujours par le serveur configuré.
 
-L'audio d'une écoute « Sur ce poste » ne part jamais au serveur, même pour réparer un passage coupé ou après un redémarrage. Si les modèles manquent ou sont refusés, la transcription en direct se met en pause et le dit, avec l'installation des modèles ou **Revenir au serveur** ; un passage manqué reste marqué dans la note.
+L'audio d'une écoute « Sur ce poste » ne part jamais au serveur, même pour réparer un passage coupé ou après un redémarrage. Si les modèles manquent, sont refusés ou viennent d'une autre version (à mettre à jour), la transcription en direct se met en pause et le dit, avec l'installation ou la mise à jour des modèles, ou **Revenir au serveur** ; un passage manqué reste marqué dans la note.
 
 **Retirer les modèles** les supprime.
 
@@ -151,12 +151,15 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
   <Step title="Tester la connexion et choisir le modèle">
     Cliquez sur « Tester la connexion ». Syntheo lit la liste dans `/v1/models` : seuls les modèles chargés par votre serveur apparaissent. Cliquez sur le modèle à utiliser.
   </Step>
+  <Step title="Vérifier si le modèle lit les images">
+    « Le modèle lit les images » décide si les images collées dans la note sont jointes à la génération de la synthèse. En « Automatique », Syntheo le demande à votre serveur, une fois par adresse et par modèle, et garde le résultat : il lit d'abord ce que le serveur publie (Ollama, LM Studio, llama.cpp server), sinon il envoie une requête minimale avec une petite image de test fournie par Syntheo et demande au modèle la couleur du disque qu'elle montre. Le texte sous le choix dit d'où vient le résultat : « Annoncé par le serveur » quand le serveur le publie, « Le modèle a accepté l'image de test et l'a décrite » quand le modèle a nommé la bonne couleur. « Tester la connexion » refait la vérification ; le résultat gardé reste en place tant que le serveur ne répond pas clairement. Sans réponse claire (erreur, réponse vide ou sans rapport avec l'image), Syntheo se fie au nom du modèle. « Oui » et « Non » imposent le choix, par exemple si votre serveur sert la partie vision d'un modèle que la vérification ne reconnaît pas ; aucune vérification ne part alors. « Tester avec une image » envoie toujours l'image de test, même quand le serveur publie la réponse, et affiche ce que le modèle en a fait.
+  </Step>
   <Step title="Régler l'effort de raisonnement (facultatif)">
     « Effort de raisonnement » propose « Auto », « Faible », « Moyen » et « Élevé ». « Auto » laisse le serveur décider. Plus d'effort donne des synthèses plus fines, mais plus lentes. Les autres valeurs ne servent qu'avec un modèle qui sait raisonner et un serveur qui accepte ce paramètre.
   </Step>
 </Steps>
 
-Si le serveur répond mais que le modèle choisi échoue, la carte affiche « Le modèle choisi n'a pas répondu : » suivi de la cause. Le même modèle sert aux comptes rendus, au chat, aux titres générés et aux propositions de sections des modèles de compte rendu.
+Si le serveur répond mais que le modèle choisi échoue, la carte affiche « Le modèle choisi n'a pas répondu : » suivi de la cause. Le même modèle sert aux synthèses, au chat, aux titres générés et aux propositions de sections des modèles de synthèse.
 
 Dans la reproduction ci-dessous, la page Synthèse est reliée à Ollama. Saisissez `http://localhost:1234/v1` (LM Studio) pour voir la liste des modèles changer. Choisissez « Élevé » dans « Effort de raisonnement », puis un autre modèle : l'effort revient à « Auto », car il dépend du modèle.
 
@@ -174,7 +177,7 @@ Un administrateur peut imposer une adresse HTTPS à tous les postes avec `manage
 ## Ce qui transite vers vos serveurs
 
 - Le **serveur de transcription** reçoit l'audio de la capture, de la dictée ou du fichier importé, au fil de l'eau. Syntheo n'écrit pas cet audio sur le disque.
-- Le **serveur LLM** reçoit le texte nécessaire à la tâche : transcription, notes, consignes du modèle de compte rendu, question posée dans le chat.
+- Le **serveur LLM** reçoit le texte nécessaire à la tâche : transcription, notes, consignes du modèle de synthèse, question posée dans le chat. Pour la synthèse, il reçoit aussi les images collées dans la note si le modèle lit les images. Pour le vérifier, Syntheo lui envoie seulement une image de test qu'il fournit lui-même, jamais une de vos images.
 - Aucun en-tête n'identifie votre appareil. Syntheo ne contacte aucun autre service d'inférence et ne bascule jamais vers un service tiers si votre serveur ne répond pas : il affiche une erreur.
 
 Les clés API sont rangées dans le trousseau du système, jamais en clair dans la base locale. Détails dans [Données et confidentialité](/fr/data-and-privacy).

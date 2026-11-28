@@ -5,7 +5,7 @@ import { Warning } from "@syntheo/ui/components/icons";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import { useConnectionHealth } from "./health";
+import { type HealthStatus, useConnectionHealth } from "./health";
 import {
   getLanguageSupportIssue,
   resolveLiveLanguageSupportMode,
@@ -67,7 +67,15 @@ function readDismissedTranscriptionLanguageWarnings(): string[] {
 
 export function TranscriptionLanguageWarningToast() {
   const { i18n, t } = useLingui();
-  const warning = useTranscriptionLanguageWarning();
+  const health = useConnectionHealth();
+  const warning = useTranscriptionLanguageWarning(health);
+
+  // Modèles « Sur ce poste » d'une autre version : pas de toast ici. Cette
+  // page affiche déjà l'encart de la carte « Sur ce poste », avec « Mettre à
+  // jour les modèles » ; le toast le répétait et masquait l'encart dans une
+  // petite fenêtre (issue 782). La barre d'état et le toast latéral le disent
+  // ailleurs (issue 763).
+  if (health.onDeviceUnavailable === "models_update") return null;
 
   if (!warning || isTranscriptionLanguageWarningDismissed(warning.key)) {
     return null;
@@ -139,7 +147,7 @@ function clearTranscriptionLanguageWarningToast() {
   toast.dismiss(TRANSCRIPTION_LANGUAGE_WARNING_TOAST_ID);
 }
 
-function useTranscriptionLanguageWarning() {
+function useTranscriptionLanguageWarning(health: HealthStatus) {
   const {
     ai_language,
     current_stt_provider,
@@ -151,7 +159,6 @@ function useTranscriptionLanguageWarning() {
     "current_stt_model",
     "spoken_languages",
   ] as const);
-  const health = useConnectionHealth();
 
   const selectedSttModel = isConfiguredSttModel(
     current_stt_provider,

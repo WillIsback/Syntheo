@@ -1,13 +1,13 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   commands as transcriptionCommands,
+  type OnDeviceModels,
   type Probe,
   type Profile,
   type Refusal,
-  type OnDeviceModels,
 } from "@syntheo/plugin-transcription";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -19,10 +19,13 @@ import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
   describeOnDeviceErrorAfterColon,
+  downloadLeftover,
   launchRefusal,
+  loadOnDeviceStatus,
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
   isEligible,
+  isModelsUpdate,
   ON_DEVICE_COMMISSIONING_QUERY_KEY,
   ON_DEVICE_STATUS_QUERY_KEY,
   runOnDeviceCommissioning,
@@ -34,17 +37,6 @@ import {
 // Carte « Sur ce poste » (issues 683 et 685) : sonde du poste, modèles du
 // programme compagnon livré avec l'application, mise en service, choix de la
 // source. Masquée quand l'organisation interdit la source.
-
-/**
- * Modèles d'une autre version en place (QA 0.8.0-4) : fichiers gardés sans
- * téléchargement interrompu ; le reste est à télécharger, ce n'est pas une
- * reprise.
- */
-function isModelsUpdate(models: OnDeviceModels): boolean {
-  return (
-    models.kind === "partial" && !models.resumable && models.presentBytes > 0
-  );
-}
 
 function useLabels() {
   const { t } = useLingui();
@@ -216,11 +208,39 @@ export function OnDeviceCard() {
     }
     void refresh();
   };
-  const installError = (e: Error) => {
+  // Issue 764 : l'état relu après l'échec, comparé à celui d'avant l'essai,
+  // dit si un téléchargement partiel reprendra ; hors ligne avant tout
+  // octet, le message ne promet pas de reprise. Le message neutre s'affiche
+  // tout de suite, puis il est précisé quand l'état relu arrive, sauf si un
+  // nouvel essai a commencé entre-temps.
+  const installAttempt = useRef(0);
+  const installError = (e: Error, before?: OnDeviceModels) => {
+    const attempt = installAttempt.current;
     setError(
       t`The models were not installed: ${describeOnDeviceErrorAfterColon(e.message)}`,
     );
-    void refresh();
+    void queryClient
+      .fetchQuery({
+        queryKey: ON_DEVICE_STATUS_QUERY_KEY,
+        queryFn: loadOnDeviceStatus,
+        staleTime: 0,
+      })
+      .then(
+        (fresh) => fresh.models,
+        () => undefined,
+      )
+      .then((after) => {
+        const leftover = downloadLeftover(before, after);
+        if (!leftover || attempt !== installAttempt.current) return;
+        setError(
+          t`The models were not installed: ${describeOnDeviceErrorAfterColon(e.message, leftover)}`,
+        );
+      });
+  };
+  const startInstall = () => {
+    installAttempt.current += 1;
+    setNotice(null);
+    return { before: status.data?.models };
   };
   // Fin d'une installation lancée ici : l'avancement est oublié aussitôt
   // (l'hôte l'a déjà effacé), sans attendre la lecture suivante.
@@ -232,17 +252,19 @@ export function OnDeviceCard() {
   };
   const downloading = useMutation({
     mutationFn: downloadOnDeviceModels,
-    onMutate: () => setNotice(null),
+    onMutate: startInstall,
     onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
-    onError: installError,
+    onError: (e: Error, _variables, context) =>
+      installError(e, context?.before),
   });
   const fromFolder = useMutation({
     mutationFn: installOnDeviceModelsFromFolder,
-    onMutate: () => setNotice(null),
+    onMutate: startInstall,
     onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
-    onError: installError,
+    onError: (e: Error, _variables, context) =>
+      installError(e, context?.before),
   });
   // Installation depuis un dossier : la commande attend d'abord le choix du
   // dossier ; l'installation ne commence (et l'hôte ne rend un avancement)
@@ -538,6 +560,13 @@ export function OnDeviceCard() {
                 This computer is chosen for transcription, but it has not been
                 measured or is too slow: live transcription is paused.
               </Trans>
+            ) : isModelsUpdate(models) ? (
+              // Issue 698 : modèles d'une version précédente, même formulation
+              // que la carte (mise à jour disponible).
+              <Trans>
+                This computer is chosen for transcription, but its models need
+                an update: live transcription is paused.
+              </Trans>
             ) : (
               <Trans>
                 This computer is chosen for transcription, but its models are
@@ -562,7 +591,11 @@ export function OnDeviceCard() {
                 onClick={() => downloading.mutate()}
                 className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
               >
-                <Trans>Download the models</Trans>
+                {isModelsUpdate(models) ? (
+                  <Trans>Update the models</Trans>
+                ) : (
+                  <Trans>Download the models</Trans>
+                )}
               </button>
             ) : companion ? (
               <button

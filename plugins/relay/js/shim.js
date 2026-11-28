@@ -45,6 +45,37 @@
   // WebSocket relay connection
   // ---------------------------------------------------------------------------
 
+  // Secret du canal de commandes (issue 664) : remis par l'amorçage dans le
+  // fragment de l'URL (`#relay-session=…`, jamais envoyé à un serveur), gardé
+  // dans sessionStorage, propre à ce port (un cookie, lui, serait partagé avec
+  // les autres ports de la boucle locale), puis présenté en sous-protocole
+  // WebSocket. Le fragment est retiré de la barre d'adresse.
+  var SESSION_KEY = "syntheo-relay-session";
+
+  function relayProtocols() {
+    var secret = null;
+    var hash = (window.location && window.location.hash) || "";
+    var match = /(?:^#|&)relay-session=([0-9a-f]{32})(?:&|$)/.exec(hash);
+    try {
+      if (match) {
+        secret = match[1];
+        window.sessionStorage.setItem(SESSION_KEY, secret);
+      } else {
+        secret = window.sessionStorage.getItem(SESSION_KEY);
+      }
+    } catch {
+      // Stockage refusé : le secret ne vaut que pour cette page.
+    }
+    if (match && window.history && window.history.replaceState) {
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+    return secret ? ["syntheo-relay." + secret] : [];
+  }
+
   function createRelayConnection(port) {
     var maxPendingInvokes = 64;
     if (window.location.port !== String(port)) {
@@ -56,6 +87,7 @@
       "//" +
       window.location.host +
       "/ws";
+    var protocols = relayProtocols();
     var ws = null;
     var nextId = 0;
     var pending = {};
@@ -190,7 +222,7 @@
 
     function connect() {
       try {
-        ws = new WebSocket(wsUrl);
+        ws = new WebSocket(wsUrl, protocols);
       } catch {
         return;
       }

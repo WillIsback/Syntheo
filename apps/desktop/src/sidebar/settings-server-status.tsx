@@ -1,4 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
+import { useCallback } from "react";
 
 import { cn } from "@syntheo/utils";
 
@@ -7,6 +8,8 @@ import {
   type ServerKind,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
+import { requestSettingFocus } from "~/settings/setting-focus";
+import { useTabs } from "~/store/zustand/tabs";
 import { useUsableTranscription } from "~/stt/usable-transcription";
 
 // État des serveurs dans le menu des paramètres : une pastille à côté de
@@ -76,13 +79,34 @@ function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
   }
 }
 
+// Arrivée sur « Mettre à jour les modèles » de la carte « Sur ce poste »
+// (issue 763) : même destination que l'action du toast.
+function useOpenOnDeviceModels() {
+  const currentTab = useTabs((state) => state.currentTab);
+  const updateSettingsTabState = useTabs(
+    (state) => state.updateSettingsTabState,
+  );
+  const openNew = useTabs((state) => state.openNew);
+  return useCallback(() => {
+    requestSettingFocus("stt-on-device-module");
+    if (currentTab?.type === "settings") {
+      updateSettingsTabState(currentTab, { tab: "transcription" });
+    } else {
+      openNew({ type: "settings", state: { tab: "transcription" } });
+    }
+  }, [currentTab, openNew, updateSettingsTabState]);
+}
+
+type Status = { label: string; tone: Tone; onAction?: () => void };
+
 // Transcription : la source « Sur ce poste », quand elle est choisie, passe
 // avant l'état du serveur (même règle que le toast et le bandeau).
-function useStatus(kind: ServerKind): { label: string; tone: Tone } {
+function useStatus(kind: ServerKind): Status {
   const { t } = useLingui();
   const { state, disabled } = useServerConnection(kind);
   const serverLabel = useStatusLabel(kind, state);
   const transcription = useUsableTranscription();
+  const openOnDeviceModels = useOpenOnDeviceModels();
   // Synthèse désactivée par réglage géré (intelligence_disabled) : aucune
   // sonde ne part, l'état « non testée » serait trompeur (issue 707).
   if (disabled) {
@@ -93,6 +117,15 @@ function useStatus(kind: ServerKind): { label: string; tone: Tone } {
   }
   if (kind === "stt" && transcription.active === "on_device") {
     return { label: t`Transcription · on this computer`, tone: "ok" };
+  }
+  // Modèles d'une autre version (issue 763) : dire la mise à jour, pas
+  // seulement « pas prêt », et y mener d'un clic comme le toast.
+  if (kind === "stt" && transcription.onDeviceModelsUpdate) {
+    return {
+      label: t`Transcription · models need an update`,
+      tone: "ko",
+      onAction: openOnDeviceModels,
+    };
   }
   if (kind === "stt" && transcription.onDeviceNotReady) {
     return { label: t`Transcription · this computer is not ready`, tone: "ko" };
@@ -111,7 +144,19 @@ export function ServerStatusDot({ kind }: { kind: ServerKind }) {
 }
 
 function ServerStatusLine({ kind }: { kind: ServerKind }) {
-  const { label, tone } = useStatus(kind);
+  const { label, tone, onAction } = useStatus(kind);
+  if (onAction) {
+    return (
+      <button
+        type="button"
+        onClick={onAction}
+        className="hover:text-foreground flex items-center gap-2 text-left underline-offset-2 hover:underline"
+      >
+        <StatusPip tone={tone} />
+        {label}
+      </button>
+    );
+  }
   return (
     <span className="flex items-center gap-2">
       <StatusPip tone={tone} />

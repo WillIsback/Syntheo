@@ -518,7 +518,7 @@ describe("buildExport", () => {
   // Issue 734 : une seule source pour la version de la règle, et seules les
   // mesures faites sous la règle courante sont exportées.
   it("writes the rule version of the Rust crate", () => {
-    expect(RULE_VERSION).toBe(2);
+    expect(RULE_VERSION).toBe(3);
     expect(buildExport(rows(), "0.8.1", NOW).rule_version).toBe(RULE_VERSION);
   });
 

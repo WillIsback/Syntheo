@@ -22,7 +22,7 @@ use std::{
 
 use tauri::{Result, Wry, tray::TrayIcon};
 
-use crate::tray_icon::RECORDING_FRAMES;
+use crate::tray_icon::{DARK_RECORDING_FRAMES_PNG, RECORDING_FRAMES, tray_on_light_background};
 
 const TRAY_ICON_PREFIX: &str = "tray-icon-";
 const PNG_SUFFIX: &str = ".png";
@@ -32,6 +32,8 @@ struct PreparedFrames {
     icons_dir: PathBuf,
     /// PNG embarqués, écrits une fois.
     frames: Vec<PathBuf>,
+    /// Les mêmes pour un panneau clair (issue 739).
+    dark_frames: Vec<PathBuf>,
 }
 
 static PREPARED_FRAMES: OnceLock<Option<PreparedFrames>> = OnceLock::new();
@@ -93,8 +95,13 @@ fn prepared_frames() -> Option<&'static PreparedFrames> {
             let base = frames_dir();
             let icons_dir = base.join(format!("syntheo-{}", std::process::id()));
             let prepared = prepare_frames(&base, RECORDING_FRAMES).and_then(|frames| {
+                let dark_frames = prepare_frames(&base, DARK_RECORDING_FRAMES_PNG)?;
                 prepare_icons_dir(&icons_dir)?;
-                Ok(PreparedFrames { icons_dir, frames })
+                Ok(PreparedFrames {
+                    icons_dir,
+                    frames,
+                    dark_frames,
+                })
             });
             prepared
                 .inspect_err(|error| {
@@ -170,7 +177,12 @@ pub fn show_frame(tray: &TrayIcon<Wry>, frame: usize) -> Result<bool> {
         return Ok(false);
     };
     let icons_dir = prepared.icons_dir.clone();
-    let frame_path = prepared.frames[frame % prepared.frames.len()].clone();
+    let frames = if tray_on_light_background() {
+        &prepared.dark_frames
+    } else {
+        &prepared.frames
+    };
+    let frame_path = frames[frame % frames.len()].clone();
     let shown = tray.with_inner_tray_icon(move |inner| {
         inner.set_temp_dir_path(Some(&icons_dir));
         show_prepared_frame(&icons_dir, &frame_path, || {

@@ -11,7 +11,7 @@ import {
   type ParticipantConsent,
 } from "~/stt/meeting-consent";
 import { persistParticipantConsent } from "~/stt/meeting-consent-store";
-import { MEETING_DISCLOSURE_MESSAGE } from "~/stt/meeting-disclosure";
+import { MEETING_DISCLOSURE_TEXTS } from "~/stt/meeting-disclosure";
 import { recordCapturedMeetingPlatform } from "~/stt/meeting-source-apps";
 
 const MEETING_CHAT_CAPTURE_INTERVAL_MS = 5_000;
@@ -202,7 +202,7 @@ export function startMeetingChatCapture({
         }
         const response = interpretChatAsConsentResponse(
           entry.message.text,
-          MEETING_DISCLOSURE_MESSAGE,
+          MEETING_DISCLOSURE_TEXTS,
         );
         if (!response) {
           continue;

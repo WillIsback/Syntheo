@@ -35,14 +35,16 @@ describe("libellés hors composant en français", () => {
   });
 
   test("notification de détection du micro", () => {
-    expect(getMicDetectedNotificationTitle()).toBe("Êtes-vous en réunion ?");
+    expect(getMicDetectedNotificationTitle()).toBe(
+      "Êtes-vous en réunion\u00a0?",
+    );
     expect(
       getIgnoreAppsFooterText([
         { id: "a", name: "Zoom" },
         { id: "b", name: "Slack" },
         { id: "c", name: "Discord" },
       ]),
-    ).toBe("Ignorer Zoom et 2 autres apps ?");
+    ).toBe("Ignorer Zoom et 2 autres apps\u00a0?");
   });
 
   test("invite de fin de réunion avec le repère du décompte", async () => {
@@ -54,7 +56,7 @@ describe("libellés hors composant en français", () => {
 
     expect(showNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Votre réunion est-elle terminée ?",
+        title: "Votre réunion est-elle terminée\u00a0?",
         message: "Syntheo arrêtera l'écoute dans {seconds} s.",
         action_label: "Arrêter",
         action_variant: "destructive",
@@ -92,7 +94,7 @@ describe("libellés hors composant en français", () => {
         wordCount: 30,
       }),
     ).toBe(
-      "Transcription trop courte pour un résumé (120/160 caractères minimum)",
+      "Transcription trop courte pour une synthèse (120/160 caractères minimum)",
     );
   });
 });

@@ -110,8 +110,8 @@ const SYN_CHAT_ANSWERS = {
   actions: ["Vos points d'action issus de « Point hebdo produit » :", "1. Prévenir les testeurs du nouveau calendrier de la bêta (avec Camille, mardi).", "2. Relire le message de lancement avant le 21 novembre."],
   mail: ["Objet : Point hebdo produit — décisions", "Bonjour à tous, merci pour ce point. La bêta est décalée au 21 novembre ; Malik vérifie le quota du serveur avant jeudi, Camille prévient les testeurs mardi."],
   decisions: ["Décisions clés :", "— La bêta est décalée au 21 novembre.", "— Le quota du serveur de transcription est vérifié avant jeudi."],
-  shorter: ["Je propose un résumé plus court. Il s'affiche à la place du compte rendu : appliquez-le ou refusez-le."],
-  longer: ["Je propose un résumé plus détaillé. Il s'affiche à la place du compte rendu : appliquez-le ou refusez-le."],
+  shorter: ["Je propose une synthèse plus courte. Elle s'affiche à la place de la synthèse actuelle : appliquez-la ou refusez-la."],
+  longer: ["Je propose une synthèse plus détaillée. Elle s'affiche à la place de la synthèse actuelle : appliquez-la ou refusez-la."],
 };
 
 const SynChatSummary = ({ sections }) => (
@@ -155,7 +155,7 @@ const SynChatBot = ({ message, onToggle, onReview }) => (
       {L("Activity")}
       {h(SynIcon, { name: message.open ? I("CaretDown") : I("CaretRight"), size: 12 })}
     </button>
-    {message.open ? <p className="syn-muted syn-small">Lecture de la note ouverte, puis repérage des passages utiles dans le compte rendu.</p> : null}
+    {message.open ? <p className="syn-muted syn-small">Lecture de la note ouverte, puis repérage des passages utiles dans la synthèse.</p> : null}
     {message.lines.map((line) => <p key={line}>{line}</p>)}
     {message.edit ? (
       <div className="syn-chat-tool">

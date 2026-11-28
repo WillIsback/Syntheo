@@ -31,15 +31,27 @@ describe("meeting consent model", () => {
   });
 
   it("ignores the disclosure text itself when classifying chat replies", () => {
-    expect(interpretChatAsConsentResponse(DISCLOSURE, DISCLOSURE)).toBeNull();
-    expect(interpretChatAsConsentResponse("I do not consent", DISCLOSURE)).toBe(
-      "declined",
-    );
-    expect(interpretChatAsConsentResponse("I consent", DISCLOSURE)).toBe(
+    expect(interpretChatAsConsentResponse(DISCLOSURE, [DISCLOSURE])).toBeNull();
+    expect(
+      interpretChatAsConsentResponse("I do not consent", [DISCLOSURE]),
+    ).toBe("declined");
+    expect(interpretChatAsConsentResponse("I consent", [DISCLOSURE])).toBe(
       "consented",
     );
     expect(
-      interpretChatAsConsentResponse("sounds good", DISCLOSURE),
+      interpretChatAsConsentResponse("sounds good", [DISCLOSURE]),
     ).toBeNull();
+  });
+
+  // Issue 635 : une ancienne version du message, déjà postée dans la
+  // réunion, n'est pas lue comme une réponse.
+  it("ignores every version of the disclosure text", () => {
+    const previous = "Syntheo v2 disclosure — I do not consent to nothing";
+    expect(
+      interpretChatAsConsentResponse(previous, [DISCLOSURE, previous]),
+    ).toBeNull();
+    expect(interpretChatAsConsentResponse(previous, [DISCLOSURE])).toBe(
+      "declined",
+    );
   });
 });

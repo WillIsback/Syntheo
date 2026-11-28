@@ -27,6 +27,7 @@ vi.mock("~/settings/developers/clipboard", () => ({
 
 import {
   MEETING_DISCLOSURE_MESSAGE,
+  MEETING_DISCLOSURE_TEXTS,
   sendMeetingRecordingDisclosure,
 } from "./meeting-disclosure";
 
@@ -73,7 +74,7 @@ it("meeting_disclosure_makes_no_unverified_guarantee", () => {
   // d'audio conservé ni traitement local tant que les chantiers 04b et 04c ne
   // les garantissent pas.
   expect(MEETING_DISCLOSURE_MESSAGE).toBe(
-    "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.",
+    "J'utilise Syntheo pour transcrire cette réunion ; la transcription est conservée sur mon poste.",
   );
   expect(MEETING_DISCLOSURE_MESSAGE).not.toMatch(
     /aucun enregistrement|local\)/,
@@ -154,4 +155,14 @@ it("meeting_disclosure_success_shows_no_toast", async () => {
   expect(mocks.persistDisclosureAttempt).toHaveBeenCalledWith(
     expect.objectContaining({ delivery: "sent", platform: "zoom" }),
   );
+});
+
+// Issue 635 : « transcript » devient « transcription » ; l'ancien texte,
+// déjà posté dans des réunions, reste filtré.
+it("keeps filtering the previous disclosure text", () => {
+  expect(MEETING_DISCLOSURE_TEXTS[0]).toBe(MEETING_DISCLOSURE_MESSAGE);
+  expect(MEETING_DISCLOSURE_TEXTS).toContain(
+    "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.",
+  );
+  expect(MEETING_DISCLOSURE_MESSAGE).not.toMatch(/\btranscript\b/);
 });

@@ -117,7 +117,7 @@ During a recording, if the computer falls more than 2 s behind, Syntheo spaces o
 
 On-device transcription only serves the live transcription of a recording: dictation and imported files still go through the configured server.
 
-The audio of an "On this computer" recording never goes to the server, not even to repair a dropped passage or after a restart. If the models are missing or refused, live transcription pauses and says so, with the model installation or **Go back to the server**; a missed passage stays marked in the note.
+The audio of an "On this computer" recording never goes to the server, not even to repair a dropped passage or after a restart. If the models are missing, refused, or come from another version (update needed), live transcription pauses and says so, with the model installation or update, or **Go back to the server**; a missed passage stays marked in the note.
 
 **Remove the models** deletes them.
 
@@ -151,6 +151,9 @@ Dictation in other apps uses the same transcription server as meetings.
   <Step title="Test the connection and choose the model">
     Click "Test connection". Syntheo reads the list from `/v1/models`: only the models loaded by your server appear. Click the model to use.
   </Step>
+  <Step title="Check whether the model reads images">
+    "The model reads images" decides whether the images pasted in the note are attached when the summary is generated. In "Automatic", Syntheo asks your server, once per address and model, and keeps the result: it first reads what the server publishes (Ollama, LM Studio, llama.cpp server), otherwise it sends a minimal request with a small test image that Syntheo provides and asks the model the color of the disc it shows. The text under the choice says where the result comes from: "Announced by the server" when the server publishes it, "The model accepted the test image and described it" when the model named the right color. "Test connection" runs the check again; the kept result stays in place until the server gives a clear answer. Without a clear answer (error, empty answer or one unrelated to the image), Syntheo goes by the model name. "Yes" and "No" force the choice, for example when your server serves the vision part of a model the check does not recognize; no check is sent then. "Test with an image" always sends the test image, even when the server publishes the answer, and shows what the model made of it.
+  </Step>
   <Step title="Set the reasoning effort (optional)">
     "Reasoning effort" offers "Auto", "Low", "Medium", and "High". "Auto" lets the server decide. More effort gives finer summaries, but slower ones. The other values only apply with a model that can reason and a server that accepts this parameter.
   </Step>
@@ -174,7 +177,7 @@ An administrator can enforce an HTTPS address on every computer with `managed_se
 ## What goes to your servers
 
 - The **transcription server** receives the audio of the capture, the dictation, or the imported file, as it streams. Syntheo does not write this audio to disk.
-- The **LLM server** receives the text the task needs: transcript, notes, summary template instructions, question asked in the chat.
+- The **LLM server** receives the text the task needs: transcript, notes, summary template instructions, question asked in the chat. For the summary, it also receives the images pasted in the note if the model reads images. To check that, Syntheo sends it only a test image of its own, never one of yours.
 - No header identifies your device. Syntheo contacts no other inference service and never falls back to a third-party service if your server does not answer: it shows an error.
 
 API keys are stored in the system keychain, never in plain text in the local database. Details in [Data and privacy](/en/data-and-privacy).

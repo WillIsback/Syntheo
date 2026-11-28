@@ -21,6 +21,10 @@ type ToastRegistryParams = {
   // « Sur ce poste » choisi mais pas prêt (modèles absents, poste non
   // mesuré) : l'écoute est en pause, un serveur n'y changerait rien.
   onDeviceNotReady?: boolean;
+  // Pas prêt parce que ses modèles viennent d'une autre version (issue 763) :
+  // le toast propose la mise à jour.
+  onDeviceModelsUpdate?: boolean;
+  onUpdateOnDeviceModels?: () => void;
   isAiTranscriptionTabActive: boolean;
   isAiIntelligenceTabActive: boolean;
   onOpenLLMSettings: () => void;
@@ -40,6 +44,8 @@ export function createToastRegistry({
   llmManagedOff = false,
   hasSttConfigured,
   onDeviceNotReady = false,
+  onDeviceModelsUpdate = false,
+  onUpdateOnDeviceModels,
   isAiTranscriptionTabActive,
   isAiIntelligenceTabActive,
   onOpenLLMSettings,
@@ -77,9 +83,27 @@ export function createToastRegistry({
           label: t`Add`,
           onClick: onOpenSTTSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 778 : à 910×600, il recouvrait « Commencer l'écoute ». Fermé
+        // pour cette session seulement, comme la demande de modèle de langage
+        // (issue 632) ; l'onglet Transcription le dit aussi.
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () => !hasUsableSttConfigured && !isAiTranscriptionTabActive,
+    },
+    {
+      toast: {
+        id: "on-device-models-update",
+        description: t`The transcription models of this computer need an update`,
+        primaryAction: {
+          label: t`Update the models`,
+          onClick: onUpdateOnDeviceModels ?? onOpenSTTSettings,
+        },
+        // Fermable pour la session : un toast persistant ne doit pas masquer
+        // la capsule dans une petite fenêtre (issue 778).
+        lifecycle: { type: "persistent", dismissal: "session" },
+      },
+      condition: () =>
+        onDeviceNotReady && onDeviceModelsUpdate && !isAiTranscriptionTabActive,
     },
     {
       toast: {
@@ -89,7 +113,8 @@ export function createToastRegistry({
           label: t`Open`,
           onClick: onOpenSTTSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 778 : tout toast persistant se ferme pour la session.
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () => onDeviceNotReady && !isAiTranscriptionTabActive,
     },
@@ -101,7 +126,11 @@ export function createToastRegistry({
           label: t`Add`,
           onClick: onOpenLLMSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 632 : dans une fenêtre étroite, il recouvrait la capsule et le
+        // bouton Export sans pouvoir être écarté. Fermé pour cette session :
+        // il revient au prochain lancement tant qu'aucun modèle n'est ajouté ;
+        // l'onglet Synthèse le dit aussi (« Configurez les synthèses par IA »).
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () =>
         hasUsableSttConfigured &&

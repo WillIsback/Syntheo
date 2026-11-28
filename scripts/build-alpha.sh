@@ -57,9 +57,12 @@
 # GPU NVIDIA (« Error 71 (Erreur de protocole) dispatching to Wayland display »,
 # rendu dmabuf, issue 555) : c'est pourquoi Docker est le mode par défaut.
 #
-# Essai de démarrage : en fin de build, si une session Wayland est ouverte, le
-# script lance l'AppImage une vingtaine de secondes dans un profil jetable
-# (ALPHA_SMOKE_TEST=0 pour sauter cet essai) ; en cas d'échec, code de sortie 3.
+# Essai de démarrage, sur demande seulement (ALPHA_SMOKE_TEST=1) : en fin de
+# build, si une session Wayland est ouverte, le script lance l'AppImage une
+# vingtaine de secondes dans un profil jetable ; en cas d'échec, code de sortie 3.
+# Il est désactivé par défaut : il ouvre une fenêtre dans la session graphique
+# de la personne qui utilise le poste, ce qu'un build lancé par un agent ne doit
+# jamais faire sans le demander.
 #
 # Sous Arch (mode natif), si linuxdeploy échoue au moment de « strip » (section
 # .relr.dyn inconnue), relancer avec NO_STRIP=true.
@@ -626,8 +629,8 @@ smoke_test_wayland() {
   esac
 }
 
-if [ -n "${WAYLAND_DISPLAY:-}" ] && [ "${ALPHA_SMOKE_TEST:-1}" != 0 ]; then
+if [ -n "${WAYLAND_DISPLAY:-}" ] && [ "${ALPHA_SMOKE_TEST:-0}" = 1 ]; then
   echo
-  echo "Essai de démarrage sous Wayland (profil jetable, 20 s ; ALPHA_SMOKE_TEST=0 pour sauter)…"
+  echo "Essai de démarrage sous Wayland (profil jetable, 20 s, demandé par ALPHA_SMOKE_TEST=1)…"
   smoke_test_wayland "$OUT/$NAME" || exit 3
 fi

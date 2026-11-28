@@ -26,23 +26,85 @@ function showToast(
 }
 
 describe("sidebar toast registry", () => {
-  it.each([
-    ["missing-llm", { hasLLMConfigured: false }],
-    ["missing-stt", { hasSttConfigured: false }],
-  ] as const)(
-    "requires %s setup even if it was dismissed previously",
-    (id, overrides) => {
-      const toast = showToast(overrides, (toast) => toast.id === id);
+  // Issue 778 : à 910×600, la demande de fournisseur recouvrait
+  // « Commencer l'écoute » sans pouvoir être fermée. Tous les toasts du
+  // registre se ferment désormais pour la session.
+  it("lets every registry toast be closed for the session", () => {
+    const params: RegistryParams = {
+      ...baseParams,
+      availableUpdate: "0.8.2",
+      hasLLMConfigured: false,
+      hasSttConfigured: false,
+      onDeviceNotReady: true,
+    };
+    for (const entry of createToastRegistry(params)) {
+      expect(entry.toast.lifecycle).toMatchObject({
+        type: "persistent",
+        dismissal: "session",
+      });
+    }
+  });
 
-      expect(toast?.id).toBe(id);
-      expect(toast?.lifecycle).toEqual({ type: "condition-bound" });
-    },
-  );
+  it("hides the missing-stt notice once closed for the session", () => {
+    expect(showToast({ hasSttConfigured: false })?.id).toBe("missing-stt");
+    expect(
+      showToast(
+        { hasSttConfigured: false },
+        (toast) => toast.id === "missing-stt",
+      ),
+    ).toBeNull();
+  });
+
+  // Issue 632 : la demande de modèle de langage se ferme pour la session
+  // (elle recouvrait la capsule dans une fenêtre étroite) et revient au
+  // lancement suivant.
+  it("lets the missing-llm notice be closed for the session only", () => {
+    const toast = showToast({ hasLLMConfigured: false });
+
+    expect(toast?.id).toBe("missing-llm");
+    expect(toast?.lifecycle).toEqual({
+      type: "persistent",
+      dismissal: "session",
+    });
+  });
 
   // Issue 707 : synthèse coupée par l'administration.
   it("never asks for a language model when synthesis is managed off", () => {
     expect(
       showToast({ hasLLMConfigured: false, llmManagedOff: true }),
+    ).toBeNull();
+  });
+
+  // Issue 763 : modèles « Sur ce poste » d'une autre version.
+  it("offers the models update instead of a generic not-ready notice", () => {
+    const onUpdateOnDeviceModels = vi.fn();
+    const toast = showToast({
+      onDeviceNotReady: true,
+      onDeviceModelsUpdate: true,
+      onUpdateOnDeviceModels,
+    });
+
+    expect(toast?.id).toBe("on-device-models-update");
+    expect(toast?.description).toBe(
+      "The transcription models of this computer need an update",
+    );
+    expect(toast?.primaryAction?.label).toBe("Update the models");
+    expect(toast?.lifecycle).toEqual({
+      type: "persistent",
+      dismissal: "session",
+    });
+    void toast?.primaryAction?.onClick();
+    expect(onUpdateOnDeviceModels).toHaveBeenCalledOnce();
+
+    expect(showToast({ onDeviceNotReady: true })?.id).toBe(
+      "on-device-not-ready",
+    );
+    expect(
+      showToast({
+        onDeviceNotReady: true,
+        onDeviceModelsUpdate: true,
+        isAiTranscriptionTabActive: true,
+      }),
     ).toBeNull();
   });
 

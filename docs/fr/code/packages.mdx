@@ -21,7 +21,7 @@ Tous les paquets sont privés (`"private": true`) et publiés sous la portée `@
 | `@syntheo/provider-validation` | `packages/provider-validation` | Validation des adresses et des identifiants des serveurs d'inférence. | `apps/desktop` | [/ai-setup](/fr/ai-setup), [/offline](/fr/offline), [/security](/fr/security) |
 | `@syntheo/store` | `packages/store` | Schémas Zod partagés (fournisseurs, modèles, transcription, chat). | `apps/desktop`, `editor` | [/ai-setup](/fr/ai-setup), [/customize-summaries](/fr/customize-summaries), [/chat](/fr/chat) |
 | `@syntheo/ui` | `packages/ui` | Composants d'interface (shadcn/Radix), icônes, configuration Tailwind. | `apps/desktop`, `editor` | aucune |
-| `@syntheo/utils` | `packages/utils` | Utilitaires : classes CSS, dates, dossiers, onglets de session, éligibilité au compte rendu. | `apps/desktop`, `editor`, `ui`, `changelog` | [/meetings](/fr/meetings), [/notes](/fr/notes) |
+| `@syntheo/utils` | `packages/utils` | Utilitaires : classes CSS, dates, dossiers, onglets de session, éligibilité à la synthèse. | `apps/desktop`, `editor`, `ui`, `changelog` | [/meetings](/fr/meetings), [/notes](/fr/notes) |
 
 ## Graphe de dépendances internes
 
@@ -113,7 +113,7 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 - Rôle : schémas Zod partagés entre l'application et l'éditeur, et helpers de conversion vers le stockage.
 - API principale : `templateSectionSchema`, `chatMessageStatusSchema`, `taskStatusSchema`, `wordSchema`, `speakerHintSchema`, `aiProviderSchema` (types `stt` et `llm`), `jsonObject`, type `ToStorageType`. Exports `.`, `./schema` et `./shared`.
 - Dépendances internes : aucune.
-- Consommateurs dans `apps/desktop` : modèles de compte rendu (`src/templates/*`), connexions STT et LLM (`src/stt/*`, `src/ai/hooks/useLLMConnection.ts`), messages de chat persistés (`src/chat/store/persisted-messages.ts`).
+- Consommateurs dans `apps/desktop` : modèles de synthèse (`src/templates/*`), connexions STT et LLM (`src/stt/*`, `src/ai/hooks/useLLMConnection.ts`), messages de chat persistés (`src/chat/store/persisted-messages.ts`).
 - Pages de doc concernées : [/ai-setup](/fr/ai-setup) (champs d'un fournisseur), [/customize-summaries](/fr/customize-summaries) (sections de modèle), [/chat](/fr/chat).
 
 ## `@syntheo/provider-validation`
@@ -132,9 +132,9 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 - Exports :
   - `.` : `cn` (fusion de classes Tailwind), réexport de `date-fns` et `TZDate`, `safeParseDate`, `parseEventInstant`, `safeFormat`.
   - `./folders` : `normalizeFolderPath`, `folderDisplayName`, `collectFolderPaths`, `folderPathMatchesFilter`, `childFolderPath`, `ancestorFolderPaths`.
-  - `./session` : onglets de l'éditeur de session (`computeCurrentNoteTab`, `createEditorTabs`) et documents de compte rendu (`hasSummaryContent`, `defaultSummaryDocumentId`, `resolveSummaryDocument`, `visibleSummaryDocuments`).
+  - `./session` : onglets de l'éditeur de session (`computeCurrentNoteTab`, `createEditorTabs`) et documents de synthèse (`hasSummaryContent`, `defaultSummaryDocumentId`, `resolveSummaryDocument`, `visibleSummaryDocuments`).
   - `./summary-eligibility` : `getSummaryEligibility`, seuils `MIN_WORDS_FOR_SUMMARY` (5) et `MIN_TRANSCRIPT_CHARACTERS_FOR_SUMMARY` (160).
-- Pages de doc concernées : [/meetings](/fr/meetings) (déclenchement du compte rendu), [/notes](/fr/notes) (dossiers).
+- Pages de doc concernées : [/meetings](/fr/meetings) (déclenchement de la synthèse), [/notes](/fr/notes) (dossiers).
 
 ## Interface et design
 

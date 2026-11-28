@@ -127,6 +127,7 @@ export const Enhanced = forwardRef<
           sessionId={sessionId}
           enhancedNoteId={enhancedNoteId}
           summaryMarkdown={getStoredNoteMarkdown(enhancedNote.content)}
+          summaryGeneratedAt={enhancedNote.generatedAt ?? null}
         />
         <EnhancedEditor
           ref={ref}

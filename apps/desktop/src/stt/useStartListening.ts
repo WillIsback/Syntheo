@@ -15,7 +15,7 @@ import { useListener } from "./contexts";
 import { notifyListeningElsewhere } from "./listening-elsewhere";
 import { startMeetingChatCapture } from "./meeting-chat-capture";
 import {
-  MEETING_DISCLOSURE_MESSAGE,
+  MEETING_DISCLOSURE_TEXTS,
   startMeetingRecordingDisclosure,
 } from "./meeting-disclosure";
 import { startMeetingScreenCapture } from "./meeting-screen-capture";
@@ -27,6 +27,7 @@ import {
   type StartFailureStage,
 } from "./start-failure";
 
+import { requestSettingFocus } from "~/settings/setting-focus";
 import { useConfigValue } from "~/shared/config";
 import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 import { useTabs } from "~/store/zustand/tabs";
@@ -36,10 +37,12 @@ import {
   getTranscriptionLanguages,
 } from "~/stt/capabilities";
 import {
+  describeOnDeviceUnavailability,
   getSingleStreamReminderMessage,
   isSingleStreamProfile,
   loadOnDeviceCommissioning,
   ON_DEVICE_BASE_URL,
+  type OnDeviceUnavailability,
 } from "~/stt/on-device";
 import {
   getSessionParticipantHumanIds,
@@ -64,6 +67,16 @@ export const getCleartextCaptureMessage = (baseUrl: string) => {
 
 export const getNoTranscriptionProviderMessage = () =>
   t`No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording.`;
+
+/** Action proposée quand « Sur ce poste » ne peut pas servir (issue 763). */
+export const getOnDeviceUnavailabilityActionLabel = (
+  reason: OnDeviceUnavailability,
+) =>
+  reason === "models_update"
+    ? t`Update the models`
+    : reason === "models_missing"
+      ? t`Install the models`
+      : t`Open`;
 
 // Délai maximal d'attente des réglages avant de conclure à l'absence de
 // fournisseur (issue 515).
@@ -92,6 +105,7 @@ export function useStartListeningState(
     connectionLoading,
     connectionReady,
     createCaptureLifecycle,
+    onDeviceUnavailable,
     session,
     setStopMeetingChatCapture,
     stopMeetingChatTasks,
@@ -144,6 +158,23 @@ export function useStartListeningState(
   const startListeningNow = useCallback(async () => {
     if (!canStartLiveSession(sessionId)) {
       notifyBlockedStart();
+      return;
+    }
+    // « Sur ce poste » choisi mais module absent (issue 763) : la raison et
+    // l'action qui convient (mise à jour des modèles…), pas « aucun
+    // fournisseur ».
+    if (!conn && onDeviceUnavailable) {
+      toast.error(describeOnDeviceUnavailability(onDeviceUnavailable), {
+        id: "recording-without-transcription",
+        duration: Infinity,
+        action: {
+          label: getOnDeviceUnavailabilityActionLabel(onDeviceUnavailable),
+          onClick: () => {
+            requestSettingFocus("stt-on-device-module");
+            openNew({ type: "settings", state: { tab: "transcription" } });
+          },
+        },
+      });
       return;
     }
     // Sans recorder, une capture sans STT ne produirait rien.
@@ -332,7 +363,7 @@ export function useStartListeningState(
 
     const stopChatCapture = startMeetingChatCapture({
       sessionId,
-      excludedTexts: [MEETING_DISCLOSURE_MESSAGE],
+      excludedTexts: [...MEETING_DISCLOSURE_TEXTS],
       onParticipantDeclined: () => {
         toast.warning(
           t`A participant declined recording. Syntheo stopped listening.`,
@@ -363,6 +394,7 @@ export function useStartListeningState(
     getSessionMode,
     microphoneDevice,
     notifyBlockedStart,
+    onDeviceUnavailable,
     speakerDevice,
     reportStartFailure,
     retainAudio,

@@ -23,7 +23,7 @@ import { assertCanonicalTemplateSections } from "~/templates/codec";
 
 const AI_GENERATION_MAX_RETRIES = 4;
 const IMAGE_CONTEXT_NOTE =
-  "Attached note images are included as visual context. Use visible text, diagrams, screenshots, and other image content when it materially improves the summary.";
+  "Attached note images are included as visual context, in order: [Image N] in the notes marks where image N appears. Use visible text, diagrams, screenshots, and other image content when it materially improves the summary.";
 
 export const enhanceWorkflow: Pick<
   TaskConfig<"enhance">,

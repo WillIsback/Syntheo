@@ -121,7 +121,7 @@ jobs:
         uses: ./.github/actions/pnpm_install
 
       - name: Tests des scripts
-        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs scripts/beta/*.test.mjs
+        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs scripts/beta/*.test.mjs plugins/relay/js/*.test.js
 
       - name: Compétence Syntheo publiée à jour
         run: node scripts/publish-syntheo-skill.mjs --check

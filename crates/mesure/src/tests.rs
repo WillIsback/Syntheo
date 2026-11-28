@@ -606,16 +606,17 @@ fn corrected_term_is_the_word_that_made_it_lexical() {
         .with_term_key(KEY);
     assert!(after.hashes().contains(&first.corrected_terms[0].hash));
 
-    // « au rectorat » remplacé par « à la DRASI » : le terme est « DRASI ».
-    let generated = "Le dossier part au rectorat demain.";
-    let sent = "Le dossier part à la DRASI demain.";
+    // « au siège » remplacé par « à Orion » (nom fictif) : le terme est
+    // « Orion ».
+    let generated = "Le dossier part au siège demain.";
+    let sent = "Le dossier part à Orion demain.";
     let report = measure(generated, Format::Text, sent, Format::Text, &before).unwrap();
-    let drasi = Dictionary::new(["DRASI"])
+    let orion = Dictionary::new(["Orion"])
         .unwrap()
         .with_term_key(KEY)
         .hashes();
     let hashes: Vec<_> = report.corrected_terms.iter().map(|t| &t.hash).collect();
-    assert_eq!(hashes, [&drasi[0]]);
+    assert_eq!(hashes, [&orion[0]]);
 }
 
 // Vérification 0.8.0, point 2 : un terme suivi contenu dans une entrée de
@@ -1331,9 +1332,9 @@ fn function_word_list_is_lowercase_and_unique() {
 }
 
 #[test]
-fn rule_version_is_two() {
-    assert_eq!(RULE_VERSION, 2);
-    assert_eq!(run(GENERATED, GENERATED).rule_version, 2);
+fn rule_version_is_three() {
+    assert_eq!(RULE_VERSION, 3);
+    assert_eq!(run(GENERATED, GENERATED).rule_version, 3);
 }
 
 // Texte brut collé (issue 730, suite) : un titre corrigé d'un mot ouvre

@@ -1,27 +1,20 @@
+import { i18n } from "@lingui/core";
+
 import { md2json } from "@syntheo/editor/markdown";
 
 import { liveQueryClient } from "~/db";
-import { WELCOME_NOTE_TRACKING_ID } from "~/onboarding/welcome-note.constants";
+import {
+  WELCOME_NOTE_TRACKING_ID,
+  WELCOME_NOTES,
+} from "~/onboarding/welcome-note.constants";
 import { createSession } from "~/session/queries";
 import { DEFAULT_USER_ID } from "~/shared/utils";
 
 const PENDING_WELCOME_SESSION_KEY = "syntheo.pending-welcome-session";
 
-const WELCOME_NOTE = `Bienvenue sur Syntheo 👋
-
-Une réunion tient sur une seule page, en trois temps : **Préparer**, **Écouter**, **Synthèse**.
-
-- **Préparer** : choisissez le **type de réunion**. Il détermine le modèle du compte-rendu.
-- **Écouter** : lancez l'écoute depuis la capsule en bas de la page. La transcription s'affiche en marge pendant que vous prenez vos notes ici.
-- **Synthèse** : à l'arrêt, Syntheo fusionne vos notes et la transcription dans le compte-rendu. Vos notes restent en vert, le texte rédigé par Syntheo à l'encre : vous voyez d'un coup d'œil qui a écrit quoi.
-
-Pourquoi le thé ? Syn·thé·o : ce qu'on rassemble autour du thé. Comme le *kaiki*, le carnet qu'un invité garde d'une réunion de thé, votre compte rendu part de vos notes. La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la note reste.
-
-Avant votre première réunion, réglez la transcription et la synthèse avec les boutons ci-dessus.
-
-Astuce : **Ctrl K** ouvre la palette pour retrouver une note, un dossier ou un réglage.`;
-
-const WELCOME_NOTE_TITLE = "Bienvenue sur Syntheo";
+function welcomeNote() {
+  return i18n.locale?.startsWith("fr") ? WELCOME_NOTES.fr : WELCOME_NOTES.en;
+}
 
 let pendingWelcomeSession: Promise<string> | null = null;
 
@@ -65,8 +58,9 @@ async function findOrCreateWelcomeSession(): Promise<string> {
   );
   if (rows[0]) return rows[0].id;
 
-  return createSession(WELCOME_NOTE_TITLE, DEFAULT_USER_ID, {
+  const note = welcomeNote();
+  return createSession(note.title, DEFAULT_USER_ID, {
     metadata_json: JSON.stringify({ welcome_note: WELCOME_NOTE_TRACKING_ID }),
-    raw_md: JSON.stringify(md2json(WELCOME_NOTE)),
+    raw_md: JSON.stringify(md2json(note.body)),
   });
 }

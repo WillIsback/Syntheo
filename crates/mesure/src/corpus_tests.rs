@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use super::*;
 use crate::docx::tests::{document, zip_with};
 
-const CORPUS: [(&str, &str); 3] = [
+const CORPUS: [(&str, &str); 4] = [
     (
         "comite-pilotage",
         include_str!("../corpus/comite-pilotage.md"),
@@ -18,6 +18,26 @@ const CORPUS: [(&str, &str); 3] = [
         include_str!("../corpus/atelier-donnees.md"),
     ),
     ("board-review", include_str!("../corpus/board-review.md")),
+    // Tableau d'actions, avec des valeurs répétées que les rendus « fusionné »
+    // regroupent en cellules fusionnées (issue 731).
+    (
+        "revue-chantier",
+        include_str!("../corpus/revue-chantier.md"),
+    ),
+];
+
+/// Documents du corpus des garde-fous, figé à `GUARD_VERSION` 1 : les
+/// documents et les rendus ajoutés ensuite entrent dans l'empreinte de la
+/// règle, pas dans celle des garde-fous, dont aucun seuil n'a changé.
+const GUARD_CORPUS_LEN: usize = 3;
+const GUARD_RENDERINGS: [&str; 7] = [
+    "markdown",
+    "html",
+    "html-named",
+    "html-decimal",
+    "html-hex",
+    "text",
+    "docx",
 ];
 
 const FINGERPRINTS: &str = include_str!("../corpus/FINGERPRINTS");
@@ -28,6 +48,10 @@ enum Kind {
     Heading,
     Bullet,
     Paragraph,
+    /// Rangée de tableau ; la première d'un tableau est l'en-tête.
+    Row,
+    /// Ligne de séparation sous l'en-tête (`| --- |`), Markdown seulement.
+    Separator,
 }
 
 struct Line {
@@ -35,13 +59,24 @@ struct Line {
     text: String,
 }
 
-/// Sous-ensemble du Markdown du corpus : `#`, `##`, `- `, paragraphes.
+/// Sous-ensemble du Markdown du corpus : `#`, `##`, `- `, paragraphes,
+/// tableaux (`| a | b |`, une ligne de séparation sous l'en-tête).
 fn parse(markdown: &str) -> Vec<Line> {
     markdown
         .lines()
         .filter(|line| !line.trim().is_empty())
         .map(|line| {
-            let (kind, text) = if let Some(text) = line.strip_prefix("## ") {
+            let (kind, text) = if line.starts_with('|') {
+                let separator = line.chars().all(|c| matches!(c, '|' | '-' | ':' | ' '));
+                (
+                    if separator {
+                        Kind::Separator
+                    } else {
+                        Kind::Row
+                    },
+                    line,
+                )
+            } else if let Some(text) = line.strip_prefix("## ") {
                 (Kind::Heading, text)
             } else if let Some(text) = line.strip_prefix("# ") {
                 (Kind::Title, text)
@@ -60,16 +95,97 @@ fn parse(markdown: &str) -> Vec<Line> {
 
 fn to_markdown(lines: &[Line]) -> String {
     let mut out = String::new();
-    for line in lines {
+    for (i, line) in lines.iter().enumerate() {
         let prefix = match line.kind {
             Kind::Title => "# ",
             Kind::Heading => "## ",
             Kind::Bullet => "- ",
-            Kind::Paragraph => "",
+            Kind::Paragraph | Kind::Row | Kind::Separator => "",
         };
         out.push_str(prefix);
         out.push_str(&line.text);
-        out.push_str("\n\n");
+        // Les lignes d'un tableau se suivent sans ligne vide.
+        let in_table =
+            |l: Option<&Line>| l.is_some_and(|l| matches!(l.kind, Kind::Row | Kind::Separator));
+        if in_table(Some(line)) && in_table(lines.get(i + 1)) {
+            out.push('\n');
+        } else {
+            out.push_str("\n\n");
+        }
+    }
+    out
+}
+
+fn cells(row: &str) -> Vec<String> {
+    row.trim()
+        .trim_start_matches('|')
+        .trim_end_matches('|')
+        .split('|')
+        .map(|cell| cell.trim().to_owned())
+        .collect()
+}
+
+/// Cellules d'un tableau, et pour chacune sa fusion : `Some((rangées,
+/// colonnes))` pour la cellule d'origine, `None` pour une cellule couverte.
+/// Sans fusion, chaque cellule couvre une rangée et une colonne ; avec, les
+/// valeurs identiques voisines sont regroupées, hors en-tête : d'abord sur la
+/// rangée, puis vers le bas tant que toutes les colonnes couvertes répètent
+/// la même valeur.
+type Grid = Vec<Vec<(String, Option<(usize, usize)>)>>;
+
+fn grid(rows: &[&Line], merged: bool) -> Grid {
+    let values: Vec<Vec<String>> = rows.iter().map(|r| cells(&r.text)).collect();
+    let mut grid: Grid = values
+        .iter()
+        .map(|row| row.iter().map(|v| (v.clone(), Some((1, 1)))).collect())
+        .collect();
+    if !merged {
+        return grid;
+    }
+    for i in 1..values.len() {
+        for j in 0..values[i].len() {
+            if grid[i][j].1.is_none() {
+                continue;
+            }
+            let value = &values[i][j];
+            let mut columns = 1;
+            while values[i].get(j + columns) == Some(value) && grid[i][j + columns].1.is_some() {
+                columns += 1;
+            }
+            let mut rows_spanned = 1;
+            while i + rows_spanned < values.len()
+                && (j..j + columns).all(|c| {
+                    values[i + rows_spanned].get(c) == Some(value)
+                        && grid[i + rows_spanned][c].1.is_some()
+                })
+            {
+                rows_spanned += 1;
+            }
+            for row in &mut grid[i..i + rows_spanned] {
+                for cell in &mut row[j..j + columns] {
+                    cell.1 = None;
+                }
+            }
+            grid[i][j].1 = Some((rows_spanned, columns));
+        }
+    }
+    grid
+}
+
+/// Groupes de lignes consécutives : un tableau entier, ou une autre ligne.
+fn groups(lines: &[Line]) -> Vec<Vec<&Line>> {
+    let mut out: Vec<Vec<&Line>> = Vec::new();
+    for line in lines {
+        let table = matches!(line.kind, Kind::Row | Kind::Separator);
+        let previous_table = out
+            .last()
+            .and_then(|g| g.last())
+            .is_some_and(|l| matches!(l.kind, Kind::Row | Kind::Separator));
+        if table && previous_table {
+            out.last_mut().unwrap().push(line);
+        } else {
+            out.push(vec![line]);
+        }
     }
     out
 }
@@ -99,7 +215,7 @@ enum Encoding {
     Hex,
 }
 
-fn to_html(lines: &[Line], encoding: Encoding) -> String {
+fn to_html(lines: &[Line], encoding: Encoding, merged: bool) -> String {
     let encode = |text: &str| -> String {
         escape(text)
             .chars()
@@ -113,10 +229,35 @@ fn to_html(lines: &[Line], encoding: Encoding) -> String {
     };
     let mut out = String::from("<html><body>");
     let mut in_list = false;
-    for line in lines {
+    for group in groups(lines) {
+        let line = group[0];
         if in_list && line.kind != Kind::Bullet {
             out.push_str("</ul>");
             in_list = false;
+        }
+        if line.kind == Kind::Row {
+            let rows: Vec<&Line> = group.into_iter().filter(|l| l.kind == Kind::Row).collect();
+            out.push_str("<table>\n");
+            for (i, row) in grid(&rows, merged).into_iter().enumerate() {
+                out.push_str("<tr>");
+                let cell = if i == 0 { "th" } else { "td" };
+                for (value, span) in row {
+                    let Some((rows_spanned, columns)) = span else {
+                        continue;
+                    };
+                    let mut attributes = String::new();
+                    if rows_spanned > 1 {
+                        attributes.push_str(&format!(" rowspan=\"{rows_spanned}\""));
+                    }
+                    if columns > 1 {
+                        attributes.push_str(&format!(" colspan={columns}"));
+                    }
+                    out.push_str(&format!("<{cell}{attributes}>{}</{cell}>", encode(&value)));
+                }
+                out.push_str("</tr>\n");
+            }
+            out.push_str("</table>\n");
+            continue;
         }
         let text = encode(&line.text);
         match line.kind {
@@ -130,6 +271,7 @@ fn to_html(lines: &[Line], encoding: Encoding) -> String {
                 }
                 out.push_str(&format!("<li>{text}</li>\n"));
             }
+            Kind::Row | Kind::Separator => unreachable!("tableau rendu plus haut"),
         }
     }
     if in_list {
@@ -139,32 +281,108 @@ fn to_html(lines: &[Line], encoding: Encoding) -> String {
     out
 }
 
-/// Texte brut collé : titres sans mise en forme, puces sans marque.
+/// Texte brut collé : titres sans mise en forme, puces sans marque,
+/// cellules d'une rangée séparées par une tabulation.
 fn to_text(lines: &[Line]) -> String {
     lines
         .iter()
-        .map(|line| line.text.as_str())
+        .filter(|line| line.kind != Kind::Separator)
+        .map(|line| match line.kind {
+            Kind::Row => cells(&line.text).join("\t"),
+            _ => line.text.clone(),
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn to_docx(lines: &[Line]) -> String {
-    let escaped: Vec<(&str, String)> = lines
-        .iter()
-        .map(|line| {
+fn to_docx(lines: &[Line], merged: bool) -> String {
+    let mut body = String::new();
+    for group in groups(lines) {
+        let line = group[0];
+        if line.kind != Kind::Row {
             let style = match line.kind {
                 Kind::Title | Kind::Heading => "Heading1",
-                Kind::Bullet | Kind::Paragraph => "",
+                _ => "",
             };
-            (style, escape(&line.text))
-        })
-        .collect();
-    let paragraphs: Vec<(&str, &str)> = escaped
-        .iter()
-        .map(|(style, text)| (*style, text.as_str()))
-        .collect();
-    let xml = document(&paragraphs);
+            let xml = document(&[(style, &escape(&line.text))]);
+            body.push_str(paragraphs_of(&xml));
+            continue;
+        }
+        let rows: Vec<&Line> = group.into_iter().filter(|l| l.kind == Kind::Row).collect();
+        body.push_str(&docx_table(&grid(&rows, merged)));
+    }
+    let xml = document(&[]).replace("</w:body>", &format!("{body}</w:body>"));
     docx_to_html(&zip_with("word/document.xml", xml.as_bytes(), true)).unwrap()
+}
+
+/// Paragraphes `<w:p>` d'un document produit par `document`.
+fn paragraphs_of(xml: &str) -> &str {
+    let start = xml.find("<w:body>").unwrap() + "<w:body>".len();
+    let end = xml.rfind("</w:body>").unwrap();
+    &xml[start..end]
+}
+
+/// Tableau Word : l'en-tête en style de titre (piège : une cellule n'ouvre
+/// jamais de section), `w:gridSpan` et `w:vMerge` pour les fusions ; chaque
+/// cellule couverte par une fusion verticale est présente, vide, comme dans
+/// Word.
+fn docx_table(grid: &Grid) -> String {
+    let mut xml = String::from("<w:tbl><w:tblPr/>");
+    // Fusion verticale encore ouverte, par colonne : colonne de sa cellule
+    // d'origine et dernière rangée couverte.
+    let mut open: Vec<Option<(usize, usize)>> = vec![None; grid.first().map_or(0, Vec::len)];
+    for (i, row) in grid.iter().enumerate() {
+        xml.push_str("<w:tr>");
+        let mut j = 0;
+        while j < row.len() {
+            let (value, span) = &row[j];
+            let (columns, properties, text) = match span {
+                Some((rows_spanned, columns)) => {
+                    let mut properties = String::new();
+                    if *columns > 1 {
+                        properties.push_str(&format!(r#"<w:gridSpan w:val="{columns}"/>"#));
+                    }
+                    if *rows_spanned > 1 {
+                        properties.push_str(r#"<w:vMerge w:val="restart"/>"#);
+                        for slot in &mut open[j..j + columns] {
+                            *slot = Some((j, i + rows_spanned - 1));
+                        }
+                    }
+                    (*columns, properties, escape(value))
+                }
+                None => {
+                    // Couverte : par une fusion verticale (cellule vide
+                    // `w:vMerge`), sinon par la cellule de gauche (sautée).
+                    if open[j].is_some_and(|(_, last)| i <= last) {
+                        let columns = (j + 1..row.len())
+                            .take_while(|&c| row[c].1.is_none() && open[c] == open[j])
+                            .count()
+                            + 1;
+                        let mut properties = String::from("<w:vMerge/>");
+                        if columns > 1 {
+                            properties = format!(r#"<w:gridSpan w:val="{columns}"/>{properties}"#);
+                        }
+                        (columns, properties, String::new())
+                    } else {
+                        j += 1;
+                        continue;
+                    }
+                }
+            };
+            let style = if i == 0 {
+                r#"<w:pPr><w:pStyle w:val="Heading2"/></w:pPr>"#
+            } else {
+                ""
+            };
+            xml.push_str(&format!(
+                r#"<w:tc><w:tcPr>{properties}</w:tcPr><w:p>{style}<w:r><w:t xml:space="preserve">{text}</w:t></w:r></w:p></w:tc>"#
+            ));
+            j += columns;
+        }
+        xml.push_str("</w:tr>");
+    }
+    xml.push_str("</w:tbl>");
+    xml
 }
 
 /// Toutes les formes d'un même texte : (nom, texte, format).
@@ -172,16 +390,31 @@ fn renderings(markdown: &str) -> Vec<(&'static str, String, Format)> {
     let lines = parse(markdown);
     vec![
         ("markdown", to_markdown(&lines), Format::Markdown),
-        ("html", to_html(&lines, Encoding::Utf8), Format::Html),
-        ("html-named", to_html(&lines, Encoding::Named), Format::Html),
+        ("html", to_html(&lines, Encoding::Utf8, false), Format::Html),
         (
-            "html-decimal",
-            to_html(&lines, Encoding::Decimal),
+            "html-named",
+            to_html(&lines, Encoding::Named, false),
             Format::Html,
         ),
-        ("html-hex", to_html(&lines, Encoding::Hex), Format::Html),
+        (
+            "html-decimal",
+            to_html(&lines, Encoding::Decimal, false),
+            Format::Html,
+        ),
+        (
+            "html-hex",
+            to_html(&lines, Encoding::Hex, false),
+            Format::Html,
+        ),
         ("text", to_text(&lines), Format::Text),
-        ("docx", to_docx(&lines), Format::Html),
+        ("docx", to_docx(&lines, false), Format::Html),
+        // Cellules fusionnées (issue 731) : valeurs répétées regroupées.
+        (
+            "html-merged",
+            to_html(&lines, Encoding::Utf8, true),
+            Format::Html,
+        ),
+        ("docx-merged", to_docx(&lines, true), Format::Html),
     ]
 }
 
@@ -460,10 +693,16 @@ fn guards(r: &Report) -> String {
 
 /// Empreinte SHA-256 d'une projection des rapports du corpus, dans un ordre
 /// fixe : chaque scénario en Markdown, et les retouches injectées dans
-/// chaque format.
-fn corpus_fingerprint(project: fn(&Report) -> String) -> String {
+/// chaque format. `guards_only` restreint au corpus figé des garde-fous
+/// (documents et rendus de `GUARD_VERSION` 1).
+fn corpus_fingerprint(project: fn(&Report) -> String, guards_only: bool) -> String {
     let mut lines = Vec::new();
-    for (name, markdown) in CORPUS {
+    let documents = if guards_only {
+        &CORPUS[..GUARD_CORPUS_LEN]
+    } else {
+        &CORPUS[..]
+    };
+    for &(name, markdown) in documents {
         let scenarios = [
             ("identite", markdown.to_owned()),
             ("typographie", typographic(markdown)),
@@ -476,6 +715,9 @@ fn corpus_fingerprint(project: fn(&Report) -> String) -> String {
             lines.push(format!("{name}\t{scenario}\t{}", project(&r)));
         }
         for (format, sent, sent_format) in renderings(&injected(markdown)) {
+            if guards_only && !GUARD_RENDERINGS.contains(&format) {
+                continue;
+            }
             let r = report(markdown, &sent, sent_format);
             lines.push(format!("{name}\tretouches-{format}\t{}", project(&r)));
         }
@@ -537,7 +779,7 @@ fn corpus_outputs_match_the_rule_version_fingerprint() {
         "rule",
         "RULE_VERSION",
         RULE_VERSION,
-        &corpus_fingerprint(calculation),
+        &corpus_fingerprint(calculation, false),
     );
 }
 
@@ -549,6 +791,6 @@ fn corpus_guards_match_the_guard_version_fingerprint() {
         "guard",
         "GUARD_VERSION",
         GUARD_VERSION,
-        &corpus_fingerprint(guards),
+        &corpus_fingerprint(guards, true),
     );
 }

@@ -2,6 +2,8 @@ mod commands;
 mod ext;
 #[cfg(target_os = "linux")]
 mod linux_frames;
+#[cfg(target_os = "linux")]
+mod linux_theme;
 mod locale;
 mod macos_position;
 mod menu_items;

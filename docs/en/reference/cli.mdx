@@ -131,7 +131,7 @@ syntheo --json mesure --generated generated.md --sent published.md
 
 Computes how much of a generated summary was reworked before it was sent or published, without AI and without network, and **prints numbers only**: no word of the texts, no heading. The command does not open the database and writes no file. It serves the local calibration of the beta measurement.
 
-- `--generated` and `--sent`: `.md`, `.txt` or `.html` files in UTF-8 (4 MiB at most), or `.docx` (16 MiB at most, read without network or external entities). The format follows the extension.
+- `--generated` and `--sent`: `.md`, `.txt` or `.html` files in UTF-8 (4 MiB at most), or `.docx` (16 MiB at most, read without network or external entities). The format follows the extension. An HTML or `.docx` table is read row by row, like a Markdown table row, and a merged cell is repeated in every row and column it covers.
 - `--dictionary` (optional): one term per line; a short replacement touching one of these terms counts as a lexical correction.
 
 The calculation strips formatting, splits both texts by the headings of the generated version (a line identical to a heading is enough in the sent version; in a `.txt` file, a line one word away from a heading not found yet is too), compares word by word, then classifies each difference:

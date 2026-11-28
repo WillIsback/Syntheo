@@ -6,7 +6,7 @@ description: "Événements de réunion signés que Syntheo envoie à un point de
 Les webhooks permettent à Syntheo d'envoyer des événements de réunion vers votre propre service. Ils sont intégrés à l'application de bureau : c'est l'application elle-même qui envoie les requêtes, sans passer par aucun serveur intermédiaire. Configurez-les dans **Paramètres → Développeurs**, section « Webhooks ».
 
 <Warning>
-  Les événements de réunion contiennent la note, les résumés, les participants, les actions à mener et le texte complet de la transcription. N'ajoutez qu'un point de terminaison de confiance. Comme pour les serveurs d'inférence, HTTPS est exigé ; le HTTP non chiffré n'est accepté que vers ce poste ou un réseau privé, après confirmation, avec un rappel permanent.
+  Les événements de réunion contiennent la note, les synthèses, les participants, les actions à mener et le texte complet de la transcription. N'ajoutez qu'un point de terminaison de confiance. Comme pour les serveurs d'inférence, HTTPS est exigé ; le HTTP non chiffré n'est accepté que vers ce poste ou un réseau privé, après confirmation, avec un rappel permanent.
 </Warning>
 
 Pour lire les données de réunion plutôt que de les recevoir, utilisez la [CLI](/fr/reference/cli) ou le [serveur MCP local](/fr/reference/mcp).
@@ -37,7 +37,7 @@ Syntheo envoie chaque événement en requête `POST` JSON, tant que l'applicatio
 | Événement | Déclenché quand |
 | --- | --- |
 | `meeting.completed` | Une capture se termine. |
-| `note.enhanced` | Un résumé IA est généré pour une réunion. |
+| `note.enhanced` | Une synthèse IA est générée pour une réunion. |
 | `webhook.test` | Vous lancez une livraison de test. |
 
 L'enveloppe JSON a cette forme :

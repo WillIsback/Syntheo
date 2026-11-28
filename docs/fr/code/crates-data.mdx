@@ -23,10 +23,10 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/frontmatter` | Lecture et écriture de Markdown avec en-tête YAML | `fs-sync-core` | aucune |
 | `crates/tiptap` | Conversion entre JSON Tiptap/ProseMirror et Markdown | `agent-access`, `fs-sync-core` | [CLI pour agents](/fr/agents/cli), [Serveur MCP](/fr/agents/mcp) |
 | `crates/export-core` | Rendu PDF avec Typst | plugin `export` | [Notes](/fr/notes) |
-| `crates/template-app` | Prompts du LLM (Askama) | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
+| `crates/template-app` | Prompts du LLM (Askama) | plugin `template` | [Personnaliser les synthèses](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
 | `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; lecture bornée des `.docx` ; ne rend que des compteurs | CLI (`syntheo mesure`), plugin `mesure` | [Référence CLI](/fr/reference/cli), [Données et confidentialité](/fr/data-and-privacy), [Bêta : mesure et transparence](/fr/beta) |
-| `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
+| `crates/summary` | Politique de longueur et mise en forme de la synthèse générée | plugin `template` | [Personnaliser les synthèses](/fr/customize-summaries), [Notes](/fr/notes) |
 | `crates/notification` | Affichage des notifications natives (façade) | plugin `notification` | [Capture automatique](/fr/automatic-capture) |
 | `crates/notification-interface` | Types communs des notifications | `notification`, backends, plugin `detect` | [Capture automatique](/fr/automatic-capture) |
 | `crates/notification-linux` | Backend GTK (Linux) | `notification` | [Capture automatique](/fr/automatic-capture) |
@@ -64,11 +64,11 @@ Les modules de `crates/db-app/src` et les pages qu'ils alimentent :
 
 | Module | Contenu | Pages de doc concernées |
 | --- | --- | --- |
-| `session_ops`, `session_lifecycle_ops`, `session_content_ops`, `session_move_ops`, `session_participant_ops` | Lecture, création, titre, résumé, transcription, déplacement entre dossiers et participants d'une session | [Réunions](/fr/meetings), [Notes](/fr/notes), [Contacts](/fr/contacts) |
+| `session_ops`, `session_lifecycle_ops`, `session_content_ops`, `session_move_ops`, `session_participant_ops` | Lecture, création, titre, synthèse, transcription, déplacement entre dossiers et participants d'une session | [Réunions](/fr/meetings), [Notes](/fr/notes), [Contacts](/fr/contacts) |
 | `session_review_ops` | Propositions de modification en attente et résolution des conflits | [Notes](/fr/notes), [CLI pour agents](/fr/agents/cli), [Serveur MCP](/fr/agents/mcp) |
 | `session_transcript_ops`, `transcript_batch_ops`, `transcript_live_ops` | Transcriptions en direct et en lot, données de rendu | [Réunions](/fr/meetings), [Importer des enregistrements](/fr/import-recordings) |
-| `summary_ops` | Corps du résumé généré, tags, file d'amélioration automatique | [Notes](/fr/notes), [Personnaliser les comptes rendus](/fr/customize-summaries) |
-| `template_ops`, `template_types` | Modèles de compte rendu stockés en base | [Personnaliser les comptes rendus](/fr/customize-summaries) |
+| `summary_ops` | Corps de la synthèse générée, tags, file d'amélioration automatique | [Notes](/fr/notes), [Personnaliser les synthèses](/fr/customize-summaries) |
+| `template_ops`, `template_types` | Modèles de synthèse stockés en base | [Personnaliser les synthèses](/fr/customize-summaries) |
 | `webhook_ops`, `webhook_types` | Endpoints de webhook, secrets et journal des livraisons | [Référence des webhooks](/fr/reference/webhooks) |
 | `contact_ops` | Personnes et organisations | [Contacts](/fr/contacts) |
 | `folder_catalog_ops`, `attachment_ops` | Dossiers et pièces jointes des notes et dossiers | [Notes](/fr/notes) |
@@ -139,7 +139,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 - **À noter** : seul le PDF passe par cette crate. Les autres formats d'export de l'application (TXT, Markdown, Org) et l'export Markdown ou JSON de la CLI n'en dépendent pas.
 - **Pages de doc concernées** : [Notes](/fr/notes) (section « Exporter une réunion »).
 
-## Prompts et comptes rendus
+## Prompts et synthèses
 
 ### template-app
 
@@ -148,7 +148,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 - **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
 - **Dépendances internes** : `syntheo-askama-utils`.
 - **À noter** : le plugin `template` expose `render` et `get_template_source`. L'interface lit la source de `enhanceFormat` dans le formulaire du modèle « Automatique » (`apps/desktop/src/templates/auto-form.tsx`).
-- **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes), [Chat](/fr/chat), [Langues](/fr/languages).
+- **Pages de doc concernées** : [Personnaliser les synthèses](/fr/customize-summaries), [Notes](/fr/notes), [Chat](/fr/chat), [Langues](/fr/languages).
 
 ### askama-utils
 
@@ -160,10 +160,10 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 ### summary
 
 - **Chemin** : `crates/summary`
-- **Rôle** : calcule la longueur cible du compte rendu selon la taille de la transcription et le nombre de sections du modèle, puis met en forme le texte généré (titre en première ligne, ligne de tags).
+- **Rôle** : calcule la longueur cible de la synthèse selon la taille de la transcription et le nombre de sections du modèle, puis met en forme le texte généré (titre en première ligne, ligne de tags).
 - **API** : `summary_length_policy`, `summary_length_policy_for_texts`, `prepare_generated_summary`, `compose_generated_summary`, `extract_tag_names`. Le plugin `template` les expose comme commandes.
 - **Dépendances internes** : aucune.
-- **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes).
+- **Pages de doc concernées** : [Personnaliser les synthèses](/fr/customize-summaries), [Notes](/fr/notes).
 
 ## Notifications
 

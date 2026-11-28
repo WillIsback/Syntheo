@@ -357,6 +357,10 @@ msgstr "A new proposal replaces your changes to the agenda."
 msgid "A participant declined recording. Syntheo stopped listening."
 msgstr "A participant declined recording. Syntheo stopped listening."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "About"
+msgstr "About"
+
 #: src/stt/batch-eta.ts
 msgid "About {minutes} min remaining"
 msgstr "About {minutes} min remaining"
@@ -618,6 +622,14 @@ msgstr "Analyzing structure..."
 msgid "Animals & Nature"
 msgstr "Animals & Nature"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Announced by the server: the model does not read images (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+msgstr "Announced by the server: the model does not read images (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Announced by the server: the model reads images (checked on {checkedOn})."
+msgstr "Announced by the server: the model reads images (checked on {checkedOn})."
+
 #: src/contacts/details-sections.tsx
 msgid "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
 msgstr "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
@@ -791,6 +803,7 @@ msgstr "Auto summary format"
 
 #: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/templates/auto-form.tsx
 #: src/templates/template-sidebar.tsx
 msgid "Automatic"
@@ -1032,6 +1045,10 @@ msgstr "Check whether this computer can transcribe on its own (about 5 s)"
 #: src/settings/general/update-section.tsx
 msgid "Checking for updates…"
 msgstr "Checking for updates…"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Checking whether the model reads images…"
+msgstr "Checking whether the model reads images…"
 
 #: src/shared/long-load-gate.tsx
 msgid "Checking your local database. This is taking longer than expected."
@@ -1829,8 +1846,8 @@ msgid "Download the update"
 msgstr "Download the update"
 
 #: src/stt/on-device.ts
-msgid "Downloading the models is not available: install them from a folder."
-msgstr "Downloading the models is not available: install them from a folder."
+msgid "Downloading the models is not available. Install them from a folder."
+msgstr "Downloading the models is not available. Install them from a folder."
 
 #. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
 #: src/settings/general/update-section.tsx
@@ -2612,9 +2629,17 @@ msgstr "Install command copied"
 msgid "Install from a folder…"
 msgstr "Install from a folder…"
 
+#: src/stt/useStartListening.ts
+msgid "Install the models"
+msgstr "Install the models"
+
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Install to all agents"
+
+#: src/stt/on-device.ts
+msgid "Installation cancelled."
+msgstr "Installation cancelled."
 
 #: src/stt/on-device.ts
 msgid "Installation cancelled. A download resumes where it stopped."
@@ -2815,6 +2840,10 @@ msgstr "Lets you know when the automation has finished."
 msgid "Lexical"
 msgstr "Lexical"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Licenses"
+msgstr "Licenses"
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Light"
@@ -2937,6 +2966,10 @@ msgstr "Loading your workspace. This should only take a moment."
 #: src/settings/general/storage/export-location.tsx
 msgid "Loading..."
 msgstr "Loading..."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Loading…"
+msgstr "Loading…"
 
 #: src/automations/labels.ts
 msgid "Local script with the path of the exported file. Asks for confirmation the first time."
@@ -3305,6 +3338,10 @@ msgstr "Model name"
 msgid "Model name served by your server"
 msgstr "Model name served by your server"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Models"
+msgstr "Models"
+
 #. placeholder {0}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Models installed ({0})."
@@ -3453,6 +3490,10 @@ msgstr "Name"
 msgid "Name speakers"
 msgstr "Name speakers"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Native components"
+msgstr "Native components"
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Needs setup"
 msgstr "Needs setup"
@@ -3527,6 +3568,10 @@ msgstr "Next meeting"
 msgid "Next view of the note"
 msgstr "Next view of the note"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "No"
+msgstr "No"
+
 #: src/settings/general/notification-ignored-apps.tsx
 msgid "No apps found."
 msgstr "No apps found."
@@ -3558,6 +3603,18 @@ msgstr "No changelog available for this version."
 #: src/templates/details.tsx
 msgid "No community templates available"
 msgstr "No community templates available"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "No component matches"
+msgstr "No component matches"
+
+#: src/stt/on-device.ts
+msgid "No connection to the download server. Nothing was downloaded and the current models are kept. Try again once connected."
+msgstr "No connection to the download server. Nothing was downloaded and the current models are kept. Try again once connected."
+
+#: src/stt/on-device.ts
+msgid "No connection to the download server. Nothing was downloaded. Try again once connected."
+msgstr "No connection to the download server. Nothing was downloaded. Try again once connected."
 
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
@@ -3900,6 +3957,10 @@ msgstr "notification, alert, synchronization, cloud"
 msgid "Notifications"
 msgstr "Notifications"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "npm packages"
+msgstr "npm packages"
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "NVIDIA NeMo-Speech.cpp"
 msgstr "NVIDIA NeMo-Speech.cpp"
@@ -3922,8 +3983,13 @@ msgid "On Linux (Wayland or X11)"
 msgstr "On Linux (Wayland or X11)"
 
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/settings/search-index.ts
 msgid "On this computer"
 msgstr "On this computer"
+
+#: src/settings/search-index.ts
+msgid "on this computer, offline, models, download, update, install"
+msgstr "on this computer, offline, models, download, update, install"
 
 #: src/settings/dictation.tsx
 msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
@@ -3954,6 +4020,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
 #: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Open"
 msgstr "Open"
 
@@ -4488,6 +4555,10 @@ msgstr "Related Notes"
 msgid "Release page"
 msgstr "Release page"
 
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "Reload editor"
+msgstr "Reload editor"
+
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
 msgid "Remind participants about recording"
@@ -4736,6 +4807,10 @@ msgstr "Run this command?"
 msgid "runs the program on your computer"
 msgstr "runs the program on your computer"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Rust crates"
+msgstr "Rust crates"
+
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "same participants"
 msgstr "same participants"
@@ -4813,6 +4888,10 @@ msgstr "Scroll to bottom"
 #: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Scroll to top"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Search a component or a license"
+msgstr "Search a component or a license"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "Search a meeting type"
@@ -5217,6 +5296,10 @@ msgstr "Simulated"
 msgid "since {first}"
 msgstr "since {first}"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Sketches, screenshots and images in the note are attached when the summary is generated."
+msgstr "Sketches, screenshots and images in the note are attached when the summary is generated."
+
 #: src/settings/developers/skills.tsx
 msgid "Skill installed"
 msgstr "Skill installed"
@@ -5272,6 +5355,11 @@ msgstr "sound, beep, ring, volume, audio"
 #: src/settings/search-index.ts
 msgid "sound, speakers, participants, access, authorize"
 msgstr "sound, speakers, participants, access, authorize"
+
+#. placeholder {0}: licenses.data.syntheo.repository
+#: src/settings/general/third-party-licenses.tsx
+msgid "Source code: {0}"
+msgstr "Source code: {0}"
 
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Source: {provider} (AI model provider)"
@@ -5635,9 +5723,20 @@ msgstr "Syntheo couldn't read this file."
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo doesn't have microphone access"
 
+#. placeholder {0}: licenses.data.syntheo.origin.url
+#. placeholder {1}: licenses.data.syntheo.origin.holder
+#. placeholder {2}: licenses.data.syntheo.origin.license
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo is derived from Anarlog ({0}), by {1}, under the {2} license."
+msgstr "Syntheo is derived from Anarlog ({0}), by {1}, under the {2} license."
+
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"
 msgstr "Syntheo is Locked"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo is released under the MIT license. It is derived from Anarlog, by Fastrepl, Inc., also under the MIT license."
+msgstr "Syntheo is released under the MIT license. It is derived from Anarlog, by Fastrepl, Inc., also under the MIT license."
 
 #: src/settings/general/update-section.tsx
 msgid "Syntheo is up to date."
@@ -5646,6 +5745,10 @@ msgstr "Syntheo is up to date."
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
 msgstr "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Syntheo license (MIT) and origin of the code"
+msgstr "Syntheo license (MIT) and origin of the code"
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
@@ -5890,6 +5993,11 @@ msgstr "Test this computer"
 msgid "Test this computer again"
 msgstr "Test this computer again"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Test with an image"
+msgstr "Test with an image"
+
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/settings/ai/shared/server-card.tsx
 msgid "Testing…"
 msgstr "Testing…"
@@ -6027,6 +6135,14 @@ msgstr "The differences could not be listed."
 msgid "The download was interrupted. Try again."
 msgstr "The download was interrupted. Try again."
 
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "The editor failed to render. Reload it to try again."
+msgstr "The editor failed to render. Reload it to try again."
+
+#: src/shared/ui/localized-dialog-labels.tsx
+msgid "The editor failed to render. Your recording is still running."
+msgstr "The editor failed to render. Your recording is still running."
+
 #: src/mesure/beta-data.tsx
 msgid "The export could not be built or saved."
 msgstr "The export could not be built or saved."
@@ -6058,6 +6174,10 @@ msgstr "The language model did not return a usable answer. Try again, or check t
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "The language model that writes your meeting notes and answers when you ask a note a question."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "The list of licenses could not be read."
+msgstr "The list of licenses could not be read."
 
 #: src/settings/general/single-language-model-hint.tsx
 msgid "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>."
@@ -6117,15 +6237,32 @@ msgstr "The memo edit could not be prepared."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "The microphone and system audio are muted: nothing is being transcribed."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model accepted the test image and described it (checked on {checkedOn})."
+msgstr "The model accepted the test image and described it (checked on {checkedOn})."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model accepted the test image: it saw the blue disc."
+msgstr "The model accepted the test image: it saw the blue disc."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The model reads images"
+msgstr "The model reads images"
+
 #: src/stt/on-device.ts
 msgid "The models are not installed or are incomplete."
 msgstr "The models are not installed or are incomplete."
 
 #: src/stt/on-device.ts
-msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
-msgstr "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
+msgid "The models could not be downloaded (network or server). Try again, the download resumes where it stopped."
+msgstr "The models could not be downloaded (network or server). Try again, the download resumes where it stopped."
+
+#: src/stt/on-device.ts
+msgid "The models could not be downloaded (network or server). Try again."
+msgstr "The models could not be downloaded (network or server). Try again."
 
 #. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message, leftover)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The models were not installed: {0}"
 msgstr "The models were not installed: {0}"
@@ -6146,6 +6283,14 @@ msgstr "The next steps were not run."
 #: src/chat/components/message/tool/approval.tsx
 msgid "The note title"
 msgstr "The note title"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The note's images are always attached when the summary is generated."
+msgstr "The note's images are always attached when the summary is generated."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The note's images are never attached."
+msgstr "The note's images are never attached."
 
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
@@ -6217,6 +6362,10 @@ msgstr "The sent version could not be measured: {0}"
 msgid "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
 msgstr "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
+msgstr "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
@@ -6228,6 +6377,14 @@ msgstr "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-S
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 msgstr "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server could not be checked and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+msgstr "The server could not be checked and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server could not be checked: going by its name, “{model}” reads images."
+msgstr "The server could not be checked: going by its name, “{model}” reads images."
 
 #: src/shared/service-error.ts
 msgid "The server could not be reached. Check that it is running and that its address in Settings is correct."
@@ -6241,6 +6398,10 @@ msgstr "The server could not process this request ({status}). Check the model an
 msgid "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 msgstr "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server did not give a clear answer. Try again later."
+msgstr "The server did not give a clear answer. Try again later."
+
 #: src/shared/service-error.ts
 msgid "The server is busy or the quota is reached. Try again in a few minutes."
 msgstr "The server is busy or the quota is reached. Try again in a few minutes."
@@ -6252,6 +6413,14 @@ msgstr "The server refused the API key. Check it under “Advanced”, then test
 #: src/shared/service-error.ts
 msgid "The server refused the request. Check that the API key is allowed to use this model."
 msgstr "The server refused the request. Check that the API key is allowed to use this model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server refused the test image (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+msgstr "The server refused the test image (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server refused the test image: the model does not read images."
+msgstr "The server refused the test image: the model does not read images."
 
 #: src/shared/service-error.ts
 msgid "The server rejected the API key. Check it in Settings."
@@ -6343,9 +6512,17 @@ msgstr "The transcription is still being written."
 msgid "The transcription models ({0}) are not installed yet."
 msgstr "The transcription models ({0}) are not installed yet."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 msgstr "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
+
+#: src/sidebar/toast/registry.tsx
+msgid "The transcription models of this computer need an update"
+msgstr "The transcription models of this computer need an update"
+
+#: src/stt/on-device.ts
+msgid "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
+msgstr "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer could not be authenticated"
@@ -6448,6 +6625,10 @@ msgstr "They describe what they would do, without acting. The local model still 
 msgid "Thinking..."
 msgstr "Thinking..."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Third-party components included in Syntheo, with their version and license. The transcription models are not shipped with the app: they are downloaded or installed separately."
+msgstr "Third-party components included in Syntheo, with their version and license. The transcription models are not shipped with the app: they are downloaded or installed separately."
+
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step runs a program on your computer. It is only added if you confirm."
 msgstr "This advanced step runs a program on your computer. It is only added if you confirm."
@@ -6505,6 +6686,10 @@ msgstr "This computer is chosen for transcription, but it has not been measured 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but its models need an update: live transcription is paused."
+msgstr "This computer is chosen for transcription, but its models need an update: live transcription is paused."
 
 #. placeholder {0}: describeOnDeviceErrorAfterColon(refusal)
 #: src/settings/ai/stt/on-device-card.tsx
@@ -6617,6 +6802,10 @@ msgstr "This note has no summary to edit yet."
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "This note was edited on another device at the same time. The later edit was kept."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "This package ships no license file; its declared license is shown above."
+msgstr "This package ships no license file; its declared license is shown above."
+
 #: src/shared/service-error.ts
 msgid "This proposal is out of date: the meeting changed after it was created."
 msgstr "This proposal is out of date: the meeting changed after it was created."
@@ -6649,7 +6838,7 @@ msgstr "This version of Syntheo does not include transcription on this computer,
 msgid "This version of Syntheo does not include transcription on this computer."
 msgstr "This version of Syntheo does not include transcription on this computer."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 msgstr "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 
@@ -6756,6 +6945,10 @@ msgid "Transcription · key refused"
 msgstr "Transcription · key refused"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · models need an update"
+msgstr "Transcription · models need an update"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · no server"
 msgstr "Transcription · no server"
 
@@ -6794,6 +6987,10 @@ msgstr "Transcription interrupted {gaps}"
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "transcription model, Whisper, Nemotron, speech recognition"
+
+#: src/settings/search-index.ts
+msgid "Transcription models"
+msgstr "Transcription models"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
@@ -6914,6 +7111,11 @@ msgstr "Unencrypted connection: the meeting content travels in clear text on the
 msgid "Unknown"
 msgstr "Unknown"
 
+#: src/settings/general/third-party-licenses.tsx
+msgctxt "license"
+msgid "Unknown"
+msgstr "Unknown"
+
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"
 msgstr "Unknown date"
@@ -7015,6 +7217,8 @@ msgid "Update"
 msgstr "Update"
 
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Update the models"
 msgstr "Update the models"
 
@@ -7387,6 +7591,7 @@ msgstr "Writing"
 msgid "Written by Syntheo"
 msgstr "Written by Syntheo"
 
+#: src/settings/ai/llm/image-input-setting.tsx
 #: src/stt/detect-events.ts
 msgid "Yes"
 msgstr "Yes"

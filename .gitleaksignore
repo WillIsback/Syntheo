@@ -1,0 +1,6 @@
+# Faux positifs de l'historique, empreintes exactes (gitleaks lit ce fichier
+# à la racine). Secrets de session factices des tests du shim du relay,
+# ajoutés par 267e81c0 (#664) et remplacés par des valeurs à faible
+# entropie : aucune clé réelle.
+267e81c0b4375499babaf5185793fd75035474fe:plugins/relay/js/shim.test.js:generic-api-key:169
+267e81c0b4375499babaf5185793fd75035474fe:plugins/relay/js/shim.test.js:generic-api-key:190

@@ -17,7 +17,7 @@ export const commands = {
 /* Constants */
 export const GUARD_VERSION = 1 as const;
 
-export const RULE_VERSION = 2 as const;
+export const RULE_VERSION = 3 as const;
 
 /* Types */
 export type CorrectedTermCount = {

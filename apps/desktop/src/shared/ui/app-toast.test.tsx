@@ -142,6 +142,51 @@ describe("app toast", () => {
     );
   });
 
+  // Issue 778 : « Aucun audio n'est capté » passe deux actions ; « Fermer »
+  // doit rester affiché à côté, sinon le toast couvre « Terminer ».
+  it("keeps the dismiss button next to a primary and a secondary action", () => {
+    const onDismiss = vi.fn();
+    render(<AppToaster theme="light" />);
+
+    act(() => {
+      showAppToast({
+        message: "No audio is being captured",
+        durationMs: Number.POSITIVE_INFINITY,
+        onDismiss,
+        action: { label: "Retry", onClick: () => {}, dismissOnClick: false },
+        secondaryAction: {
+          label: "Device settings",
+          onClick: () => {},
+          dismissOnClick: false,
+        },
+      });
+    });
+
+    const toast = screen.getByRole("status");
+    const buttons = Array.from(
+      toast.querySelectorAll('[data-slot="app-toast-actions"] button'),
+    ).map((button) => button.textContent);
+    expect(buttons).toEqual(["Retry", "Device settings", "Dismiss"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+    expect(toast.getAttribute("data-phase")).toBe("exiting");
+  });
+
+  it("shows no dismiss button on a toast that cannot be closed", () => {
+    render(<AppToaster theme="light" />);
+    act(() => {
+      showAppToast({
+        message: "Saving",
+        durationMs: Number.POSITIVE_INFINITY,
+        dismissible: false,
+        action: { label: "Open", onClick: () => {} },
+      });
+    });
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Open" })).toBeTruthy();
+  });
+
   it("reports once when a toast leaves, however it was dismissed", async () => {
     vi.useFakeTimers();
     const onDismiss = vi.fn();

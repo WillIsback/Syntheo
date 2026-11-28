@@ -1,3 +1,4 @@
+import { json2md } from "@syntheo/editor/markdown";
 import {
   commands as templateCommands,
   type Participant,
@@ -11,7 +12,12 @@ import {
 } from "@syntheo/plugin-transcription";
 
 import type { TaskArgsMap, TaskArgsMapTransformed, TaskConfig } from ".";
-import { collectEnhanceImageContext } from "./enhance-images";
+import {
+  collectImageReferences,
+  type EnhanceImageContext,
+  replaceNoteImages,
+} from "./enhance-image-references";
+import { collectEnhanceImages } from "./enhance-images";
 import {
   getMemoTemplateSections,
   isTemplateNewerThanMemo,
@@ -24,7 +30,12 @@ import {
 } from "~/session/content-queries";
 import { noteFingerprint } from "~/session/note-fingerprint";
 import { formatSessionSourceAppsContext } from "~/session/source-apps";
-import { modelSupportsImageInput } from "~/settings/ai/shared/model-capabilities";
+import {
+  decideImageInput,
+  imageInputKey,
+  parseImageInputSettings,
+} from "~/settings/ai/shared/image-input";
+import { getStoredAiProvider } from "~/settings/providers";
 import type { SettingValues } from "~/settings/schema";
 import { parseDictionaryTermsJson } from "~/stt/keywords";
 import {
@@ -67,7 +78,16 @@ async function transformArgs(
   const meetingChatContext = formatMeetingChatContext(
     await loadMeetingChatRecords(sessionId),
   );
-  const sessionContext = getSessionContext(snapshot, meetingChatContext);
+  const noteImages = await collectNoteImages(
+    sessionId,
+    snapshot,
+    await modelReadsImages(settingsValues),
+  );
+  const sessionContext = getSessionContext(
+    snapshot,
+    meetingChatContext,
+    noteImages.noteMarkdown,
+  );
   const templateRecord = await loadTemplate(templateId);
   const preferTemplate = isTemplateNewerThanMemo(
     templateRecord?.updatedAt,
@@ -112,6 +132,7 @@ async function transformArgs(
     settingsValues,
     transcriptTexts,
   );
+  localizeAnonymousSpeakers(transcripts, language);
   const templateSectionCount = template?.sections.length ?? 0;
   const policyResult = await templateCommands.summaryLengthPolicy({
     transcript_texts: transcriptTexts,
@@ -121,15 +142,7 @@ async function transformArgs(
     throw new Error(policyResult.error);
   }
 
-  const imageContext = modelSupportsImageInput(
-    getOptionalSettingsValue(settingsValues, "current_llm_provider"),
-    getOptionalSettingsValue(settingsValues, "current_llm_model"),
-  )
-    ? await collectEnhanceImageContext(sessionId, [
-        sessionContext.preMeetingMemo,
-        sessionContext.postMeetingMemo,
-      ])
-    : [];
+  const imageContext = noteImages.images;
 
   return {
     language,
@@ -162,6 +175,32 @@ async function loadTemplate(templateId: string | undefined) {
   } catch (error) {
     console.error("[enhance] failed to load template", error);
     return null;
+  }
+}
+
+/** Libellé du rendu pour un locuteur sans nom (`crates/transcript/src/label.rs`). */
+const ANONYMOUS_SPEAKER = /^Speaker (\d+|[ABC])$/;
+
+/**
+ * Le modèle reçoit les locuteurs anonymes dans la langue de la synthèse
+ * (issue 699) : la transcription affiche « Locuteur 4 » en français, la
+ * synthèse ne doit pas citer « Speaker 4 ». Les noms et « You » ne changent
+ * pas ; les données gardent « Speaker N ».
+ */
+function localizeAnonymousSpeakers(
+  transcripts: Transcript[],
+  language: string,
+): void {
+  if (!language.toLowerCase().startsWith("fr")) {
+    return;
+  }
+  for (const transcript of transcripts) {
+    for (const segment of transcript.segments) {
+      const number = ANONYMOUS_SPEAKER.exec(segment.speaker ?? "")?.[1];
+      if (number) {
+        segment.speaker = `Locuteur ${number}`;
+      }
+    }
   }
 }
 
@@ -211,15 +250,104 @@ function getFormatOverride(
 
 function getOptionalSettingsValue(
   settingsValues: SettingValues,
-  valueId: "current_llm_provider" | "current_llm_model",
+  valueId: "current_llm_provider" | "current_llm_model" | "llm_image_input",
 ): string | undefined {
   const value = settingsValues[valueId];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+/**
+ * Le modèle de synthèse reçoit-il les images (issue 754) ? Le réglage
+ * « Le modèle lit les images » du serveur et du modèle choisis : Oui, Non, ou
+ * Automatique (résultat de la détection gardé, sinon le nom du modèle).
+ */
+async function modelReadsImages(
+  settingsValues: SettingValues,
+): Promise<boolean> {
+  const provider = getOptionalSettingsValue(
+    settingsValues,
+    "current_llm_provider",
+  );
+  const model = getOptionalSettingsValue(settingsValues, "current_llm_model");
+  if (!provider || !model) return false;
+  const baseUrl = String(
+    (await getStoredAiProvider("llm", provider).catch(() => undefined))
+      ?.base_url ?? "",
+  );
+  const entry = parseImageInputSettings(
+    getOptionalSettingsValue(settingsValues, "llm_image_input"),
+  )[imageInputKey(baseUrl, model)];
+  return decideImageInput(entry, model).reads;
+}
+
+/**
+ * Images de la note envoyées au modèle, et texte de la note où chaque image
+ * est remplacée par une référence lisible (issue 750). Les images sont lues
+ * dans le contenu JSON de la note : son Markdown perd l'identifiant de la
+ * pièce jointe et n'y laisse que `![]( "char-editor-width=80")`. Une image
+ * jointe à la requête devient « [Image N] », N étant son rang parmi les
+ * images jointes ; une image non jointe (modèle sans vision, fichier
+ * introuvable, budget atteint) devient « [Image] ».
+ */
+async function collectNoteImages(
+  sessionId: string,
+  snapshot: SessionContentSnapshot,
+  modelReadsImages: boolean,
+): Promise<{ images: EnhanceImageContext[]; noteMarkdown: string }> {
+  const memoReferences = collectImageReferences(
+    snapshot.transcripts[0]?.memo ?? "",
+  );
+  const noteDoc = parseNoteDoc(snapshot);
+  const noteReferences = noteDoc
+    ? collectImageReferences(snapshot.rawContent)
+    : collectImageReferences(snapshot.rawMarkdown);
+  const attached = modelReadsImages
+    ? await collectEnhanceImages(sessionId, [
+        ...memoReferences,
+        ...noteReferences,
+      ])
+    : [];
+  const rankByReference = new Map(
+    attached.map(({ index }, rank) => [index, rank + 1]),
+  );
+  const label = (position: number) => {
+    const rank = rankByReference.get(memoReferences.length + position);
+    return rank ? `[Image ${rank}]` : "[Image]";
+  };
+  // Le sérialiseur Markdown échappe les crochets : un repère alphanumérique
+  // passe tel quel, puis devient la référence lisible.
+  const noteMarkdown = noteDoc
+    ? json2md(
+        replaceNoteImages(
+          noteDoc,
+          (position) => `${IMAGE_MARKER}${position}${IMAGE_MARKER}`,
+        ) as Parameters<typeof json2md>[0],
+      ).replace(IMAGE_MARKER_RE, (_, position: string) =>
+        label(Number(position)),
+      )
+    : snapshot.rawMarkdown;
+  return { images: attached.map(({ image }) => image), noteMarkdown };
+}
+
+const IMAGE_MARKER = "SYNTHEOIMAGEREF";
+const IMAGE_MARKER_RE = new RegExp(`${IMAGE_MARKER}(\\d+)${IMAGE_MARKER}`, "g");
+
+function parseNoteDoc(snapshot: SessionContentSnapshot): unknown {
+  if (snapshot.rawContentFormat === "markdown" || !snapshot.rawContent) {
+    return null;
+  }
+  try {
+    const doc = JSON.parse(snapshot.rawContent) as unknown;
+    return doc && typeof doc === "object" ? doc : null;
+  } catch {
+    return null;
+  }
+}
+
 function getSessionContext(
   snapshot: SessionContentSnapshot,
   meetingChatContext: string,
+  noteMarkdown: string,
 ) {
   const transcriptsMeta = snapshot.transcripts.map((transcript) => ({
     id: transcript.id,
@@ -238,10 +366,10 @@ function getSessionContext(
   return {
     preMeetingMemo: transcriptsMeta[0]?.memoMd ?? "",
     postMeetingMemo: supplementalContext
-      ? [snapshot.rawMarkdown, supplementalContext]
+      ? [noteMarkdown, supplementalContext]
           .filter((value) => value.trim())
           .join("\n\n")
-      : snapshot.rawMarkdown,
+      : noteMarkdown,
     session: getSessionData(snapshot),
     participants: getParticipants(snapshot),
     transcriptsMeta,

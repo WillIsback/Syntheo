@@ -42,7 +42,7 @@ Deux cas particuliers réutilisent le code 2 :
 
 ## Erreurs MCP
 
-Le serveur MCP signale une réunion, une proposition ou un import introuvable comme « paramètres invalides ». Les échecs de validation et les conflits (contenu de proposition vide, plusieurs résumés sans `target_id`, refus d'une proposition qui n'est plus en attente) sont signalés comme erreurs internes, tout comme les échecs de base de données et de sérialisation.
+Le serveur MCP signale une réunion, une proposition ou un import introuvable comme « paramètres invalides ». Les échecs de validation et les conflits (contenu de proposition vide, plusieurs synthèses sans `target_id`, refus d'une proposition qui n'est plus en attente) sont signalés comme erreurs internes, tout comme les échecs de base de données et de sérialisation.
 
 <Warning>
   Ne tentez jamais de réparer en créant des tables, en lançant des migrations ou en exécutant du SQL. L'application gère seule l'initialisation et les migrations du schéma ; une modification manuelle peut corrompre la base.

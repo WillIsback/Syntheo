@@ -192,6 +192,33 @@ describe("ToastNotifications", () => {
     },
   );
 
+  // Issue 632 : dans une fenêtre étroite, la notification recouvrait la
+  // capsule et le bouton Export sans pouvoir être fermée. Elle a maintenant
+  // un bouton de fermeture et ne revient pas pendant la session.
+  it("lets the language model notice be closed for the session", () => {
+    mocks.config.current_llm_provider = "";
+    mocks.config.current_llm_model = "";
+
+    const view = render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const call = mocks.message.mock.calls.find(
+      (args) => args[0] === "Language model needed",
+    );
+    expect(call?.[1]).toMatchObject({ closeButton: true, dismissible: true });
+
+    act(() => call?.[1].onDismiss());
+    mocks.message.mockClear();
+    view.rerender(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    expect(
+      mocks.message.mock.calls.some(
+        (args) => args[0] === "Language model needed",
+      ),
+    ).toBe(false);
+  });
+
   // QA de 0.8.0-2 (William) : seule la transcription sur ce poste, prête.
   it("asks for no transcription provider when this computer is ready", () => {
     mocks.config.current_stt_provider = null;
@@ -308,6 +335,36 @@ describe("ToastNotifications", () => {
 
     const descriptions = mocks.message.mock.calls.map((call) => call[0]);
     expect(descriptions).toContain("Transcription provider needed");
+  });
+
+  // Issue 778 : à 910×600, « Fournisseur de transcription requis » couvrait
+  // « Commencer l'écoute ». Il se ferme pour la session, même si une ancienne
+  // version l'avait rangé parmi les toasts fermés pour toujours.
+  it("lets the transcription provider notice be closed for the session", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = false;
+    mocks.dismissedToastIds.add("missing-stt");
+
+    const view = render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const call = mocks.message.mock.calls.find(
+      (args) => args[0] === "Transcription provider needed",
+    );
+    expect(call?.[1]).toMatchObject({ closeButton: true, dismissible: true });
+
+    act(() => call?.[1].onDismiss());
+    mocks.message.mockClear();
+    view.rerender(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    expect(
+      mocks.message.mock.calls.some(
+        (args) => args[0] === "Transcription provider needed",
+      ),
+    ).toBe(false);
+    expect(mocks.dismissToast).not.toHaveBeenCalled();
   });
 
   afterEach(() => {
