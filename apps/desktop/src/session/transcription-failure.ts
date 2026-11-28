@@ -43,6 +43,9 @@ const SELECT_SQL = `
 /** Code d'un import interrompu par la fermeture de Syntheo (issue 714). */
 export const INTERRUPTED_IMPORT_CODE = "interrupted";
 
+/** Code d'un import demandé par un agent qui a échoué (issue 794). */
+export const AGENT_IMPORT_FAILED_CODE = "agent_import";
+
 function toTranscriptionFailure(
   error: unknown,
   code?: string,

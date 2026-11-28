@@ -334,3 +334,49 @@ it("keeps the idle worker heartbeat to a few database writes per minute", async 
   view.unmount();
   client.clear();
 });
+
+// Issue 794 : l'échec d'un import d'agent n'apparaissait nulle part. Il est
+// gardé dans la note (avis d'échec) et journalisé, sans l'adresse ni la clé que
+// l'erreur du fournisseur peut contenir.
+it("shows a failed agent import in the meeting and logs it without secrets", async () => {
+  vi.useFakeTimers();
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const job = setupJob(false);
+    mocks.transcribe.mockRejectedValue(
+      new Error(
+        "UnexpectedStatus { status: 500 } for https://stt.example.test/v1/audio?api_key=sk-provider-secret-123 Bearer abcdefgh12345678",
+      ),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(job.state().status).toBe("failed");
+    expect(job.state().error ?? "").not.toContain("secret");
+
+    const recorded = mocks.transaction.mock.calls
+      .flatMap(
+        ([statements]) => statements as { sql: string; params: unknown[] }[],
+      )
+      .find((statement) => statement.sql.includes("$.transcription_failure"));
+    expect(recorded?.params[2]).toBe("meeting");
+    const failure = JSON.parse(String(recorded?.params[0])) as {
+      code: string;
+      message: string;
+    };
+    expect(failure.code).toBe("agent_import");
+    expect(failure.message).toContain("500");
+    expect(failure.message).not.toMatch(/secret|abcdefgh|\/v1\/audio/);
+
+    const logged = consoleError.mock.calls.find(
+      ([first]) =>
+        typeof first === "string" && first.startsWith("[recording-import:"),
+    );
+    expect(logged?.[0]).toMatch(/^\[recording-import:transcribing\] /);
+    expect(JSON.stringify(logged)).not.toMatch(/secret|abcdefgh|\/v1\/audio/);
+    job.view.unmount();
+    job.client.clear();
+  } finally {
+    consoleError.mockRestore();
+  }
+});

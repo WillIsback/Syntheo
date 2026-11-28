@@ -9,9 +9,15 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { executeTransaction, liveQueryClient } from "~/db";
 import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
+import {
+  AGENT_IMPORT_FAILED_CODE,
+  recordTranscriptionFailure,
+} from "~/session/transcription-failure";
 import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
+import { errorText, sanitizeErrorText } from "~/shared/service-error";
 import { discardAudioUpload } from "~/stt/audio-upload-stream";
+import { isNoSpeechDetectedError } from "~/stt/no-speech-error";
 import { useRunBatch } from "~/stt/useRunBatch";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
@@ -226,7 +232,27 @@ async function processImport(
       );
     const summary = await enhancer.enhanceAndWait(job.meeting_id);
     await update("done", summary);
-  } catch {
+  } catch (error) {
+    // Issue 794 : l'échec n'était visible nulle part. Le journal reçoit la
+    // phase (seul le libellé entre crochets est gardé dans app.log) et une
+    // raison nettoyée : adresses réduites à l'hôte, jetons masqués, bornée.
+    const reason = sanitizeErrorText(errorText(error));
+    console.error(`[recording-import:${phase}] agent import failed`, reason);
+    // Avant le résumé, la réunion reste vide : l'échec est gardé dans la note,
+    // comme pour un fichier déposé (issue 559). Un résumé en échec a déjà son
+    // propre état dans la note, et la transcription y est.
+    if (phase !== "summarizing") {
+      await recordTranscriptionFailure(
+        job.meeting_id,
+        new Error(reason),
+        isNoSpeechDetectedError(error) ? "no_speech" : AGENT_IMPORT_FAILED_CODE,
+      ).catch((persistError: unknown) => {
+        console.error(
+          "[recording-import] failed to record failure",
+          persistError,
+        );
+      });
+    }
     // Provider errors may contain credentials; keep externally readable job errors bounded and generic.
     await update(
       "failed",

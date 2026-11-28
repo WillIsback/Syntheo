@@ -1672,6 +1672,10 @@ msgstr "Supprimer le dossier"
 msgid "Delete folder “{name}”"
 msgstr "Supprimer le dossier « {name} »"
 
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "Delete note"
+msgstr "Supprimer la note"
+
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
 msgstr "Supprimer la section {position}"
@@ -1882,6 +1886,10 @@ msgstr "Rédigez un e-mail de suivi à l'intention des participants"
 #: src/chat/components/body/empty.tsx
 msgid "Draft follow-up email."
 msgstr "Rédiger un e-mail de suivi."
+
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "Drop the recording into this note to import it again, or delete the note."
+msgstr "Déposez l'enregistrement dans cette note pour l'importer de nouveau, ou supprimez la note."
 
 #: src/session/components/note-input/audio-drop-target.tsx
 msgid "Drop to upload and transcribe audio"
@@ -6150,6 +6158,10 @@ msgstr "Les fichiers n'ont pas pu être lus ou écrits (disque plein ?). Réess
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "L'import de {name} a été abandonné : {reason}"
+
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "The import requested by an agent failed."
+msgstr "L'import demandé par un agent a échoué."
 
 #: src/stt/audio-import-feedback.ts
 msgid "The import was abandoned: {reason}"
