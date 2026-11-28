@@ -13,7 +13,11 @@ import {
 } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
-import { formatFolderPath, formatMeetingCount } from "~/search/unified/labels";
+import {
+  formatFolderParent,
+  formatFolderPath,
+  formatMeetingCount,
+} from "~/search/unified/labels";
 import type {
   NoteResult,
   SearchContact,
@@ -67,25 +71,37 @@ export function PaletteFolderGroup({
         </PaletteHeading>
       }
     >
-      {folders.map((folder) => (
-        <CommandPrimitive.Item
-          key={folder.path}
-          value={paletteFolderValue(folder.path)}
-          onSelect={() => onSelect(folder)}
-          className={cn([PALETTE_ITEM_CLASS, "group"])}
-        >
-          <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
-          <span className="text-foreground truncate font-medium">
-            {folder.name}
-          </span>
-          <span className="text-muted-foreground shrink-0 text-xs">
-            {formatMeetingCount(folder.noteCount)}
-          </span>
-          <span className="text-muted-foreground ml-auto hidden shrink-0 text-xs group-data-[selected=true]:inline">
-            <Trans>Tab: search inside</Trans>
-          </span>
-        </CommandPrimitive.Item>
-      ))}
+      {folders.map((folder) => {
+        // Issue 628 : le parent distingue deux sous-dossiers de même nom.
+        const parent = formatFolderParent(folder.path);
+        return (
+          <CommandPrimitive.Item
+            key={folder.path}
+            value={paletteFolderValue(folder.path)}
+            onSelect={() => onSelect(folder)}
+            className={cn([PALETTE_ITEM_CLASS, "group"])}
+          >
+            <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="text-foreground min-w-0 truncate font-medium">
+              {folder.name}
+            </span>
+            {parent ? (
+              <span
+                data-testid="palette-folder-parent"
+                className="text-muted-foreground min-w-0 shrink-[2] truncate text-xs"
+              >
+                {parent}
+              </span>
+            ) : null}
+            <span className="text-muted-foreground shrink-0 text-xs">
+              {formatMeetingCount(folder.noteCount)}
+            </span>
+            <span className="text-muted-foreground ml-auto hidden shrink-0 text-xs group-data-[selected=true]:inline">
+              <Trans>Tab: search inside</Trans>
+            </span>
+          </CommandPrimitive.Item>
+        );
+      })}
     </CommandPrimitive.Group>
   );
 }

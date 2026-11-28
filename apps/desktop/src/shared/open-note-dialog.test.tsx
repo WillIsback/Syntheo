@@ -508,6 +508,37 @@ describe("recherche commune dans la palette", () => {
     expect(hebdo.textContent).toContain(ATLAS);
   });
 
+  // Issue 628 : deux sous-dossiers de même nom se distinguent par leur parent.
+  it("affiche le dossier parent d'un sous-dossier, pas celui d'un dossier racine", () => {
+    setCatalog(notes, [
+      "Comité",
+      ATLAS,
+      `${ATLAS}/Ateliers`,
+      "Equipe Projet",
+      "Equipe Projet/Ateliers",
+    ]);
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("ateliers");
+
+    const folderOption = (path: string) =>
+      screen
+        .getAllByRole("option")
+        .find(
+          (option) => option.getAttribute("data-value") === `folder-${path}`,
+        );
+    const parentOf = (path: string) =>
+      folderOption(path)?.querySelector("[data-testid=palette-folder-parent]")
+        ?.textContent;
+    expect(parentOf(`${ATLAS}/Ateliers`)).toBe(`${ATLAS} ›`);
+    expect(parentOf("Equipe Projet/Ateliers")).toBe("Equipe Projet ›");
+
+    type("comité");
+    expect(folderOption("Comité")).toBeTruthy();
+    expect(parentOf("Comité")).toBeUndefined();
+  });
+
   it("cherche aussi dans le contenu des notes (index plein texte)", async () => {
     searchHits([
       { id: "comite", score: 3, snippet: "date de livraison du 27" },
