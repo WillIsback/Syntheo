@@ -58,6 +58,123 @@
 Data, network flows and GDPR responsibilities:
 [GDPR compliance](https://docs.syntheo.studio/en/conformite/rgpd).
 
+## Syntheo and other meeting notepads
+
+This table only keeps points where Syntheo made a different choice. It is not
+a ranking: these tools also do things Syntheo does not,
+[listed below](#what-the-others-do-and-syntheo-does-not). Checked on
+28 November 2026 against each vendor's public documentation and repositories.
+
+✅ yes · 🟡 partly · ❌ no
+
+|                                                              | Syntheo | Granola | Anarlog | OpenWhispr | Meetily |
+| ------------------------------------------------------------ | :-----: | :-----: | :-----: | :--------: | :-----: |
+| Open-source application                                      |   ✅    |   ❌    |   ✅    |     ✅     |   ✅    |
+| Every feature free, no paid plan                             |   ✅    |   ❌    |   ❌    |     ❌     |   ❌    |
+| Works without an account                                     |   ✅    |   ❌    |   ✅    |     ✅     |   ✅    |
+| No telemetry in the app                                      |   ✅    |   ❌    |   ❌    |     🟡     |   🟡    |
+| No built-in cloud AI service                                 |   ✅    |   ❌    |   🟡    |     ❌     |   🟡    |
+| No meeting audio kept                                        |   ✅    |   ✅    |   ❌    |     ✅     |   ❌    |
+| Linux build                                                  |   ✅    |   ❌    |   ✅    |     ✅     |   🟡    |
+| MSI installer for Windows fleets                             |   ✅    |   ❌    |   ❌    |     ❌     |   ✅    |
+| Self-hosted transcription service, shipped as a Docker image |   ✅    |   ❌    |   ❌    |     ❌     |   ❌    |
+| Interface and write-up templates in French                   |   ✅    |   ❌    |   ❌    |     ✅     |   ❌    |
+| Thread across meetings and a proposed agenda                 |   ✅    |   🟡    |   🟡    |     🟡     |   ❌    |
+| Your notes told apart from AI text inside the write-up       |   ✅    |   ✅    |   🟡    |     🟡     |   🟡    |
+| Free local access for agents (CLI and MCP)                   |   ✅    |   ❌    |   ✅    |     🟡     |   ❌    |
+
+<details>
+<summary>Details for each row, with sources</summary>
+
+- **Open source.** Granola is proprietary. Anarlog is MIT-licensed, except its
+  `enterprise/` folder, under a commercial licence
+  ([LICENSING.md][cmp-a-licensing]). The OpenWhispr app is MIT-licensed; its
+  cloud service is not published ([README][cmp-o-readme]). Meetily publishes an
+  MIT community edition next to a closed Pro edition ([README][cmp-m-readme]).
+- **No paid plan.** Granola: a free plan limited to 30 days of history, then
+  $14 per user per month ([plans][cmp-g-billing]). Anarlog: Pro at $14 per
+  person per month for cloud, sync, sharing and teams ([teams][cmp-a-teams]).
+  OpenWhispr: free unlimited local use, Pro at $8 per month
+  ([plans][cmp-o-plans]). Meetily: free community edition, Pro at $10 per user
+  per month ([README][cmp-m-readme]).
+- **No account.** Granola requires a Google or Microsoft account
+  ([getting started][cmp-g-setup]). Anarlog and OpenWhispr work locally without
+  one. For Meetily, no sign-in was found in the community edition: the cell is
+  counted in its favour.
+- **Telemetry.** Granola's privacy policy provides for analytics tools
+  ([policy][cmp-g-privacy]). Anarlog shares usage data by default, with a
+  setting to turn it off ([data][cmp-a-privacy]). OpenWhispr and Meetily ship
+  telemetry that is off by default and that the user can turn on
+  ([OpenWhispr][cmp-o-strings], [Meetily][cmp-m-privacy]). In Syntheo, that
+  code is removed.
+- **Cloud AI.** Syntheo only talks to the servers you or your organization
+  configure: no provider is built in. If you choose a server run by a third
+  party, your data goes there. Granola transcribes and writes in its cloud
+  ([the vendor's explanation][cmp-g-cloud]). Anarlog offers its cloud (Pro) and
+  bring-your-own-key providers next to local models, with nothing preselected
+  ([models][cmp-a-models]). OpenWhispr uses its cloud by default after
+  onboarding, with a fully local mode available
+  ([network flows][cmp-o-network]). Meetily is local by default, with optional
+  cloud providers for summaries ([README][cmp-m-readme]).
+- **Audio.** Granola caches audio while its cloud transcribes it, then deletes
+  it ([FAQ][cmp-g-faq]). OpenWhispr states that meeting audio is never stored
+  ([interface strings][cmp-o-strings]). Anarlog and Meetily record it by
+  default, with a setting to avoid it ([Anarlog][cmp-a-privacy],
+  [Meetily][cmp-m-rec]).
+- **Linux.** Granola runs on macOS, Windows, iOS and Android
+  ([getting started][cmp-g-setup]). Anarlog's Linux build is in beta
+  ([installation][cmp-a-install]). Meetily publishes installers for Windows and
+  macOS; on Linux it is built from source ([README][cmp-m-readme]).
+- **MSI.** Granola, Anarlog and OpenWhispr publish an EXE installer
+  ([Granola][cmp-g-managed], [Anarlog][cmp-a-install],
+  [OpenWhispr][cmp-o-builder]); Meetily publishes an MSI
+  ([version 0.5.0][cmp-m-release]). Anarlog and OpenWhispr also have
+  administrator-enforced settings.
+- **Transcription service provided.** Syntheo publishes the
+  `ghcr.io/willisback/syntheo-transcription` image, to run on one computer or
+  on a shared server. Anarlog accepts a self-hosted server but does not provide
+  one. In OpenWhispr, meeting notes cannot use a self-hosted server yet
+  ([interface strings][cmp-o-strings]). Meetily's former server is archived
+  ([backend][cmp-m-backend]). OpenWhispr and Meetily transcribe inside the app,
+  with no server.
+- **French.** All of them transcribe French. Granola's interface is in English
+  ([languages][cmp-g-lang]). Anarlog's is almost entirely in English: 15
+  messages translated out of 1,628 on the day of the check
+  ([catalogue][cmp-a-fr]). OpenWhispr's is fully translated
+  ([catalogue][cmp-o-fr]). Meetily's is in English
+  ([open request][cmp-m-i18n]), and the summary language can be set.
+- **Thread across meetings.** Granola prepares pre-meeting briefs on its
+  Business and Enterprise plans ([briefs][cmp-g-briefs]). Anarlog finds related
+  meetings on demand, in the Pro plan's chat ([chat][cmp-a-chat]). OpenWhispr
+  has folders and search, without a project thread. Meetily has no folders
+  ([open request][cmp-m-folders]).
+- **Provenance.** Granola shows what comes from your notes in black
+  ([notes][cmp-g-notes]). Anarlog, OpenWhispr and Meetily separate your notes
+  and the summary into tabs ([Anarlog][cmp-a-notes],
+  [Meetily][cmp-m-workspace]).
+- **Agents.** Granola's MCP server is remote and tied to the account
+  ([MCP][cmp-g-mcp]). Anarlog's CLI and MCP server are local and free
+  ([MCP][cmp-a-mcp]). OpenWhispr has a local CLI ([CLI][cmp-o-cli]); its MCP
+  server is remote and listed with the paid features ([MCP][cmp-o-mcp]). At
+  Meetily, the MCP server, the CLI and the API are Pro features
+  ([MCP][cmp-m-mcp]).
+
+</details>
+
+### What the others do, and Syntheo does not
+
+- **macOS and mobile.** All four have a macOS build, and Granola has iOS and
+  Android apps. Syntheo is only published for Linux and Windows.
+- **Built-in language model.** OpenWhispr and Meetily write the summary offline
+  with nothing else to install. Syntheo has transcribed on the computer since
+  version 0.8.0, but the write-up needs a language-model server, Ollama for
+  example.
+- **Calendars, sharing, sync, SSO.** Granola and Anarlog connect to calendars,
+  share notes and manage teams. Syntheo connects to no calendar and syncs
+  nothing.
+
+Found a mistake in this table? [Open an issue](https://github.com/WillIsback/Syntheo/issues/new/choose).
+
 ## Installation
 
 ### Linux: one-line script (AppImage)
@@ -158,3 +275,40 @@ earlier web generation of the project.
 ## Licence
 
 [MIT](LICENSE): © 2026 William Derue (Syntheo), © 2023 Fastrepl, Inc. (original code).
+
+[cmp-g-setup]: https://docs.granola.ai/help-center/getting-started/setting-up-granola-for-the-first-time
+[cmp-g-privacy]: https://docs.granola.ai/help-center/policies/privacy-policy
+[cmp-g-lang]: https://docs.granola.ai/help-center/customising-granola/multi-language
+[cmp-g-faq]: https://docs.granola.ai/help-center/consent-security-privacy/security-privacy-data-faqs
+[cmp-g-mcp]: https://docs.granola.ai/help-center/sharing/integrations/mcp
+[cmp-g-billing]: https://docs.granola.ai/help-center/managing-your-account/subscriptions-and-billing
+[cmp-g-cloud]: https://www.granola.ai/blog/local-first-ai-notetaker-vs-cloud
+[cmp-g-briefs]: https://docs.granola.ai/help-center/taking-notes/pre-meeting-briefs
+[cmp-g-managed]: https://docs.granola.ai/help-center/getting-started/managed-installations
+[cmp-g-notes]: https://docs.granola.ai/help-center/taking-notes/ai-enhanced-notes
+[cmp-a-licensing]: https://github.com/fastrepl/anarlog/blob/main/LICENSING.md
+[cmp-a-privacy]: https://docs.anarlog.so/data-and-privacy
+[cmp-a-models]: https://docs.anarlog.so/models-and-providers
+[cmp-a-install]: https://docs.anarlog.so/desktop-installation
+[cmp-a-mcp]: https://docs.anarlog.so/agents/mcp
+[cmp-a-chat]: https://docs.anarlog.so/chat
+[cmp-a-teams]: https://docs.anarlog.so/teams
+[cmp-a-notes]: https://docs.anarlog.so/notes
+[cmp-a-fr]: https://github.com/fastrepl/anarlog/blob/main/apps/desktop/src/i18n/locales/fr/messages.po
+[cmp-o-readme]: https://github.com/OpenWhispr/openwhispr/blob/main/README.md
+[cmp-o-strings]: https://github.com/OpenWhispr/openwhispr/blob/main/src/locales/en/translation.json
+[cmp-o-fr]: https://github.com/OpenWhispr/openwhispr/blob/main/src/locales/fr/translation.json
+[cmp-o-network]: https://github.com/OpenWhispr/openwhispr/blob/main/docs/network-allowlist.md
+[cmp-o-plans]: https://docs.openwhispr.com/help/plans-and-limits
+[cmp-o-builder]: https://github.com/OpenWhispr/openwhispr/blob/main/electron-builder.json
+[cmp-o-cli]: https://github.com/OpenWhispr/openwhispr-cli
+[cmp-o-mcp]: https://github.com/OpenWhispr/openwhispr-mcp
+[cmp-m-readme]: https://github.com/Zackriya-Solutions/meetily/blob/main/README.md
+[cmp-m-privacy]: https://github.com/Zackriya-Solutions/meetily/blob/main/PRIVACY_POLICY.md
+[cmp-m-rec]: https://github.com/Zackriya-Solutions/meetily/blob/main/frontend/src-tauri/src/audio/recording_preferences.rs
+[cmp-m-backend]: https://github.com/Zackriya-Solutions/meetily/blob/main/backend/README.md
+[cmp-m-release]: https://github.com/Zackriya-Solutions/meetily/releases/tag/v0.5.0
+[cmp-m-i18n]: https://github.com/Zackriya-Solutions/meetily/issues/819
+[cmp-m-folders]: https://github.com/Zackriya-Solutions/meetily/issues/842
+[cmp-m-mcp]: https://meetily.ai/mcp
+[cmp-m-workspace]: https://docs.meetily.ai/features/meeting-workspace
