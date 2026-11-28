@@ -539,6 +539,50 @@ describe("recherche commune dans la palette", () => {
     expect(parentOf("Comité")).toBeUndefined();
   });
 
+  // Issue 792 : un parent long se réduit avant le nom du sous-dossier, et
+  // l'infobulle donne le chemin complet.
+  it("réduit le parent avant le nom et donne le chemin complet en infobulle", () => {
+    const longParent = "Comptes rendus du comité de pilotage trimestriel";
+    setCatalog(notes, [longParent, `${longParent}/Ateliers`, "Comité"]);
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("ateliers");
+
+    const option = screen
+      .getAllByRole("option")
+      .find(
+        (candidate) =>
+          candidate.getAttribute("data-value") ===
+          `folder-${longParent}/Ateliers`,
+      );
+    expect(option?.getAttribute("title")).toBe(`${longParent} › Ateliers`);
+
+    const name = option?.querySelector("[data-testid=palette-folder-name]");
+    const parent = option?.querySelector("[data-testid=palette-folder-parent]");
+    const shrinkOf = (element: Element | null | undefined) => {
+      const classes = element?.getAttribute("class")?.split(/\s+/) ?? [];
+      if (classes.includes("shrink-0")) return 0;
+      const custom = classes
+        .map((name) => /^shrink-\[(\d+)\]$/.exec(name)?.[1])
+        .find(Boolean);
+      return custom ? Number(custom) : 1;
+    };
+    // Le nom peut encore se réduire (sinon il déborderait de la palette),
+    // mais le parent cède la place bien avant lui.
+    expect(name?.getAttribute("class")).toContain("min-w-0");
+    expect(shrinkOf(name)).toBeGreaterThan(0);
+    expect(shrinkOf(parent)).toBeGreaterThanOrEqual(100 * shrinkOf(name));
+
+    type("comité");
+    const rootOption = screen
+      .getAllByRole("option")
+      .find(
+        (candidate) => candidate.getAttribute("data-value") === "folder-Comité",
+      );
+    expect(rootOption?.getAttribute("title")).toBe("Comité");
+  });
+
   it("cherche aussi dans le contenu des notes (index plein texte)", async () => {
     searchHits([
       { id: "comite", score: 3, snippet: "date de livraison du 27" },

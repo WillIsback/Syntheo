@@ -79,16 +79,23 @@ export function PaletteFolderGroup({
             key={folder.path}
             value={paletteFolderValue(folder.path)}
             onSelect={() => onSelect(folder)}
+            // Issue 792 : le chemin complet, même quand la ligne le tronque.
+            title={formatFolderPath(folder.path)}
             className={cn([PALETTE_ITEM_CLASS, "group"])}
           >
             <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
-            <span className="text-foreground min-w-0 truncate font-medium">
+            <span
+              data-testid="palette-folder-name"
+              className="text-foreground min-w-0 truncate font-medium"
+            >
               {folder.name}
             </span>
             {parent ? (
+              // Issue 792 : le parent cède la place avant le nom ; celui-ci
+              // ne se tronque qu'une fois le parent réduit à rien.
               <span
                 data-testid="palette-folder-parent"
-                className="text-muted-foreground min-w-0 shrink-[2] truncate text-xs"
+                className="text-muted-foreground min-w-0 shrink-[1000] truncate text-xs"
               >
                 {parent}
               </span>

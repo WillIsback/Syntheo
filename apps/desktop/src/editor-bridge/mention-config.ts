@@ -7,7 +7,11 @@ import {
   type MentionItem,
 } from "@syntheo/editor/widgets";
 
-import { formatFolderPath, formatMeetingCount } from "~/search/unified/labels";
+import {
+  formatFolderParent,
+  formatFolderPath,
+  formatMeetingCount,
+} from "~/search/unified/labels";
 import type { UnifiedSearchResults } from "~/search/unified/types";
 import { useUnifiedSearcher } from "~/search/unified/use-unified-search";
 
@@ -16,7 +20,7 @@ import { useUnifiedSearcher } from "~/search/unified/use-unified-search";
  * même ordre que la palette `Ctrl+K` (dossiers, notes, contacts). Dossiers et
  * contacts gardent leur place, les notes remplissent le reste.
  */
-function toMentionItems(
+export function toMentionItems(
   results: UnifiedSearchResults,
   untitledLabel: string,
   limit = MENTION_DISPLAY_LIMIT,
@@ -29,12 +33,19 @@ function toMentionItems(
   const noteCount = Math.max(0, limit - folders.length - contacts.length);
 
   return [
-    ...folders.map((folder): MentionItem => ({
-      id: folder.path,
-      type: "folder",
-      label: folder.name,
-      description: formatMeetingCount(folder.noteCount),
-    })),
+    ...folders.map((folder): MentionItem => {
+      // Issue 790 : comme la palette (issue 628), le parent distingue deux
+      // sous-dossiers de même nom.
+      const parent = formatFolderParent(folder.path);
+      return {
+        id: folder.path,
+        type: "folder",
+        label: folder.name,
+        ...(parent ? { context: parent } : {}),
+        description: formatMeetingCount(folder.noteCount),
+        title: formatFolderPath(folder.path),
+      };
+    }),
     ...results.notes.slice(0, noteCount).map((note): MentionItem => ({
       id: note.id,
       type: "session",
