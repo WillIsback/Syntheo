@@ -1,8 +1,21 @@
 import type { TextStreamPart, ToolSet } from "ai";
 
-export type EarlyValidatorFn = (
-  textSoFar: string,
-) => { valid: true } | { valid: false; feedback: string };
+// `pending` : le début de la réponse ne suffit pas encore pour juger (par
+// exemple une courte introduction avant le premier titre) ; le flux reste
+// en mémoire jusqu'au morceau suivant, sans nouvelle requête.
+export type EarlyValidationResult =
+  | { valid: true }
+  | { valid: false; feedback: string }
+  | { pending: true };
+
+export type EarlyValidatorFn = (textSoFar: string) => EarlyValidationResult;
+
+// Plafond de l'attente `pending` (issue 779). Au-delà, le début de réponse
+// est accepté tel quel, comme un flux qui se termine pendant l'attente : un
+// nouvel essai coûterait une seconde requête au serveur LLM pour une réponse
+// déjà longue, et un validateur qui ne tranche toujours pas après autant de
+// texte n'a pas trouvé de faute franche.
+export const MAX_PENDING_CHARS = 500;
 
 export async function* withEarlyValidationRetry<
   TOOLS extends ToolSet = ToolSet,
@@ -75,6 +88,13 @@ export async function* withEarlyValidationRetry<
 
             if (trimmedLength >= minChar) {
               const result = validator(accumulatedText);
+
+              if ("pending" in result) {
+                if (accumulatedText.length >= MAX_PENDING_CHARS) {
+                  yield* flushBuffer();
+                }
+                continue;
+              }
 
               if (!result.valid) {
                 if (attempt < maxRetries - 1) {
