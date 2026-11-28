@@ -69,8 +69,9 @@ export function ImageInputSetting({
   const choice = entry?.choice ?? "auto";
   const decision = decideImageInput(entry, model);
 
-  const persist = (detected: ImageInputDetection) =>
-    saveImageInput(key, (current) => ({ ...current, detected }));
+  const persistFor = (target: string, detected: ImageInputDetection) =>
+    saveImageInput(target, (current) => ({ ...current, detected }));
+  const persist = (detected: ImageInputDetection) => persistFor(key, detected);
 
   // Une demande de « Tester la connexion » ne compte que si le choix est
   // Automatique au moment du clic : un clic fait sous Oui ou Non ne doit pas
@@ -137,12 +138,33 @@ export function ImageInputSetting({
     gcTime: Number.POSITIVE_INFINITY,
   });
 
+  // Le test appartient au serveur et au modèle testés : la carte n'est pas
+  // remontée quand l'un d'eux change, donc le résultat est gardé avec sa clé.
+  // Il n'est affiché, et un résultat net n'est enregistré, que pour ce couple
+  // (issue 784) : un test fini après un changement de modèle n'est pas
+  // reporté sur le nouveau.
   const testing = useMutation({
-    mutationFn: () => probeImageInput({ baseUrl, apiKey, model }),
-    onSuccess: (result) => {
-      if (result.status !== "unclear") void persist(result.detection);
+    mutationFn: async (target: {
+      key: string;
+      baseUrl: string;
+      apiKey: string;
+      model: string;
+    }) => ({
+      key: target.key,
+      result: await probeImageInput({
+        baseUrl: target.baseUrl,
+        apiKey: target.apiKey,
+        model: target.model,
+      }),
+    }),
+    onSuccess: ({ key: tested, result }) => {
+      if (result.status !== "unclear")
+        void persistFor(tested, result.detection);
     },
   });
+  const testingHere = testing.isPending && testing.variables.key === key;
+  const lastTest =
+    testing.isSuccess && testing.data.key === key ? testing.data.result : null;
 
   const labels: Record<ImageInputChoice, string> = {
     auto: t`Automatic`,
@@ -222,11 +244,11 @@ export function ImageInputSetting({
       ? t`This test is not kept: going by its name, “${model}” reads images.`
       : t`This test is not kept: the note's images are not attached.`;
   };
-  const testResult = testing.isSuccess
+  const testResult = lastTest
     ? {
-        ok: testing.data.status === "reads",
-        text: testResultText(testing.data),
-        applies: appliesText(testing.data),
+        ok: lastTest.status === "reads",
+        text: testResultText(lastTest),
+        applies: appliesText(lastTest),
       }
     : null;
 
@@ -278,11 +300,11 @@ export function ImageInputSetting({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          disabled={!connected || testing.isPending}
-          onClick={() => testing.mutate()}
+          disabled={!connected || testingHere}
+          onClick={() => testing.mutate({ key, baseUrl, apiKey, model })}
           className="border-input bg-card hover:bg-muted rounded-md border px-3 py-1.5 text-[13px] font-medium disabled:opacity-60"
         >
-          {testing.isPending ? t`Testing…` : t`Test with an image`}
+          {testingHere ? t`Testing…` : t`Test with an image`}
         </button>
         {testResult ? (
           <span

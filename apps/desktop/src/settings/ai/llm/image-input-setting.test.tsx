@@ -469,3 +469,77 @@ it("says the server answered without describing the image", async () => {
   );
   expect(mocks.stored).toBe("{}");
 });
+
+// Le dernier test appartient au serveur et au modèle testés : passer à un
+// autre modèle sans remonter la carte ne doit pas reporter son résultat ni
+// la phrase « ce qui s'applique » sur le nouveau modèle.
+function treeFor(client: QueryClient, model: string) {
+  return (
+    <QueryClientProvider client={client}>
+      <ImageInputSetting baseUrl={BASE} apiKey="" model={model} connected />
+    </QueryClientProvider>
+  );
+}
+
+it("drops the last test when another model is chosen", async () => {
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
+  mocks.probe.mockResolvedValue({
+    status: "reads",
+    detection: {
+      reads: true,
+      source: "probe",
+      checkedAt: "2026-11-26T11:00:00.000Z",
+    },
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(treeFor(client, MODEL));
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+  await screen.findByText("This result now applies.");
+
+  view.rerender(treeFor(client, "llama-text-only"));
+
+  await screen.findByText(/“llama-text-only” is not recognized/);
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByText(/^Last test:/)).toBeNull();
+
+  view.rerender(treeFor(client, MODEL));
+  expect(screen.getByText("This result now applies.")).toBeTruthy();
+});
+
+it("keeps a test that ends after a model change for the tested model", async () => {
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
+  let answer: (value: unknown) => void = () => {};
+  mocks.probe.mockReturnValue(
+    new Promise((resolve) => {
+      answer = resolve;
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(treeFor(client, MODEL));
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+  view.rerender(treeFor(client, "llama-text-only"));
+  expect(
+    screen.getByRole("button", { name: "Test with an image" }),
+  ).toBeTruthy();
+
+  answer({
+    status: "reads",
+    detection: {
+      reads: true,
+      source: "probe",
+      checkedAt: "2026-11-26T11:00:00.000Z",
+    },
+  });
+
+  await waitFor(() =>
+    expect(JSON.parse(mocks.stored)[KEY]?.detected?.reads).toBe(true),
+  );
+  expect(JSON.parse(mocks.stored)[`${BASE}|llama-text-only`]).toBeUndefined();
+  expect(screen.queryByRole("status")).toBeNull();
+});
