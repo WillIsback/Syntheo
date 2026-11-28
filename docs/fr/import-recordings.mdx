@@ -54,6 +54,8 @@ Les menus « Téléverser un audio » et « Téléverser une transcription » n'
 
 Syntheo ajoute le texte horodaté à la note, puis rédige une synthèse si un serveur de synthèse est configuré et si la note n'en a pas encore.
 
+Dans un fichier VTT, les balises de voix (`<v Alice>Bonjour</v>`) indiquent qui parle. Syntheo en fait des intervenants nommés : il les relie au participant ou au contact du même nom, ou crée le contact, puis l'ajoute aux participants de la note. Les autres balises de mise en forme (`<i>`, `<b>`, `<c>`, horodatages…) sont retirées du texte. Un fichier sans balise de voix donne un seul intervenant anonyme.
+
 ## Si un import ne démarre pas
 
 - Vérifiez que le fichier est dans un format pris en charge.
