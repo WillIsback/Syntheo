@@ -726,7 +726,7 @@ fn prepare(
     let residual_entities = entities(&sent_blocks)
         .saturating_sub(entities(&generated_blocks))
         .min(u32::MAX as usize) as u32;
-    // Rang de chaque titre généré parmi les lignes de même clé (titres et
+    // Rangs de chaque titre généré parmi les lignes de même clé (titres et
     // corps), pour le retrouver dans un texte envoyé sans mise en forme.
     let generated_keys: Vec<(bool, String)> = generated_blocks
         .iter()
@@ -740,7 +740,7 @@ fn prepare(
             s.title.as_ref().map(|key| KnownTitle {
                 key: key.clone(),
                 words: s.title_words.clone(),
-                rank: title_rank(&generated_keys, key),
+                ranks: title_ranks(&generated_keys, key),
             })
         })
         .collect();
@@ -1084,27 +1084,33 @@ fn is_heading_number(word: &str) -> bool {
 struct KnownTitle {
     key: String,
     words: Vec<String>,
-    /// Rang (à partir de 1) du titre parmi les lignes générées de même clé,
-    /// titres et corps : « 2 » si une ligne de corps identique le précède.
-    rank: usize,
+    /// Rangs (à partir de 1) des titres de cette clé parmi les lignes
+    /// générées de même clé, titres et corps : `[2]` si une ligne de corps
+    /// identique précède le titre, `[1, 2]` si le titre figure deux fois (les
+    /// sections de même titre sont fusionnées, la clé n'est connue qu'une
+    /// fois).
+    ranks: Vec<usize>,
 }
 
-/// Rang (à partir de 1) du premier titre de clé `key` parmi les lignes de
-/// même clé, titres et corps.
-fn title_rank(keys: &[(bool, String)], key: &str) -> usize {
+/// Rangs (à partir de 1) des titres de clé `key` parmi les lignes de même
+/// clé, titres et corps.
+fn title_ranks(keys: &[(bool, String)], key: &str) -> Vec<usize> {
     keys.iter()
         .filter(|(_, k)| k == key)
-        .position(|(heading, _)| *heading)
-        .map_or(1, |i| i + 1)
+        .enumerate()
+        .filter(|(_, (heading, _))| *heading)
+        .map(|(i, _)| i + 1)
+        .collect()
 }
 
 /// Découpe en sections. Dans la version envoyée, une ligne identique à un
 /// titre généré ouvre aussi une section : un texte collé depuis un wiki perd
-/// souvent la mise en forme des titres. Une seule ligne par titre, et
-/// seulement si aucun titre mis en forme de l'envoyée ne porte ce libellé :
-/// celle du même rang que le titre parmi les lignes de même libellé de la
-/// générée (`KnownTitle::rank`), ou la dernière s'il y en a moins. Une ligne
-/// de corps qui reprend un titre reste ainsi du corps (règle v4, issue 767).
+/// souvent la mise en forme des titres. Seulement si aucun titre mis en forme
+/// de l'envoyée ne porte ce libellé, et seulement les lignes aux mêmes rangs
+/// que les titres de ce libellé parmi les lignes de même libellé de la
+/// générée (`KnownTitle::ranks`), la dernière remplaçant un rang absent de
+/// l'envoyée. Une ligne de corps qui reprend un titre reste ainsi du corps,
+/// et un titre présent deux fois ouvre deux sections (règle v4, issue 767).
 /// Dans un texte brut (`plain`), une ligne qui remplit le critère (a) des
 /// titres proches (`one_word_edit`) face à un titre généré pas encore
 /// retrouvé en ouvre une aussi : un titre corrigé d'un mot reste un titre.
@@ -1119,9 +1125,9 @@ fn sections(
     let mut found = vec![false; known.len()];
     let mut count = 0usize;
     let keys: Vec<String> = blocks.iter().map(|b| title_key(&b.text)).collect();
-    // Pour chaque titre connu, rang de la ligne non mise en forme qui l'ouvre
-    // (0 : aucune, le libellé figure déjà parmi les titres mis en forme).
-    let opening_rank: Vec<usize> = known
+    // Pour chaque titre connu, rangs des lignes non mises en forme qui
+    // l'ouvrent (aucun si le libellé figure parmi les titres mis en forme).
+    let opening_ranks: Vec<Vec<usize>> = known
         .iter()
         .map(|title| {
             let formatted = blocks
@@ -1133,7 +1139,11 @@ fn sections(
                 .zip(&keys)
                 .filter(|(b, k)| !b.heading && **k == title.key)
                 .count();
-            if formatted { 0 } else { title.rank.min(lines) }
+            if formatted {
+                Vec::new()
+            } else {
+                title.ranks.iter().map(|&rank| rank.min(lines)).collect()
+            }
         })
         .collect();
     let mut seen = vec![0usize; known.len()];
@@ -1142,7 +1152,7 @@ fn sections(
         let exact = same.filter(|&i| {
             block.heading || {
                 seen[i] += 1;
-                seen[i] == opening_rank[i]
+                opening_ranks[i].contains(&seen[i])
             }
         });
         let near = (plain && !block.heading && same.is_none())

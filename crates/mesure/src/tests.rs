@@ -1572,6 +1572,27 @@ Les points ci-dessous ont été tranchés en séance.
 - Reporter la recette au printemps.
 ";
 
+// Titre présent deux fois dans la générée, sous deux sujets : chaque ligne
+// identique d'un texte brut ou d'un collage wiki ouvre sa section.
+const DUPLICATE_TITLE: &str = "# Bilan Orphée
+
+## Lot A
+
+Le lot A avance.
+
+## Décisions
+
+- Garder le prestataire.
+
+## Lot B
+
+Le lot B prend du retard.
+
+## Décisions
+
+- Relancer le fournisseur.
+";
+
 fn html_of(markdown: &str) -> String {
     markdown
         .split("\n\n")
@@ -1610,7 +1631,7 @@ fn text_of(markdown: &str) -> String {
 
 #[test]
 fn a_body_line_repeating_a_title_gives_no_rework_on_an_identical_copy() {
-    for generated in [TITLE_IN_BODY, TITLE_BEFORE_HEADING] {
+    for generated in [TITLE_IN_BODY, TITLE_BEFORE_HEADING, DUPLICATE_TITLE] {
         let words = run(generated, generated).total.generated;
         for (name, sent, format) in [
             ("markdown", generated.to_owned(), Format::Markdown),
@@ -1642,4 +1663,16 @@ fn a_pasted_title_is_still_found_when_a_body_line_repeats_it() {
     assert!(report.aligned);
     assert_eq!(report.headings_matched, report.headings_generated);
     assert_eq!(report.total.added + report.total.deleted, 0);
+}
+
+// Collage wiki d'une générée dont un titre figure deux fois : les deux lignes
+// sans mise en forme ouvrent leur section, comme dans la générée.
+#[test]
+fn a_pasted_duplicate_title_opens_a_section_at_each_line() {
+    let sent = DUPLICATE_TITLE.replace("## ", "");
+    let report = run(DUPLICATE_TITLE, &sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, report.headings_generated);
+    assert_eq!(report.total.added + report.total.deleted, 0);
+    assert_eq!(report.content_per_mille, Some(0.0));
 }
