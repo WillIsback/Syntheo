@@ -103,18 +103,19 @@ which Syntheo also compiles in and checks before every launch.
 ## Accuracy
 
 Word error rate on French, measured by Syntheo on a computer with VNNI (AMD
-Ryzen 9 9950X, 4 cores): **12.55 %** with these int8 weights (95 % bootstrap
-interval 10.73 to 14.45), against **12.52 %** in FP32 (10.72 to 14.35). The
-paired difference is +0.02 point (−0.39 to +0.44): no measurable degradation.
+Ryzen 9 9950X, 4 cores): **10.22 %** with these int8 weights (95 % bootstrap
+interval 8.72 to 11.83), against **10.42 %** in FP32 (8.96 to 11.94). The
+paired difference is −0.20 point (−0.63 to +0.19): no measurable degradation.
 
-The sample holds 150 utterances (4,208 words, 29.9 minutes of read speech): 100
-from FLEURS `fr_fr` (test split) and 50 from Multilingual LibriSpeech `french`
-(the 1-hour subset `1_hours`, taken from the training split), drawn at random
-with fixed seeds. The intervals come from 1,000 bootstrap resamples of the
-utterances. With this sample size, a degradation smaller than about 0.5 point
-between int8 and FP32 cannot be detected, and spontaneous, noisy or far-field
-speech is not measured. Measured on November 22, 2026, with the files listed
-in `models.json` (shipped with Syntheo 0.8.0 to 0.8.2).
+The sample holds 150 utterances (4,480 words, 29.6 minutes of read speech): 100
+from FLEURS `fr_fr` (test split, 12.47 % int8, 12.59 % FP32) and 50 from
+Multilingual LibriSpeech `french` (test split, 7.25 % int8, 7.56 % FP32), drawn
+at random with fixed seeds. The intervals come from 1,000 bootstrap resamples
+of the utterances. With this sample size, a degradation smaller than about 0.5
+point between int8 and FP32 cannot be detected, and spontaneous, noisy or
+far-field speech is not measured. FLEURS was transcribed on November 22, 2026,
+MLS on November 28, 2026 (ONNX Runtime 1.31.0), with the files listed in
+`models.json` (shipped with Syntheo 0.8.0 to 0.8.2).
 
 The list of utterances, their references and the script that rebuilds the
 sample are in

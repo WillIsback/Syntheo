@@ -1,5 +1,5 @@
 {
-  "about": "Corpus de WER français de Syntheo (issue 788) : 100 énoncés FLEURS fr_fr (test) et 50 énoncés Multilingual LibriSpeech french (sous-ensemble 1_hours), parole lue. La liste des énoncés, leurs empreintes et les références sont dans utterances.tsv. Aucun audio dans le dépôt : prepare.py reconstruit le corpus. Voir README.md et ATTRIBUTION.md.",
+  "about": "Corpus de WER français de Syntheo (issue 788) : 100 énoncés FLEURS fr_fr (test) et 50 énoncés Multilingual LibriSpeech french (split test), parole lue. La liste des énoncés, leurs empreintes et les références sont dans utterances.tsv. Aucun audio dans le dépôt : prepare.py reconstruit le corpus. Voir README.md et ATTRIBUTION.md.",
   "fleurs": {
     "repository": "https://huggingface.co/datasets/google/fleurs",
     "revision": null,
@@ -21,8 +21,8 @@
     "revision": "2e83e61823b4c47dcbcb1980bb88601274127609",
     "license": "CC-BY-4.0 ; enregistrements LibriVox dans le domaine public",
     "parquet": {
-      "file": "french/1_hours-00000-of-00001.parquet",
-      "sha256": "289811be92a1f41b6d7cc92b342a7d6f6839a78f54ad6bcbaf9e10e034d8b554"
+      "file": "french/test-00000-of-00001.parquet",
+      "sha256": "118dad8c119d13564464cc2c5d2d4ffaea4f5752f4cb50a589f502e905ede736"
     },
     "seed": 20261123,
     "count": 50

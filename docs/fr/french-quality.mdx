@@ -4,7 +4,7 @@ sidebarTitle: "Qualité en français"
 description: "Taux d'erreur sur les mots (WER) de la transcription sur ce poste, mesuré sur 150 énoncés de parole lue en français : résultats, conditions, méthode reproductible, limites et sources."
 ---
 
-Sur 150 énoncés de parole lue en français, la transcription **Sur ce poste** fait **12,55 %** d'erreurs sur les mots (intervalle à 95 % : 10,73 à 14,45 %), soit environ un mot sur huit. La quantification int8 des modèles livrés ne dégrade pas ce résultat de façon mesurable face aux poids d'origine en FP32 (12,52 %).
+Sur 150 énoncés de parole lue en français, la transcription **Sur ce poste** fait **10,22 %** d'erreurs sur les mots (intervalle à 95 % : 8,72 à 11,83 %), soit environ un mot sur dix. La quantification int8 des modèles livrés ne dégrade pas ce résultat de façon mesurable face aux poids d'origine en FP32 (10,42 %).
 
 Ces chiffres portent sur de la parole lue, enregistrée proprement. Ils ne mesurent ni une réunion réelle ni la qualité des synthèses : lisez [Ce que ces chiffres ne mesurent pas](#ce-que-ces-chiffres-ne-mesurent-pas) avant de les comparer à votre usage.
 
@@ -14,28 +14,28 @@ Le taux d'erreur sur les mots (WER) compte les mots remplacés, oubliés ou ajou
 
 | Moteur de transcription | Modèle | WER | Intervalle à 95 % | Énoncés | Mots |
 | --- | --- | --- | --- | --- | --- |
-| [Sur ce poste](/fr/on-device-transcription) (`syntheo-speech`), Syntheo 0.8.0 à 0.8.2 | NVIDIA Nemotron 3.5 ASR Streaming 0.6B, int8 à plage réduite (modèles livrés) | 12,55 % | 10,73 à 14,45 % | 150 | 4 208 |
-| Référence, non livrée | Même modèle, poids d'origine en FP32 | 12,52 % | 10,72 à 14,35 % | 150 | 4 208 |
+| [Sur ce poste](/fr/on-device-transcription) (`syntheo-speech`), Syntheo 0.8.0 à 0.8.2 | NVIDIA Nemotron 3.5 ASR Streaming 0.6B, int8 à plage réduite (modèles livrés) | 10,22 % | 8,72 à 11,83 % | 150 | 4 480 |
+| Référence, non livrée | Même modèle, poids d'origine en FP32 | 10,42 % | 8,96 à 11,94 % | 150 | 4 480 |
 | [Service de transcription en local](/fr/local-transcription-service) (NVIDIA NeMo-Speech.cpp) | Nemotron 3.5 ASR Streaming 0.6B, quantifié `q8_0` | Non mesuré | — | — | — |
 | Serveur compatible OpenAI ([Configurer la transcription et l'IA](/fr/ai-setup)) | Le modèle que vous choisissez | Dépend du modèle choisi, non mesuré | — | — | — |
 
-L'écart apparié entre les modèles livrés et la référence FP32 est de +0,02 point (intervalle à 95 % : −0,39 à +0,44) : il n'est pas mesurable avec cet échantillon. Le service NeMo-Speech.cpp utilise le même modèle de base, mais une autre quantification et un autre moteur d'exécution : le résultat ci-dessus ne s'y applique pas.
+L'écart apparié entre les modèles livrés et la référence FP32 est de −0,20 point (intervalle à 95 % : −0,63 à +0,19) : il n'est pas mesurable avec cet échantillon. Le service NeMo-Speech.cpp utilise le même modèle de base, mais une autre quantification et un autre moteur d'exécution : le résultat ci-dessus ne s'y applique pas.
 
 Par jeu de données :
 
 | Jeu | Énoncés | Mots | Modèles livrés (int8) | Référence FP32 |
 | --- | --- | --- | --- | --- |
 | FLEURS `fr_fr` | 100 | 2 550 | 12,47 % (10,23 à 14,88) | 12,59 % (10,39 à 14,92) |
-| Multilingual LibriSpeech `french` | 50 | 1 658 | 12,67 % (9,91 à 16,11) | 12,42 % (9,44 à 15,81) |
-| **Total** | **150** | **4 208** | **12,55 % (10,73 à 14,45)** | **12,52 % (10,72 à 14,35)** |
+| Multilingual LibriSpeech `french` | 50 | 1 930 | 7,25 % (5,72 à 8,95) | 7,56 % (6,03 à 9,22) |
+| **Total** | **150** | **4 480** | **10,22 % (8,72 à 11,83)** | **10,42 % (8,96 à 11,94)** |
 
 ## Conditions de la mesure
 
-- **Date** : 22 novembre 2026.
+- **Date** : FLEURS transcrit le 22 novembre 2026, MLS le 28 novembre 2026, avec les mêmes modèles et le même banc. Retranscrits le 28 novembre, 5 énoncés FLEURS redonnent un texte identique à celui du 22 novembre avec chaque modèle.
 - **Modèles** : les fichiers de `apps/speech/models/models.json`, identiques octet pour octet à ceux que Syntheo 0.8.0, 0.8.1 et 0.8.2 téléchargent. Ils sont quantifiés depuis l'export ONNX `altunenes/parakeet-rs` (révision `26684938ff242cb4f7a65fad712476c6015a4477`) de `nvidia/nemotron-3.5-asr-streaming-0.6b` (révision `ea30d66debe3740a08b573244286791d423d6b3e`). La référence FP32 est ce même export, non quantifié.
-- **Matériel** : AMD Ryzen 9 9950X (AVX-512 avec VNNI), limité à 4 cœurs, 4 fils ONNX Runtime.
+- **Matériel** : AMD Ryzen 9 9950X (AVX-512 avec VNNI), limité à 4 cœurs, 4 fils ONNX Runtime 1.31.0.
 - **Exécution** : chaque fichier est transcrit en entier, hors temps réel, sans la chaîne de capture de l'application (micro, son du poste, annulation d'écho). La diarisation n'intervient pas dans le WER.
-- **Audio** : 29,9 min au total, WAV 16 kHz, mono, PCM 16 bits.
+- **Audio** : 29,6 min au total (FLEURS 17,5 min, MLS 12,1 min), WAV 16 kHz, mono, PCM 16 bits.
 
 Sur un processeur sans VNNI, le calcul int8 arrondit autrement. Mesuré en émulation sur 16 énoncés de ce corpus, l'écart avec le FP32 reste dans le bruit de la mesure (voir la fiche des modèles, `apps/speech/models/model-card.md`).
 
@@ -48,7 +48,6 @@ Sur un processeur sans VNNI, le calcul int8 arrondit autrement. Mesuré en émul
 - **Vocabulaire général** : textes encyclopédiques et littéraires, sans jargon métier, noms propres de votre organisation ni sigles (le [dictionnaire](/fr/languages#noms-propres-et-jargon) sert à cela).
 - **Pas les synthèses** : le WER mesure la transcription seule, pas la qualité des synthèses rédigées ensuite par votre serveur LLM.
 - **Échantillon limité** : 150 énoncés ne détectent pas un écart inférieur à environ 0,5 point entre deux variantes.
-- **Partie MLS** : elle vient du sous-ensemble « 1 heure » du split d'entraînement de Multilingual LibriSpeech. Si le modèle a été entraîné sur MLS, ce qui n'est pas vérifié ici, cette partie peut être optimiste.
 
 En réunion réelle, attendez-vous à un taux d'erreur plus élevé.
 
@@ -57,7 +56,7 @@ En réunion réelle, attendez-vous à un taux d'erreur plus élevé.
 ### Corpus
 
 - 100 énoncés de **FLEURS** `fr_fr`, split `test` : 100 phrases distinctes tirées avec `random.Random(20261122)`, puis un enregistrement par phrase.
-- 50 énoncés de **Multilingual LibriSpeech** `french`, sous-ensemble `1_hours` : tirés avec `random.Random(20261123)` parmi les énoncés triés par identifiant.
+- 50 énoncés de **Multilingual LibriSpeech** `french`, split `test` : tirés avec `random.Random(20261123)` parmi les énoncés triés par identifiant.
 - Les références sont les transcriptions des jeux de données, sans modification (pour FLEURS, la transcription brute, avec ponctuation).
 
 Le dépôt de Syntheo ne contient aucun audio. Le dossier [`apps/speech/wer-corpus`](https://github.com/WillIsback/Syntheo/tree/main/apps/speech/wer-corpus) contient la liste des énoncés (`utterances.tsv` : identifiant, jeu, split, fichier d'origine, empreintes SHA-256, référence), les sources (`sources.json`), l'attribution et les scripts.

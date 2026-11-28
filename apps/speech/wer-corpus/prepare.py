@@ -10,7 +10,7 @@ Usage :
       <fleurs test.tsv> <dossier audio FLEURS test> <parquet MLS>
 
 Le corpus compte 150 énoncés : 100 de FLEURS fr_fr (split test) et 50 de
-Multilingual LibriSpeech french (sous-ensemble « 1 heure », 1_hours), listés
+Multilingual LibriSpeech french (split test), listés
 dans utterances.tsv avec leur fichier d'origine, son empreinte et la
 référence. Le dépôt ne contient aucun audio.
 
