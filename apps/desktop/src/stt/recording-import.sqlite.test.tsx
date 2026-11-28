@@ -87,7 +87,12 @@ vi.mock("~/session/queries", () => ({
 const MIGRATIONS = resolve(process.cwd(), "../../crates/db-app/migrations");
 let schema = "";
 
-function insertJob(id: string, meetingId: string, status: string) {
+function insertJob(
+  id: string,
+  meetingId: string,
+  status: string,
+  { workerId = "previous-worker", ageSeconds = 600 } = {},
+) {
   mocks.database!.exec(
     `INSERT INTO sessions (id, owner_user_id, title, metadata_json)
      VALUES ('${meetingId}', 'user-1', 'Agent import', '{"welcome_note":"kept"}')`,
@@ -96,7 +101,20 @@ function insertJob(id: string, meetingId: string, status: string) {
     `INSERT INTO local_recording_import_jobs
        (id, meeting_id, file_path, processing_status, worker_id, updated_at)
      VALUES ('${id}', '${meetingId}', '/recordings/call.wav', '${status}',
-       'previous-worker', unixepoch() - 600)`,
+       '${workerId}', unixepoch() - ${ageSeconds})`,
+  );
+}
+
+function jobStatus(id: string) {
+  return query(
+    "SELECT processing_status FROM local_recording_import_jobs WHERE id = ?",
+    [id],
+  )[0]?.processing_status;
+}
+
+function workerIds() {
+  return query("SELECT id FROM local_recording_import_worker ORDER BY id").map(
+    (row) => String(row.id),
   );
 }
 
@@ -162,5 +180,83 @@ describe("recording import heartbeat", () => {
       )[0]?.processing_status,
     ).toBe("failed");
     expect(metadata("meeting-2")).toEqual({ welcome_note: "kept" });
+  });
+
+  // Issue 816 : l'application est à instance unique et seule la fenêtre
+  // principale porte le worker. Une tâche en cours tenue par un autre worker
+  // a donc perdu son traitement : elle est interrompue au premier battement,
+  // sans attendre les deux minutes du délai de péremption.
+  it("interrupts at once a running job left by another worker", async () => {
+    insertJob("job-3", "meeting-3", "transcribing", { ageSeconds: 5 });
+
+    await recordingImportHeartbeat();
+
+    expect(jobStatus("job-3")).toBe("failed");
+    expect(metadata("meeting-3")).toMatchObject({
+      transcription_failure: { code: "agent_import" },
+    });
+  });
+
+  it("leaves a running job of the current worker alone", async () => {
+    await recordingImportHeartbeat();
+    const [current] = workerIds();
+    insertJob("job-4", "meeting-4", "transcribing", {
+      workerId: current,
+      ageSeconds: 5,
+    });
+
+    await recordingImportHeartbeat();
+
+    expect(jobStatus("job-4")).toBe("transcribing");
+    expect(metadata("meeting-4")).toEqual({ welcome_note: "kept" });
+  });
+
+  // Issue 817 : un rechargement de l'interface (location.reload) relit le
+  // module. Le worker garde son identifiant pour toute la vie de la fenêtre,
+  // sinon sa propre tâche en cours passerait pour celle d'un worker disparu.
+  // Base pour l'issue 817 : seul l'identifiant est vérifié ; la reprise de la
+  // tâche jusqu'à done n'est pas livrée.
+  it("keeps the same worker id and its running job after the interface reloads (base for issue 817)", async () => {
+    await recordingImportHeartbeat();
+    const [current] = workerIds();
+    insertJob("job-5", "meeting-5", "transcribing", {
+      workerId: current,
+      ageSeconds: 5,
+    });
+
+    vi.resetModules();
+    const reloaded = await import("./recording-import");
+    await reloaded.recordingImportHeartbeat();
+
+    expect(workerIds()).toEqual([current]);
+    expect(jobStatus("job-5")).toBe("transcribing");
+    expect(metadata("meeting-5")).toEqual({ welcome_note: "kept" });
+  });
+
+  // Issue 816 : après un rechargement, l'identifiant est le même mais le
+  // nouveau chargement ne traite rien. La tâche en cours abandonnée par le
+  // chargement précédent ne doit pas bloquer la file jusqu'à sa péremption :
+  // la tâche en attente est prise tout de suite, l'abandonnée reste au
+  // battement.
+  it("picks a queued job at once when a reload abandoned a running job", async () => {
+    await recordingImportHeartbeat();
+    const [current] = workerIds();
+    insertJob("job-6", "meeting-6", "transcribing", {
+      workerId: current,
+      ageSeconds: 5,
+    });
+    insertJob("job-7", "meeting-7", "queued");
+
+    vi.resetModules();
+    const reloaded = await import("./recording-import");
+
+    expect(await reloaded.nextImportJob()).toEqual([
+      {
+        id: "job-7",
+        meeting_id: "meeting-7",
+        file_path: "/recordings/call.wav",
+      },
+    ]);
+    expect(jobStatus("job-6")).toBe("transcribing");
   });
 });

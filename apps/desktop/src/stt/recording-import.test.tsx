@@ -114,7 +114,14 @@ function setupJob(fails: boolean) {
     if (sql.includes("file_path != ''")) return [];
     return ["done", "failed"].includes(status)
       ? []
-      : [{ id: "job", meeting_id: "meeting", file_path: "/staged.wav" }];
+      : [
+          {
+            id: "job",
+            meeting_id: "meeting",
+            file_path: "/staged.wav",
+            processing_status: status,
+          },
+        ];
   });
   mocks.transaction.mockImplementation(
     async (statements: { params: unknown[] }[]) => {

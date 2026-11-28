@@ -54,8 +54,13 @@ export const AGENT_IMPORT_INTERRUPTED_MESSAGE = "agent import interrupted";
 // la transcription) est passé en échec par le battement de cœur suivant, sans
 // passer par le catch de l'import. Cette instruction, jouée dans la même
 // transaction juste avant, garde l'échec dans la note. Un résumé interrompu
-// est exclu : la transcription est déjà dans la note.
-export function agentImportInterruptedFailureStatement(staleSeconds: number): {
+// est exclu : la transcription est déjà dans la note. Issue 816 : une tâche
+// tenue par un autre worker que le worker courant est interrompue tout de
+// suite (application à instance unique, voir recording-import.tsx).
+export function agentImportInterruptedFailureStatement(
+  currentWorkerId: string,
+  staleSeconds: number,
+): {
   sql: string;
   params: unknown[];
 } {
@@ -71,13 +76,14 @@ export function agentImportInterruptedFailureStatement(staleSeconds: number): {
         AND id IN (
           SELECT meeting_id FROM local_recording_import_jobs
           WHERE processing_status IN ('importing', 'transcribing')
-            AND updated_at < unixepoch() - ?
+            AND (worker_id IS NOT ? OR updated_at < unixepoch() - ?)
         )`,
     params: [
       JSON.stringify({
         code: AGENT_IMPORT_FAILED_CODE,
         message: AGENT_IMPORT_INTERRUPTED_MESSAGE,
       } satisfies TranscriptionFailure),
+      currentWorkerId,
       staleSeconds,
     ],
   };
