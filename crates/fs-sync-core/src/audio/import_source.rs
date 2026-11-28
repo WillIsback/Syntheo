@@ -361,6 +361,99 @@ mod tests {
 
         if linked {
             assert!(result.is_err(), "the swapped-in link must not be read");
+        } else {
+            eprintln!("ignoré : lien impossible (droit de créer un lien symbolique absent)");
+        }
+    }
+
+    /// Windows : crée une jonction `link` vers le dossier `target`. Une
+    /// jonction ne demande aucun privilège, contrairement à un lien symbolique.
+    #[cfg(windows)]
+    fn junction(link: &std::path::Path, target: &std::path::Path) {
+        let output = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "mklink /J: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    /// Windows : dossier parent remplacé par une jonction entre la
+    /// vérification du chemin et l'ouverture. Le handle suit la jonction, mais
+    /// son chemin final n'est plus le chemin validé : refus.
+    #[cfg(windows)]
+    #[test]
+    fn a_parent_directory_swapped_for_a_junction_is_refused_on_windows() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("recordings");
+        std::fs::create_dir(&dir).unwrap();
+        std::fs::write(dir.join("meeting.wav"), b"validated audio").unwrap();
+        let elsewhere = temp.path().join("elsewhere");
+        std::fs::create_dir(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("meeting.wav"), b"other content!!").unwrap();
+
+        let result = read_import_source_observed(&dir.join("meeting.wav"), LIMITS, &mut |stage| {
+            if stage == ImportStage::PathChecked {
+                std::fs::rename(&dir, temp.path().join("moved")).unwrap();
+                junction(&dir, &elsewhere);
+            }
+        });
+
+        let error = result.expect_err("the junction must not redirect the read");
+        assert_eq!(error.to_string(), "audio_source_changed_during_import");
+    }
+
+    /// Windows : un chemin qui traverse une jonction déjà en place est
+    /// accepté et lu depuis sa cible réelle.
+    #[cfg(windows)]
+    #[test]
+    fn a_path_through_an_existing_junction_is_accepted_on_windows() {
+        let temp = TempDir::new().unwrap();
+        let real = temp.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        std::fs::write(real.join("meeting.wav"), b"validated audio").unwrap();
+        let alias = temp.path().join("alias");
+        junction(&alias, &real);
+
+        let (data, canonical) = read_import_source(&alias.join("meeting.wav"), LIMITS).unwrap();
+
+        assert_eq!(data, b"validated audio");
+        assert_eq!(
+            canonical,
+            std::fs::canonicalize(real.join("meeting.wav")).unwrap()
+        );
+    }
+
+    /// Windows : le même fichier atteint par le partage administratif local,
+    /// en chemin UNC court (`\\localhost\C$\…`) et long (`\\?\UNC\…`), est
+    /// accepté. Ignoré si le partage administratif n'est pas joignable.
+    #[cfg(windows)]
+    #[test]
+    fn unc_paths_to_a_local_file_are_accepted_on_windows() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("meeting.wav");
+        std::fs::write(&path, b"validated audio").unwrap();
+        let plain = path.to_string_lossy().into_owned();
+        let (drive, rest) = (&plain[..1], &plain[3..]);
+        let short = std::path::PathBuf::from(format!(r"\\localhost\{drive}$\{rest}"));
+        let long = std::path::PathBuf::from(format!(r"\\?\UNC\localhost\{drive}$\{rest}"));
+
+        if let Err(error) = std::fs::metadata(&short) {
+            eprintln!(
+                "ignoré : partage administratif \\\\localhost\\{drive}$ injoignable ({error})"
+            );
+            return;
+        }
+        for candidate in [&short, &long] {
+            let (data, _) = read_import_source(candidate, LIMITS)
+                .unwrap_or_else(|error| panic!("{}: {error}", candidate.display()));
+            assert_eq!(data, b"validated audio", "{}", candidate.display());
         }
     }
 
