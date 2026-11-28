@@ -52,9 +52,11 @@ impl From<TimedSubtitleFile> for Subtitle {
 }
 
 /// Le jeton d'un cue SubRip : son texte sans les balises de mise en forme,
-/// sans locuteur (le SubRip n'a pas de balise de voix).
+/// entités HTML décodées, sans locuteur (le SubRip n'a pas de balise de voix).
 fn srt_cue_token(text: &str, start_time: u64, end_time: u64) -> Option<Token> {
-    let text = strip_srt_formatting(text);
+    // Entités décodées après le retrait des balises : un « &lt;i&gt; » écrit
+    // en entités reste du texte, comme le voulait l'auteur du fichier.
+    let text = decode_entities(&strip_srt_formatting(text));
     let text = text.trim();
     // Comme pour le WebVTT, un cue sans lettre ni chiffre n'est pas une réplique.
     if !text.chars().any(char::is_alphanumeric) {
@@ -441,6 +443,28 @@ mod tests {
                 0,
                 2000
             )]
+        );
+    }
+
+    #[test]
+    fn srt_html_entities_are_decoded_after_formatting_is_removed() {
+        let tokens = parse(
+            ".srt",
+            "1\n00:00:00,000 --> 00:00:02,000\nDupont &amp; Fils, a &lt; b et b &gt; c.\n\n\
+             2\n00:00:02,000 --> 00:00:04,000\n&lt;i&gt; reste du texte, <i>pas</i> ceci.\n",
+        );
+
+        assert_eq!(
+            tokens,
+            vec![
+                (None, "Dupont & Fils, a < b et b > c.".to_string(), 0, 2000),
+                (
+                    None,
+                    "<i> reste du texte, pas ceci.".to_string(),
+                    2000,
+                    4000
+                ),
+            ]
         );
     }
 
