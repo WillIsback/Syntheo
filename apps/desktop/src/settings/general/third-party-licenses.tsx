@@ -18,8 +18,8 @@ import type {
 import { componentMatches } from "./third-party-licenses-search";
 
 // Page des licences (issue 747), Paramètres › Profil › À propos. Les données
-// sont générées au build (Cargo.lock, pnpm-lock.yaml, modèles) et chargées
-// seulement à l'ouverture : aucune requête réseau.
+// sont générées au build (Cargo.lock, paquets npm du bundle, modèles) et
+// chargées seulement à l'ouverture : aucune requête réseau.
 
 type Kind = ThirdPartyComponent["kind"];
 
@@ -205,6 +205,8 @@ function ComponentRow({
               component.texts.map((index) => (
                 <LicenseText key={index} text={texts[index] ?? ""} />
               ))
+            ) : component.references.length > 0 ? (
+              <ReferenceTexts component={component} texts={texts} />
             ) : (
               <p className="text-muted-foreground">
                 <Trans>
@@ -217,6 +219,49 @@ function ComponentRow({
         ) : null}
       </details>
     </li>
+  );
+}
+
+/**
+ * Texte SPDX officiel de la licence, à défaut de celui du composant
+ * (issue 776) : signalé comme tel, avec le nom du composant et ses auteurs.
+ */
+function ReferenceTexts({
+  component,
+  texts,
+}: {
+  component: ThirdPartyComponent;
+  texts: string[];
+}) {
+  const { name, version } = component;
+  const authors = component.authors.join(", ");
+  return (
+    <>
+      <p className="text-muted-foreground">
+        <Trans>
+          This component ships no license text. The reference text of its
+          license, as published by SPDX, is shown instead.
+        </Trans>
+      </p>
+      <p className="text-muted-foreground">
+        <Trans>
+          Component: {name} {version}
+        </Trans>
+      </p>
+      {authors ? (
+        <p className="text-muted-foreground">
+          <Trans>Authors: {authors}</Trans>
+        </p>
+      ) : null}
+      {component.references.map(({ license, text }) => (
+        <div key={text}>
+          <p className="font-medium">
+            <Trans>Reference text of the {license} license</Trans>
+          </p>
+          <LicenseText text={texts[text] ?? ""} />
+        </div>
+      ))}
+    </>
   );
 }
 
