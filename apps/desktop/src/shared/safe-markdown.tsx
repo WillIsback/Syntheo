@@ -22,18 +22,38 @@ export function SafeMarkdownImage(
 // Mêmes plugins que Streamdown, mais les `id` et `name` du HTML brut sont
 // préfixés : un élément ne peut plus masquer une propriété de `document`
 // (clobbering).
-function buildSafeRehypePlugins(): StreamdownProps["rehypePlugins"] {
+function buildSafeRehypePlugins({
+  attachmentImages = false,
+}: { attachmentImages?: boolean } = {}): StreamdownProps["rehypePlugins"] {
   const sanitize = defaultRehypePlugins.sanitize;
   if (!Array.isArray(sanitize) || sanitize.length < 2) return undefined;
   const [sanitizePlugin, sanitizeSchema] = sanitize as [
     unknown,
-    Record<string, unknown>,
+    Record<string, unknown> & { protocols?: Record<string, string[]> },
   ];
+  const protocols = attachmentImages
+    ? {
+        ...sanitizeSchema.protocols,
+        src: [...(sanitizeSchema.protocols?.src ?? []), "attachment"],
+      }
+    : sanitizeSchema.protocols;
   return [
     defaultRehypePlugins.raw,
-    [sanitizePlugin, { ...sanitizeSchema, clobberPrefix: "user-content-" }],
+    [
+      sanitizePlugin,
+      { ...sanitizeSchema, protocols, clobberPrefix: "user-content-" },
+    ],
     defaultRehypePlugins.harden,
   ] as NonNullable<StreamdownProps["rehypePlugins"]>;
 }
 
 export const safeRehypePlugins = buildSafeRehypePlugins();
+
+// Vues en lecture seule d'une synthèse (version précédente, relecture d'une
+// proposition ; issue 697) : l'adresse `attachment://<id>` d'une image jointe
+// passe le nettoyage, pour que le rendu `img` la résolve parmi les pièces
+// jointes de la session. Aucune autre adresse n'est ouverte : `asset:`,
+// `file:` et les adresses distantes restent refusées par ce rendu.
+export const summaryRehypePlugins = buildSafeRehypePlugins({
+  attachmentImages: true,
+});

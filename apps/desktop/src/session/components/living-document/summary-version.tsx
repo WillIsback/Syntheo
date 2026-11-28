@@ -2,6 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { type RefObject, useCallback, useMemo, useState } from "react";
 import { Streamdown } from "streamdown";
 
+import { AttachmentResolverContext } from "@syntheo/editor/node-views";
 import type { NoteEditorRef } from "@syntheo/editor/note";
 import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
@@ -12,22 +13,27 @@ import { formatVersionDate } from "./summary-switcher-view";
 
 import { flushDatabaseWrites } from "~/db/write-queue";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
+import { useAttachmentResolver } from "~/session/hooks/useAttachmentResolver";
 import { noteChangedSinceSummary } from "~/session/note-fingerprint";
 import { type SummaryVersionRecord, useEnhancedNote } from "~/session/queries";
-import { safeRehypePlugins } from "~/shared/safe-markdown";
+import { summaryRehypePlugins } from "~/shared/safe-markdown";
 
 // Une version remplacée d'une synthèse (issue 415), en lecture seule : la
 // version actuelle l'emporte toujours, on ne peut pas en promouvoir une
 // ancienne. Pas de coloration des notes : elle ne concerne que la version
-// actuelle.
+// actuelle. Une image jointe s'y affiche si la session connaît sa pièce
+// jointe (issue 697).
 export function SummaryVersionView({
+  sessionId,
   version,
   onBackToCurrent,
 }: {
+  sessionId: string;
   version: SummaryVersionRecord;
   onBackToCurrent: () => void;
 }) {
   const { t, i18n } = useLingui();
+  const resolveAttachment = useAttachmentResolver(sessionId);
   const date = formatVersionDate(
     version.generatedAt ?? version.supersededAt,
     i18n.locale,
@@ -65,15 +71,17 @@ export function SummaryVersionView({
         </Button>
       </div>
       <div data-provenance="ai" aria-readonly="true">
-        <Streamdown
-          icons={streamdownIcons}
-          components={streamdownComponents}
-          rehypePlugins={safeRehypePlugins}
-          className={cn(["note-typography", "flex flex-col"])}
-          linkSafety={{ enabled: false }}
-        >
-          {version.markdown}
-        </Streamdown>
+        <AttachmentResolverContext.Provider value={resolveAttachment}>
+          <Streamdown
+            icons={streamdownIcons}
+            components={streamdownComponents}
+            rehypePlugins={summaryRehypePlugins}
+            className={cn(["note-typography", "flex flex-col"])}
+            linkSafety={{ enabled: false }}
+          >
+            {version.markdown}
+          </Streamdown>
+        </AttachmentResolverContext.Provider>
       </div>
     </section>
   );

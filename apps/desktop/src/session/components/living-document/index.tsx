@@ -382,6 +382,7 @@ function SynthesisStage(
   } else if (viewedVersion) {
     content = (
       <SummaryVersionView
+        sessionId={sessionId}
         version={viewedVersion}
         onBackToCurrent={showSummary}
       />
@@ -449,7 +450,7 @@ function SummaryWithReview(
     <>
       <div data-provenance="ai">
         {proposal ? (
-          <SummaryProposalReview proposal={proposal} />
+          <SummaryProposalReview sessionId={sessionId} proposal={proposal} />
         ) : (
           <Enhanced
             ref={editorRef}

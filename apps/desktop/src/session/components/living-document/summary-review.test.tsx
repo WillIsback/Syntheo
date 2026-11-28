@@ -25,6 +25,10 @@ vi.mock("streamdown", () => ({
   ),
 }));
 
+vi.mock("~/session/hooks/useAttachmentResolver", () => ({
+  useAttachmentResolver: () => () => null,
+}));
+
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
@@ -64,7 +68,7 @@ describe("SummaryProposalReview", () => {
   });
 
   it("renders the proposal as a readable diff, not raw markdown", () => {
-    render(<SummaryProposalReview proposal={proposal} />);
+    render(<SummaryProposalReview sessionId="session-1" proposal={proposal} />);
 
     const review = screen.getByRole("region", {
       name: "Proposed summary edit",
@@ -81,7 +85,7 @@ describe("SummaryProposalReview", () => {
   });
 
   it("applies or declines the proposal from the note", async () => {
-    render(<SummaryProposalReview proposal={proposal} />);
+    render(<SummaryProposalReview sessionId="session-1" proposal={proposal} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Apply to summary" }));
     await waitFor(() => {
@@ -107,7 +111,7 @@ describe("SummaryProposalReview", () => {
     mocks.applyProposalReview.mockRejectedValueOnce(
       new Error("Raw English failure"),
     );
-    render(<SummaryProposalReview proposal={proposal} />);
+    render(<SummaryProposalReview sessionId="session-1" proposal={proposal} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Apply to summary" }));
 
