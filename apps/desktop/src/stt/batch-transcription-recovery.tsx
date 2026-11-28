@@ -14,6 +14,7 @@ import { notifyResumedImportAbandoned } from "~/stt/audio-import-feedback";
 import { parseBatchResumeContext } from "~/stt/batch-resume-context";
 import { recoverInterruptedImports } from "~/stt/interrupted-imports";
 import { isStoppedTranscriptionError, useRunBatch } from "~/stt/useRunBatch";
+import { useSTTConnection } from "~/stt/useSTTConnection";
 
 export function BatchTranscriptionRecovery() {
   const [resumable, setResumable] = useState<TranscriptionSession[]>([]);
@@ -69,18 +70,28 @@ function ResumeBatchTranscription({
   const sessionId = session.session_id;
   const record = useSession(sessionId);
   const runBatch = useRunBatch(sessionId);
+  // Issue 795 : la reprise prend fournisseur et modèle dans la session, mais
+  // l'adresse et la clé dans la connexion. Au premier rendu, les réglages lus
+  // en direct sont encore « en chargement » (packages/db-react) : la reprise
+  // attend qu'ils soient chargés et appelle le runBatch du dernier rendu.
+  const { isLoading: connectionLoading } = useSTTConnection();
+  const runBatchRef = useRef(runBatch);
+  useEffect(() => {
+    runBatchRef.current = runBatch;
+  }, [runBatch]);
   const started = useRef(false);
 
   useEffect(() => {
-    if (started.current || !record) return;
+    if (started.current || !record || connectionLoading) return;
     const context = parseBatchResumeContext(session.resume_context);
     if (!context || !session.provider || !session.model) return;
     started.current = true;
 
-    void runBatch(session.file_path, {
-      promotion: { scope: context.promotion },
-      resume: { provider: session.provider, model: session.model },
-    })
+    void runBatchRef
+      .current(session.file_path, {
+        promotion: { scope: context.promotion },
+        resume: { provider: session.provider, model: session.model },
+      })
       .then(() =>
         getEnhancerService()?.queueAutoEnhanceIfSummaryEmpty(sessionId),
       )
@@ -102,7 +113,7 @@ function ResumeBatchTranscription({
           error,
         });
       });
-  }, [record, runBatch, session, sessionId]);
+  }, [connectionLoading, record, session, sessionId]);
 
   return null;
 }
