@@ -1,12 +1,12 @@
 ---
 title: "Set up transcription and AI"
 sidebarTitle: "Transcription and AI"
-description: "Connect Syntheo to your self-hosted inference servers: a transcription server and an OpenAI-compatible LLM server."
+description: "Connect Syntheo to your inference servers, or your organization's: a transcription server and an OpenAI-compatible LLM server."
 ---
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
 
-Syntheo calls no cloud AI service. It connects to **your** inference servers, on your computer or your network, through standard protocols; live transcription can also run on this computer, without a server (see [Transcribe on this computer](#transcribe-on-this-computer)). You configure two independent things:
+Syntheo includes no cloud AI service. It connects to the inference servers **you** choose, on your computer, your network or your organization's, through standard protocols; live transcription can also run on this computer, without a server (see [Transcribe on this computer](#transcribe-on-this-computer)). You configure two independent things:
 
 | Setting | Role | Protocol |
 | --- | --- | --- |
@@ -160,6 +160,8 @@ Dictation in other apps uses the same transcription server as meetings.
 </Steps>
 
 If the server answers but the chosen model fails, the card shows "The selected model did not answer:" followed by the cause. The same model serves for summaries, the chat, generated titles, and section suggestions for summary templates.
+
+Does your organization provide a model server, for example Albert API for French State employees? See [Server provided by your organization](/en/organization-server).
 
 In the replica below, the Synthesis page is connected to Ollama. Enter `http://localhost:1234/v1` (LM Studio) to see the model list change. Choose "High" in "Reasoning effort", then another model: the effort goes back to "Auto", because it depends on the model.
 

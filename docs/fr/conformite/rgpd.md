@@ -17,7 +17,8 @@ pas responsable de traitement : l'utilisateur l'est, sur son poste.
 > entièrement en mémoire ; le fichier importé est lu à son emplacement
 > d'origine, sans copie dans le dossier de données.
 >
-> **Providers** : endpoints on-premise uniquement. La transcription parle aux
+> **Providers** : uniquement les endpoints que l'utilisateur ou son organisation
+> configure ; aucun fournisseur cloud n'est intégré. La transcription parle aux
 > protocoles OpenAI et NVIDIA NeMo-Speech.cpp ; le résumé, le chat et le
 > générateur de templates parlent à un seul endpoint LLM configuré, une API
 > OpenAI-compatible (vLLM, Ollama, llama.cpp server…).
@@ -175,7 +176,9 @@ une suppression, l'effacement est retenté au lancement suivant.
   participants l'enregistrement »).
 - **Choisir les endpoints d'inférence** et en assumer le traitement : un
   endpoint auto-hébergé reste sous le contrôle de l'utilisateur ; un endpoint
-  tiers est un sous-traitant.
+  tiers est un sous-traitant. Pour un serveur mis à disposition par
+  l'organisation, dont Albert API pour les administrations de l'État, voir
+  [Serveur fourni par votre organisation](/fr/organization-server).
 - **Gérer la durée de conservation** des transcriptions et des notes, et les
   supprimer quand elles ne sont plus nécessaires. Supprimer une réunion dans
   l'application la retire de l'application et de la recherche, mais son

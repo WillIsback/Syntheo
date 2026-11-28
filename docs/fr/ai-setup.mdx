@@ -1,12 +1,12 @@
 ---
 title: "Configurer la transcription et l'IA"
 sidebarTitle: "Transcription et IA"
-description: "Reliez Syntheo à vos serveurs d'inférence auto-hébergés : un serveur de transcription et un serveur LLM compatible OpenAI."
+description: "Reliez Syntheo à vos serveurs d'inférence, ou à ceux de votre organisation : un serveur de transcription et un serveur LLM compatible OpenAI."
 ---
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
 
-Syntheo n'appelle aucun service cloud d'IA. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard ; la transcription en direct peut aussi tourner sur ce poste, sans serveur (voir [Transcrire sur ce poste](#transcrire-sur-ce-poste)). Vous configurez deux choses indépendantes :
+Syntheo n'intègre aucun service cloud d'IA. Il se connecte aux serveurs d'inférence que **vous** choisissez, sur votre poste, votre réseau ou celui de votre organisation, par des protocoles standard ; la transcription en direct peut aussi tourner sur ce poste, sans serveur (voir [Transcrire sur ce poste](#transcrire-sur-ce-poste)). Vous configurez deux choses indépendantes :
 
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
@@ -160,6 +160,8 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
 </Steps>
 
 Si le serveur répond mais que le modèle choisi échoue, la carte affiche « Le modèle choisi n'a pas répondu : » suivi de la cause. Le même modèle sert aux synthèses, au chat, aux titres générés et aux propositions de sections des modèles de synthèse.
+
+Votre organisation met un serveur de modèles à votre disposition, par exemple Albert API pour les agents de l'État ? Voir [Serveur fourni par votre organisation](/fr/organization-server).
 
 Dans la reproduction ci-dessous, la page Synthèse est reliée à Ollama. Saisissez `http://localhost:1234/v1` (LM Studio) pour voir la liste des modèles changer. Choisissez « Élevé » dans « Effort de raisonnement », puis un autre modèle : l'effort revient à « Auto », car il dépend du modèle.
 
