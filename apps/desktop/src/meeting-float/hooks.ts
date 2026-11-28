@@ -44,7 +44,11 @@ const MEETING_FLOAT_SQL = `
     session.owner_user_id,
     '' AS human_id,
     '' AS human_name,
-    json_extract(session.metadata_json, '$.speaker_context') AS speaker_context,
+    CASE
+      WHEN json_valid(session.metadata_json)
+        THEN json_extract(session.metadata_json, '$.speaker_context')
+      ELSE NULL
+    END AS speaker_context,
     (
       SELECT transcript.started_at_ms
       FROM transcripts AS transcript

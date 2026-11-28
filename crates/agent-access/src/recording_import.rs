@@ -133,7 +133,7 @@ pub async fn import_recording(
                 return Ok(existing);
         }
         let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(database)?;
-        syntheo_db_app::insert_session(&mut tx, &id, &title, "", "", &folder, &now).await.map_err(database)?;
+        syntheo_db_app::insert_session(&mut tx, &id, &title, "", "{}", &folder, &now).await.map_err(database)?;
         syntheo_db_app::insert_empty_session_note(&mut tx, &id, "", &now).await.map_err(database)?;
         syntheo_db_app::upsert_session_owner_human(&mut tx, &id, &now).await.map_err(database)?;
         syntheo_db_app::insert_owner_session_participant(&mut tx, &uuid::Uuid::new_v4().to_string(), &id, &now).await.map_err(database)?;
@@ -203,6 +203,13 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(count, 1);
+        // Issue 798: the desktop reads session metadata with json_extract, so an
+        // imported meeting must start with a valid empty JSON object.
+        let metadata: String = sqlx::query_scalar("SELECT metadata_json FROM sessions")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(metadata, "{}");
 
         // The job points at the user's original file; nothing was copied.
         let stored: String =
