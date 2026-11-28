@@ -42,8 +42,9 @@ export function resolveCurrentSessionId(
   return deps.getSessionId();
 }
 
-// Folders @-mentioned in the triggering user message scope folder-aware
-// tools; the sidebar folder filter applies when none were mentioned.
+// Folders of the triggering user message scope folder-aware tools: the
+// @-mentioned ones, else the folder page it was sent from (see the chat
+// transport); the sidebar folder filter applies when it carries none.
 export function resolveFolderPaths(
   deps: Pick<ToolDependencies, "getFolderFilter">,
   options: ToolCallOptions | undefined,
