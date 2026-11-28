@@ -358,7 +358,13 @@ it("shows a failed agent import in the meeting and logs it without secrets", asy
       .flatMap(
         ([statements]) => statements as { sql: string; params: unknown[] }[],
       )
-      .find((statement) => statement.sql.includes("$.transcription_failure"));
+      .find(
+        (statement) =>
+          statement.sql.includes("$.transcription_failure") &&
+          // L'instruction du battement de cœur (imports interrompus) est
+          // testée sur une vraie base dans recording-import.sqlite.test.tsx.
+          !statement.sql.includes("local_recording_import_jobs"),
+      );
     expect(recorded?.params[2]).toBe("meeting");
     const failure = JSON.parse(String(recorded?.params[0])) as {
       code: string;

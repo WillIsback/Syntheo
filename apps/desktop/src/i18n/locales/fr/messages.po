@@ -5805,6 +5805,10 @@ msgid "Syntheo uses it to recognize you among the participants of your meetings,
 msgstr "Syntheo s'en sert pour vous reconnaître parmi les participants de vos réunions, afin de ne pas vous compter deux fois. Elle reste sur cet appareil."
 
 #: src/session/components/living-document/transcription-failure.tsx
+msgid "Syntheo was closed before the import finished."
+msgstr "Syntheo a été fermé avant la fin de l'import."
+
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/stt/audio-import-feedback.ts
 msgid "Syntheo was closed before the import finished. Import the file again."
 msgstr "Syntheo a été fermé avant la fin de l'import. Importez à nouveau le fichier."

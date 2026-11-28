@@ -6,6 +6,7 @@ import { useDeleteSession } from "~/session/hooks/useDeleteSession";
 import { useSessionSummary } from "~/session/queries";
 import {
   AGENT_IMPORT_FAILED_CODE,
+  AGENT_IMPORT_INTERRUPTED_MESSAGE,
   clearTranscriptionFailure,
   INTERRUPTED_IMPORT_CODE,
   useTranscriptionFailure,
@@ -36,10 +37,12 @@ export function TranscriptionFailureNotice({
       ? t`No speech was detected in the audio.`
       : failure.code === INTERRUPTED_IMPORT_CODE
         ? t`Syntheo was closed before the import finished. Import the file again.`
-        : // Message gardé brut dans la note (« unsupported audio codec:
-          // opus », « recording_too_long »…) : traduit à l'affichage, comme
-          // le toast de l'import (passe QA 0.8.1-1, issues 714 et 654).
-          describeAudioImportError(new Error(failure.message));
+        : agentImport && failure.message === AGENT_IMPORT_INTERRUPTED_MESSAGE
+          ? t`Syntheo was closed before the import finished.`
+          : // Message gardé brut dans la note (« unsupported audio codec:
+            // opus », « recording_too_long »…) : traduit à l'affichage, comme
+            // le toast de l'import (passe QA 0.8.1-1, issues 714 et 654).
+            describeAudioImportError(new Error(failure.message));
 
   const dismiss = () => {
     clearBatchSession(sessionId);

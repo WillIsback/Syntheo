@@ -11,6 +11,7 @@ import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
 import {
   AGENT_IMPORT_FAILED_CODE,
+  agentImportInterruptedFailureStatement,
   recordTranscriptionFailure,
 } from "~/session/transcription-failure";
 import { useAiProvidersState } from "~/settings/providers";
@@ -26,6 +27,8 @@ const workerId = crypto.randomUUID();
 // than 90 s (`crates/agent-access`). Each beat is a SQLite write, so it stays
 // sparse: every 5 s kept the WAL busy even when the app was idle (issue 271).
 const RECORDING_IMPORT_HEARTBEAT_MS = 30_000;
+// A running job refreshes its row every 10 s; past this age it was interrupted.
+const STALE_JOB_SECONDS = 120;
 type ImportJob = { id: string; meeting_id: string; file_path: string };
 
 /** Formats acceptés pour un import demandé par un agent (même liste que la
@@ -50,7 +53,7 @@ export function isAgentRecordingPath(path: string): boolean {
   );
 }
 
-async function heartbeat() {
+export async function recordingImportHeartbeat() {
   const vault = await settingsCommands.vaultBase();
   if (vault.status === "error") throw new Error(vault.error);
   await executeTransaction([
@@ -59,12 +62,13 @@ async function heartbeat() {
         ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at, vault_path = excluded.vault_path`,
       params: [workerId, vault.data],
     },
+    agentImportInterruptedFailureStatement(STALE_JOB_SECONDS),
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed',
         error = 'Desktop processing was interrupted. The meeting and any completed transcript were preserved.',
         updated_at = unixepoch()
-        WHERE processing_status IN ('importing', 'transcribing', 'summarizing') AND updated_at < unixepoch() - 120`,
-      params: [],
+        WHERE processing_status IN ('importing', 'transcribing', 'summarizing') AND updated_at < unixepoch() - ?`,
+      params: [STALE_JOB_SECONDS],
     },
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed', error = 'Meeting was deleted.', updated_at = unixepoch()
@@ -89,7 +93,7 @@ async function heartbeat() {
 
 export function RecordingImportWorker() {
   useMountEffect(() => {
-    const tick = () => void heartbeat().catch(console.error);
+    const tick = () => void recordingImportHeartbeat().catch(console.error);
     tick();
     const timer = setInterval(tick, RECORDING_IMPORT_HEARTBEAT_MS);
     return () => {
