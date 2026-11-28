@@ -30,9 +30,7 @@ import {
 import { inspectionsShowActiveMeetingForApps } from "./meeting-accessibility";
 import {
   getIgnorableApps,
-  getIgnoreAppsFooterText,
   getNotificationAppName,
-  getNotificationIconForApp,
   getNotificationIconForDetectedApps,
 } from "./meeting-apps";
 
@@ -378,21 +376,9 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
 
           void (async () => {
             try {
-              const footerIcon =
-                ignorableApps.length > 0
-                  ? await getNotificationIconForApp(ignorableApps[0]!)
-                  : null;
               const notificationIcon = await getNotificationIconForDetectedApps(
                 payload.apps,
               );
-              const footer =
-                ignorableApps.length > 0
-                  ? {
-                      text: getIgnoreAppsFooterText(ignorableApps),
-                      actionLabel: t`Yes`,
-                      icon: footerIcon,
-                    }
-                  : null;
 
               if (shouldCaptureMicDetectedTriggerApps()) {
                 captureTriggerApps(ignorableApps);
@@ -419,7 +405,9 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
                 action_label: t`Yes`,
                 action_variant: null,
                 options: null,
-                footer,
+                // Une seule question : ignorer une application se fait dans
+                // les réglages des réunions (issue 808).
+                footer: null,
                 icon: notificationIcon,
               });
             } finally {

@@ -127,7 +127,6 @@ const SYN_LABELS = {
   "Erase my measurements…": "Erase my measurements…",
   "Esc": "Esc",
   "Estimating…": "Estimating…",
-  "Exclude apps from detection": "Exclude apps from detection",
   "Export": "Export",
   "Export location": "Export location",
   "Export my measurements…": "Export my measurements…",
@@ -144,7 +143,6 @@ const SYN_LABELS = {
   "High": "High",
   "Hold your shortcut while speaking, then release it to finish.": "Hold your shortcut while speaking, then release it to finish.",
   "Identity": "Identity",
-  "Ignore {firstName}?": "Ignore {firstName}?",
   "Import": "Import",
   "Import progress": "Import progress",
   "Importing audio...": "Importing audio...",
@@ -3063,8 +3061,8 @@ export const DictationScreen = ({ preview = true, markers = true }) => {
 
 // Page automatic-capture : la notification « Êtes-vous en réunion ? » et la
 // pastille flottante d'écoute. Reproduit apps/desktop/src/stt/detect-events.ts
-// (titre, bouton « Oui », pied « Ignorer … ? », 15 secondes),
-// stt/meeting-apps.ts (getIgnoreAppsFooterText), la notification native de
+// (titre, bouton « Oui » seul, sans pied « Ignorer … ? » depuis l'issue 808,
+// 15 secondes), la notification native de
 // crates/notification-linux (en haut à droite, croix, barre de temps) et
 // apps/desktop/src/meeting-float/overlay/bar.tsx (MeetingPill,
 // RecordingControls, MicrophoneToggle, PausedControls) avec les dimensions
@@ -3082,8 +3080,6 @@ const SYN_CSS_AUTOCAPTURE = `
 .syn-ac-close{position:absolute;top:6px;left:6px;display:grid;place-items:center;width:20px;height:20px;border:0;border-radius:999px;background:var(--syn-muted);color:var(--syn-muted-foreground);font:14px/1 Geist,system-ui,sans-serif;cursor:pointer;padding:0}
 .syn-ac-main{display:flex;align-items:center;gap:10px;padding:14px 12px 10px 32px}
 .syn-ac-main strong{flex:1;font-size:14px;font-weight:600}
-.syn-ac-foot{display:flex;align-items:center;gap:8px;padding:8px 12px 10px 32px;border-top:1px solid var(--syn-border);font-size:13px;color:var(--syn-muted-foreground)}
-.syn-ac-foot span{flex:1}
 .syn-ac-appicon{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--syn-accent);color:var(--syn-accent-foreground)}
 .syn-ac-progress{height:3px;background:var(--syn-primary);transition:width 1s linear}
 .syn-ac-pill-slot{position:absolute;left:50%;bottom:22px;transform:translateX(-50%)}
@@ -3115,22 +3111,16 @@ const synAcDuration = (s) => {
 };
 
 /** Notification native « Êtes-vous en réunion ? » (Linux, en haut à droite). */
-const SynAcNotification = ({ remaining, onAccept, onIgnore, onDismiss, markers }) => (
+const SynAcNotification = ({ remaining, onAccept, onDismiss, markers }) => (
   <div className="syn-ac-notif" role="alertdialog" aria-label={L("Are you in a meeting?")}>
     <button type="button" className="syn-ac-close" aria-label="Close notification" onClick={onDismiss}>
       <span aria-hidden="true">×</span>
     </button>
     {markers ? h(SynHotspot, { n: 1, style: { right: 64, top: 16 } }) : null}
-    {markers ? h(SynHotspot, { n: 2, style: { right: 64, top: 62 } }) : null}
     <div className="syn-ac-main">
       <span className="syn-ac-appicon" aria-hidden="true">{h(SynIcon, { name: I("Microphone"), size: 15 })}</span>
       <strong>{L("Are you in a meeting?")}</strong>
       <button type="button" className="syn-ui-btn" data-variant="primary" onClick={onAccept}>{L("Yes")}</button>
-    </div>
-    <div className="syn-ac-foot">
-      {h(SynIcon, { name: I("VideoCamera"), size: 14 })}
-      <span>{LF("Ignore {firstName}?", { firstName: SYN_AC_APP })}</span>
-      <button type="button" className="syn-ui-btn" onClick={onIgnore}>{L("Yes")}</button>
     </div>
     <div aria-hidden="true">
       <div className="syn-ac-progress" style={{ width: `${(remaining / SYN_AC_NOTIF_SECONDS) * 100}%` }} />
@@ -3145,9 +3135,9 @@ const SynAcPill = ({ state, act, markers }) => {
   const notice = L("Recording needs attention");
   return (
     <div className="syn-ac-pill-slot">
-      {markers && !paused ? h(SynHotspot, { n: 3, style: { left: 30, top: -28 } }) : null}
-      {markers && !paused ? h(SynHotspot, { n: 4, style: { left: 103, top: -28 } }) : null}
-      {markers ? h(SynHotspot, { n: 5, style: { right: 70, top: -28 } }) : null}
+      {markers && !paused ? h(SynHotspot, { n: 2, style: { left: 30, top: -28 } }) : null}
+      {markers && !paused ? h(SynHotspot, { n: 3, style: { left: 103, top: -28 } }) : null}
+      {markers ? h(SynHotspot, { n: 4, style: { right: 70, top: -28 } }) : null}
       <div className="syn-ac-pill" role="group" aria-label="Syntheo floating bar" style={{ width: paused ? 232 : 294 }}>
         {paused ? (
           <div style={{ display: "flex", flex: 1, justifyContent: "center", alignItems: "center", gap: 4 }}>
@@ -3298,7 +3288,6 @@ export const AutoCaptureScreen = ({ markers = true }) => {
               remaining: state.remaining,
               markers: showMarkers,
               onAccept: () => patch({ stage: "listening", elapsed: 0, paused: false, error: false, micMuted: false, hint: "A note opens and listening starts; the pill appears at the bottom center." }),
-              onIgnore: () => patch({ stage: "idle", hint: `${SYN_AC_APP} joins “${L("Exclude apps from detection")}”: no more notifications for this app.` }),
               onDismiss: () => patch({ stage: "idle", hint: "Notification closed: no listening starts." }),
             })
           : null}

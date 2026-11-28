@@ -228,10 +228,6 @@ msgstr "{notice}. Ouvrez Syntheo pour réessayer ou changer d'appareil."
 msgid "{openPoints, plural, one {# open point} other {# open points}}"
 msgstr "{openPoints, plural, one {# point ouvert} other {# points ouverts}}"
 
-#: src/stt/meeting-apps.ts
-msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
-msgstr "{otherAppCount, plural, one {Ignorer {firstName} et # autre app ?} other {Ignorer {firstName} et # autres apps ?}}"
-
 #: src/folders/project/folder-thread-card.tsx
 msgid "{pendingCount, plural, one {# meeting since} other {# meetings since}}"
 msgstr "{pendingCount, plural, one {# réunion depuis} other {# réunions depuis}}"
@@ -2542,22 +2538,6 @@ msgstr "Identité"
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "Ignore"
 msgstr "Ignorer"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore {firstName} and {secondName}?"
-msgstr "Ignorer {firstName} et {secondName} ?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore {firstName}?"
-msgstr "Ignorer {firstName} ?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore these apps?"
-msgstr "Ignorer ces apps ?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore this app?"
-msgstr "Ignorer cette app ?"
 
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import"

@@ -1,7 +1,6 @@
 {
   "automatic-capture.jsx.tpl": {
     "Alerte : le niveau laisse place à un avertissement. Ouvrez Syntheo pour réessayer ou changer d'appareil.": "Alert: the level meter gives way to a warning. Open Syntheo to retry or switch devices.",
-    "rejoint « ${L(\"Exclude apps from detection\")} » : plus de notification pour cette application.": "joins “${L(\"Exclude apps from detection\")}”: no more notifications for this app.",
     "`« ${L(\"Stop when meeting ends\")} » : ${SYN_AC_APP} libère le micro, l'écoute s'arrête.`": "`“${L(\"Stop when meeting ends\")}”: ${SYN_AC_APP} releases the microphone, listening stops.`",
     "Une note s'ouvre et l'écoute démarre ; la pastille apparaît en bas au centre.": "A note opens and listening starts; the pill appears at the bottom center.",
     "Réunion terminée : la pastille disparaît et la note passe à la synthèse.": "Meeting over: the pill disappears and the note moves on to the summary.",
