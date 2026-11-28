@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -171,6 +171,18 @@ export function ModelRadioList({
   const [custom, setCustom] = useState(false);
   const [draft, setDraft] = useState(isKnown ? "" : value);
   const showCustom = custom || (!!value && !isKnown) || models.length === 0;
+  // Le nom saisi n'est enregistré qu'à la validation du champ (Entrée ou
+  // perte du focus), pas à chaque frappe (issue 803) : chaque nom
+  // intermédiaire devenait le modèle choisi et relançait la détection des
+  // images. Un champ ouvert puis quitté sans saisie ne change rien.
+  const radiosRef = useRef<HTMLDivElement>(null);
+  const edited = useRef(false);
+  const commitDraft = () => {
+    if (!edited.current) return;
+    edited.current = false;
+    const next = draft.trim();
+    if (next !== value) onChange(next);
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -182,6 +194,7 @@ export function ModelRadioList({
       </span>
       {models.length > 0 ? (
         <div
+          ref={radiosRef}
           role="radiogroup"
           aria-labelledby={labelId}
           className="flex flex-col gap-1.5"
@@ -196,6 +209,7 @@ export function ModelRadioList({
                 aria-checked={checked}
                 disabled={disabled}
                 onClick={() => {
+                  edited.current = false;
                   setCustom(false);
                   setDraft("");
                   onChange(model.id);
@@ -245,9 +259,24 @@ export function ModelRadioList({
           value={disabled ? value : draft}
           placeholder={t`Model name served by your server`}
           onChange={(event) => {
+            edited.current = true;
             setCustom(true);
             setDraft(event.target.value);
-            onChange(event.target.value.trim());
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commitDraft();
+            }
+          }}
+          onBlur={(event) => {
+            // Quitter le champ pour cliquer un modèle de la liste : c'est ce
+            // modèle qui est retenu, le nom saisi n'est pas enregistré avant.
+            const target = event.relatedTarget;
+            if (target instanceof Node && radiosRef.current?.contains(target)) {
+              return;
+            }
+            commitDraft();
           }}
         />
       ) : null}

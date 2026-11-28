@@ -420,6 +420,9 @@ describe("SttServerCard", () => {
       const input = screen.getByRole("textbox", { name: "Model name" });
       expect((input as HTMLInputElement).disabled).toBe(false);
       fireEvent.change(input, { target: { value: "voxtral-mini" } });
+      // Enregistré à la validation du champ, pas à la frappe (issue 803).
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      fireEvent.blur(input);
       expect(mocks.setSelection).toHaveBeenCalledWith({
         current_stt_model: "voxtral-mini",
       });
