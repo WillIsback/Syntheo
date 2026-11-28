@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,21 +13,20 @@ import test from "node:test";
 import {
   buildThirdPartyLicenses,
   checkThirdPartyLicenses,
-  checkTypesOnly,
-  checkUnshippedDependencies,
   cratesFromMetadata,
+  cssPackageImports,
   detectLicense,
-  entryImports,
   licenseFromTexts,
+  licenseIds,
+  npmPackagesFromModules,
   packagesFromPnpm,
   pnpmCommand,
-  pnpmTreeDirs,
   readLicenseFiles,
   readTextFile,
-  shippedPackageDirs,
+  shippedModuleIds,
+  spdxReferenceText,
   SYNTHEO_REPOSITORY,
   UNKNOWN_LICENSE,
-  UNSHIPPED_DEPENDENCIES,
 } from "./third-party-licenses.mjs";
 
 // Issue 747 : génération de la page des licences, sur des données simulées.
@@ -204,10 +209,10 @@ test("the build check refuses an empty or incomplete list", () => {
     syntheo: { text: "x" },
     texts: [],
     components: [
-      { kind: "crate", name: "serde" },
-      { kind: "crate", name: "tauri" },
-      { kind: "npm", name: "react" },
-      { kind: "model", name: "nemotron" },
+      { kind: "crate", name: "serde", texts: [0], references: [] },
+      { kind: "crate", name: "tauri", texts: [0], references: [] },
+      { kind: "npm", name: "react", texts: [0], references: [] },
+      { kind: "model", name: "nemotron", texts: [0], references: [] },
     ],
   };
   assert.deepEqual(checkThirdPartyLicenses(complete), {
@@ -216,7 +221,22 @@ test("the build check refuses an empty or incomplete list", () => {
     native: 0,
     models: 1,
     texts: 0,
+    references: 0,
+    missing: [],
   });
+  // Sans liste npm (`--check`), seules les crates et les modèles comptent.
+  assert.equal(
+    checkThirdPartyLicenses(
+      {
+        ...complete,
+        components: complete.components
+          .slice(0, 2)
+          .concat(complete.components[3]),
+      },
+      { npm: false },
+    ).npm,
+    0,
+  );
 });
 
 // Alpha 0.8.2-1 : sous Windows, `pnpm` est un script `pnpm.cmd` qu'execFileSync
@@ -258,8 +278,8 @@ test("falls back to pnpm, through a shell on Windows only", () => {
   );
 });
 
-// Issue 775 : licence déduite du texte quand le champ est absent, liste npm
-// limitée aux paquets livrés, dépôt de Syntheo.
+// Issue 775 : licence déduite du texte quand le champ est absent, dépôt de
+// Syntheo.
 const MIT_TEXT = `The MIT License (MIT)
 
 Copyright (c) 2019-present Exemple
@@ -329,233 +349,6 @@ test("keeps the npm packages without license field as undeclared", () => {
   assert.equal(packages[0].license, null);
 });
 
-// Arbre de `pnpm list --prod --json --depth Infinity` : un paquet n'est
-// détaillé qu'une fois, ses autres occurrences sont `deduped`.
-function pnpmTree() {
-  const dep = (path, dependencies) => ({
-    version: "1.0.0",
-    path,
-    ...(dependencies ? { dependencies } : { deduped: true }),
-  });
-  return [
-    { path: "/w" },
-    {
-      name: "@syntheo/desktop",
-      path: "/w/apps/desktop",
-      dependencies: {
-        "@syntheo/ui": { version: "link:../../packages/ui", path: "/w/ui" },
-        "react-scan": dep("/m/react-scan", {
-          bippy: dep("/m/bippy", {}),
-          "react-doctor": dep("/m/react-doctor", {
-            eslint: dep("/m/eslint", { esquery: dep("/m/esquery", {}) }),
-          }),
-        }),
-        // Détaillé ici, mais aussi atteint par react-doctor plus haut.
-        esquery: dep("/m/esquery"),
-      },
-    },
-    {
-      name: "@syntheo/ui",
-      path: "/w/ui",
-      dependencies: { clsx: dep("/m/clsx", {}), eslint: dep("/m/eslint") },
-    },
-  ];
-}
-
-test("ships the dependency closure without the unshipped edges", () => {
-  const shipped = shippedPackageDirs(pnpmTree(), "@syntheo/desktop", {
-    "react-scan": ["react-doctor"],
-  });
-  assert.deepEqual([...shipped].sort(), [
-    "/m/bippy",
-    "/m/clsx",
-    "/m/eslint",
-    "/m/esquery",
-    "/m/react-scan",
-    "/w/apps/desktop",
-    "/w/ui",
-  ]);
-  const withoutUi = pnpmTree();
-  delete withoutUi[2].dependencies.eslint;
-  assert.equal(
-    shippedPackageDirs(withoutUi, "@syntheo/desktop", {
-      "react-scan": ["react-doctor"],
-    }).has("/m/eslint"),
-    false,
-  );
-  const packages = packagesFromPnpm(
-    {
-      MIT: [
-        { name: "bippy", versions: ["1.0.0"], paths: ["/m/bippy"] },
-        {
-          name: "react-doctor",
-          versions: ["1.0.0"],
-          paths: ["/m/react-doctor"],
-        },
-      ],
-    },
-    shipped,
-  );
-  assert.deepEqual(
-    packages.map((p) => p.name),
-    ["bippy"],
-  );
-});
-
-test("refuses to drop a dependency the entry module imports", () => {
-  const root = mkdtempSync(join(tmpdir(), "licenses-"));
-  const dir = crateDir(root, "outil", {
-    "package.json": JSON.stringify({
-      exports: { ".": { types: "./index.d.ts", import: "./index.mjs" } },
-    }),
-    "index.mjs":
-      'import { a } from "./chunk.mjs";\nimport "node:fs";\nexport * from "@orion/runtime";',
-    "chunk.mjs": 'export const a = await import("bippy/core");',
-  });
-  assert.deepEqual([...entryImports(dir)].sort(), ["@orion/runtime", "bippy"]);
-  checkUnshippedDependencies([["outil", dir]], { outil: ["orion-cli"] });
-  assert.throws(
-    () => checkUnshippedDependencies([["outil", dir]], { outil: ["bippy"] }),
-    /outil importe bippy/,
-  );
-});
-
-test("follows directory and extensionless imports, and fails loudly", () => {
-  const root = mkdtempSync(join(tmpdir(), "licenses-"));
-  const dir = crateDir(root, "kit", {
-    "package.json": JSON.stringify({ module: "es/index.js" }),
-  });
-  mkdirSync(join(dir, "es/Panel"), { recursive: true });
-  mkdirSync(join(dir, "es/awesome"), { recursive: true });
-  writeFileSync(
-    join(dir, "es/index.js"),
-    'export { default as Panel } from "./Panel";\nimport "./theme";\nconst a = "require(\'./package.json\')";',
-  );
-  writeFileSync(join(dir, "es/Panel/index.js"), 'import "@orion/panel";');
-  writeFileSync(join(dir, "es/theme.js"), 'import "./theme.css";');
-  writeFileSync(join(dir, "es/theme.css"), "");
-  // Sous-chemin séparé, jamais atteint depuis l'entrée.
-  writeFileSync(join(dir, "es/awesome/index.js"), 'import "@orion/forum";');
-  assert.deepEqual([...entryImports(dir, ["./package.json"])].sort(), [
-    "@orion/panel",
-  ]);
-  // Un import introuvable n'est plus ignoré.
-  assert.throws(() => entryImports(dir), /import introuvable/);
-  writeFileSync(join(dir, "es/theme.js"), 'import "./absent";');
-  assert.throws(
-    () => entryImports(dir, ["./package.json"]),
-    /import introuvable : .*absent/,
-  );
-  writeFileSync(join(dir, "es/theme.js"), 'import "../../outside.js";');
-  writeFileSync(join(root, "outside.js"), "");
-  assert.throws(
-    () => entryImports(dir, ["./package.json"]),
-    /import hors du paquet/,
-  );
-  assert.throws(
-    () => entryImports(join(root, "missing")),
-    /package.json illisible/,
-  );
-  const noEntry = crateDir(root, "vide", {
-    "package.json": JSON.stringify({ main: "dist/index.js" }),
-  });
-  assert.throws(() => entryImports(noEntry), /import introuvable/);
-});
-
-test("drops build-only and type-only packages of shipped ones", () => {
-  assert.deepEqual(UNSHIPPED_DEPENDENCIES["@emotion/react"], [
-    "@emotion/babel-plugin",
-  ]);
-  assert.deepEqual(UNSHIPPED_DEPENDENCIES["@lobehub/ui"], [
-    "@giscus/react",
-    "@splinetool/runtime",
-  ]);
-  const dep = (path, dependencies = {}) => ({
-    version: "1.0.0",
-    path,
-    dependencies,
-  });
-  const tree = [
-    {
-      name: "@syntheo/desktop",
-      path: "/w/apps/desktop",
-      dependencies: {
-        "@emotion/react": dep("/m/emotion-react", {
-          "@emotion/babel-plugin": dep("/m/emotion-babel", {
-            "babel-plugin-macros": dep("/m/macros"),
-          }),
-          "@emotion/cache": dep("/m/emotion-cache"),
-          "@types/react": dep("/m/types-react"),
-        }),
-        "@lobehub/ui": dep("/m/lobehub-ui", {
-          "@giscus/react": dep("/m/giscus-react", { giscus: dep("/m/giscus") }),
-          "@splinetool/runtime": dep("/m/spline"),
-          antd: dep("/m/antd"),
-        }),
-      },
-    },
-  ];
-  assert.deepEqual([...shippedPackageDirs(tree, "@syntheo/desktop")].sort(), [
-    "/m/antd",
-    "/m/emotion-cache",
-    "/m/emotion-react",
-    "/m/lobehub-ui",
-    "/w/apps/desktop",
-  ]);
-});
-
-test("refuses a types package that carries scripts", () => {
-  const root = mkdtempSync(join(tmpdir(), "licenses-"));
-  const clean = crateDir(root, "types-a", {
-    "index.d.ts": "export {};",
-    "package.json": "{}",
-  });
-  checkTypesOnly([clean]);
-  const odd = crateDir(root, "types-b", { "index.js": "export {};" });
-  assert.throws(() => checkTypesOnly([clean, odd]), /porteurs de scripts/);
-});
-
-test("pnpm licenses list and pnpm list must agree exactly", () => {
-  const tree = pnpmTreeDirs(pnpmTree());
-  const shipped = shippedPackageDirs(pnpmTree(), "@syntheo/desktop", {
-    "react-scan": ["react-doctor"],
-  });
-  const entry = (name, path) => ({ name, versions: ["1.0.0"], paths: [path] });
-  const complete = [
-    entry("bippy", "/m/bippy"),
-    entry("clsx", "/m/clsx"),
-    entry("eslint", "/m/eslint"),
-    entry("esquery", "/m/esquery"),
-    entry("react-scan", "/m/react-scan"),
-    entry("react-doctor", "/m/react-doctor"),
-  ];
-  assert.equal(packagesFromPnpm({ MIT: complete }, shipped, tree).length, 5);
-  // Un dossier livré sans entrée de licence.
-  assert.throws(
-    () => packagesFromPnpm({ MIT: complete.slice(1) }, shipped, tree),
-    /livrés sans licence : \/m\/bippy/,
-  );
-  // Une entrée de licence hors de l'arbre de pnpm list.
-  assert.throws(
-    () =>
-      packagesFromPnpm(
-        { MIT: [...complete, entry("fantome", "/m/fantome")] },
-        shipped,
-        tree,
-      ),
-    /absents de pnpm list : fantome@1.0.0/,
-  );
-  assert.throws(
-    () =>
-      packagesFromPnpm(
-        { MIT: [...complete, { name: "sans", versions: ["1.0.0"] }] },
-        shipped,
-        tree,
-      ),
-    /sans@1.0.0 \(sans dossier\)/,
-  );
-});
-
 test("deduces the license of a component from its text, else marks it", () => {
   const root = mkdtempSync(join(tmpdir(), "licenses-"));
   writeFileSync(join(root, "LICENSE"), "Syntheo MIT");
@@ -604,4 +397,201 @@ test("the interface translates the same unknown-license marker", () => {
   assert.ok(
     page.includes(`export const UNKNOWN_LICENSE = "${UNKNOWN_LICENSE}";`),
   );
+});
+
+// Issue 776 : texte SPDX de référence, signalé comme tel, quand un composant
+// ne fournit pas le sien (symphonia, MPL-2.0).
+test("falls back to the SPDX reference text, with name and authors", () => {
+  const root = mkdtempSync(join(tmpdir(), "licenses-"));
+  writeFileSync(join(root, "LICENSE"), "Syntheo MIT");
+  const speech = {
+    workspace_members: ["syntheo-speech-id"],
+    packages: [
+      {
+        id: "syntheo-speech-id",
+        name: "syntheo-speech",
+        version: "0.1.0",
+        source: null,
+        manifest_path: join(root, "speech/Cargo.toml"),
+      },
+    ],
+    resolve: { nodes: [] },
+  };
+  const app = metadata(root);
+  const serde = app.packages.find((pkg) => pkg.name === "serde");
+  serde.license = "MPL-2.0 OR (Orion-1.0 AND Apache-2.0 WITH LLVM-exception)";
+  serde.authors = ["Ada Exemple <ada@exemple.fr>", "Orion"];
+  crateDir(root, "crates/x/vendor/vendored", { LICENSE: "Own MIT" });
+  const data = buildThirdPartyLicenses({
+    root,
+    appMetadata: app,
+    speechMetadata: speech,
+    npm: [],
+    speech: [],
+  });
+  const fallback = data.components.find((c) => c.name === "serde");
+  assert.deepEqual(fallback.texts, []);
+  assert.deepEqual(fallback.authors, ["Ada Exemple", "Orion"]);
+  assert.deepEqual(
+    fallback.references.map((r) => r.license),
+    ["MPL-2.0", "Apache-2.0", "LLVM-exception"],
+  );
+  assert.deepEqual(fallback.missing, ["Orion-1.0"]);
+  assert.match(
+    data.texts[fallback.references[0].text],
+    /^Mozilla Public License Version 2\.0/,
+  );
+  const own = data.components.find((c) => c.name === "vendored");
+  assert.deepEqual(own.references, []);
+  assert.equal(data.texts[own.texts[0]], "Own MIT");
+});
+
+test("reads the SPDX ids of an expression, case-insensitively", () => {
+  assert.deepEqual(licenseIds("(MIT OR Apache-2.0) AND Unicode-3.0"), [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+  ]);
+  assert.deepEqual(licenseIds("MIT/apache-2.0"), ["MIT", "apache-2.0"]);
+  assert.equal(
+    spdxReferenceText("apache-2.0")?.split("\n")[0].trim(),
+    "Apache License",
+  );
+  assert.equal(spdxReferenceText("Orion-1.0"), null);
+});
+
+// Issue 781 : liste npm dérivée des modules réellement rendus dans le bundle.
+function npmPackage(root, store, name, manifest, files = {}) {
+  const dir = join(root, "node_modules/.pnpm", store, "node_modules", name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ name, version: "1.0.0", ...manifest }),
+  );
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(join(dir, file, ".."), { recursive: true });
+    writeFileSync(join(dir, file), text);
+  }
+  return dir;
+}
+
+test("ships the npm packages whose modules are rendered in the bundle", () => {
+  const root = mkdtempSync(join(tmpdir(), "licenses-"));
+  const react = npmPackage(
+    root,
+    "react@1.0.0",
+    "react",
+    {
+      license: "MIT",
+      author: "Ada Exemple <ada@exemple.fr> (https://exemple.fr)",
+    },
+    { LICENSE: "React MIT" },
+  );
+  const kit = npmPackage(root, "@orion+kit@1.0.0", "@orion/kit", {
+    license: { type: "ISC" },
+    repository: "git+https://exemple.fr/orion/kit.git",
+  });
+  const font = npmPackage(root, "@orion+font@1.0.0", "@orion/font", {
+    license: "OFL-1.1",
+  });
+  npmPackage(root, "shaken@1.0.0", "shaken", { license: "MIT" });
+  const chunks = [
+    {
+      modules: {
+        [`${react}/index.js`]: { renderedLength: 120 },
+        [`${kit}/es/Panel/index.js?v=1`]: { renderedLength: 8 },
+        [join(
+          root,
+          "node_modules/.pnpm/shaken@1.0.0/node_modules/shaken/a.js",
+        )]: { renderedLength: 0 },
+        [`${font}/index.css`]: { renderedLength: 0 },
+        [join(root, "apps/desktop/src/main.tsx")]: { renderedLength: 400 },
+        "\0virtual:changelog": { renderedLength: 10 },
+      },
+    },
+  ];
+  const ids = shippedModuleIds(chunks);
+  const packages = npmPackagesFromModules(ids, [root]);
+  assert.deepEqual(
+    packages.map((p) => [p.name, p.version, p.license, p.url]).sort(),
+    [
+      ["@orion/font", "1.0.0", "OFL-1.1", null],
+      ["@orion/kit", "1.0.0", "ISC", "https://exemple.fr/orion/kit"],
+      ["react", "1.0.0", "MIT", null],
+    ],
+  );
+  assert.deepEqual(packages.find((p) => p.name === "react").authors, [
+    "Ada Exemple",
+  ]);
+});
+
+test("attributes bundler helpers to the bundler package", () => {
+  const root = mkdtempSync(join(tmpdir(), "licenses-"));
+  npmPackage(root, "vite@8.0.0", "vite", { license: "MIT", version: "8.0.0" });
+  const rolldown = npmPackage(root, "rolldown@1.0.0", "rolldown", {
+    license: "MIT",
+  });
+  mkdirSync(join(root, "node_modules"), { recursive: true });
+  symlinkSync(
+    join(root, "node_modules/.pnpm/vite@8.0.0/node_modules/vite"),
+    join(root, "node_modules/vite"),
+  );
+  symlinkSync(rolldown, join(root, "node_modules/rolldown"));
+  const ids = [
+    "\0vite/preload-helper.js",
+    "\0rolldown/runtime.js",
+    "\0@oxc-project+runtime@0.156.0/helpers/esm/get.js",
+    "\0virtual:third-party-licenses",
+  ];
+  assert.deepEqual(
+    npmPackagesFromModules(ids, [root])
+      .map((p) => p.name)
+      .sort(),
+    ["rolldown", "vite"],
+  );
+  assert.throws(
+    () => npmPackagesFromModules(["\0orion-helper/x.js"], [root]),
+    /orion-helper/,
+  );
+});
+
+test("finds the npm packages imported by a stylesheet", () => {
+  assert.deepEqual(
+    cssPackageImports(
+      '@import "tailwindcss";\n@import "./local.css" layer(base);\n@import url("@orion/font/index.css");\n@import "../x.css";',
+    ),
+    ["tailwindcss", "@orion/font"],
+  );
+});
+
+test("the build check refuses a shipped package without license text", () => {
+  const data = {
+    syntheo: { text: "x" },
+    texts: ["MIT text"],
+    components: [
+      { kind: "crate", name: "serde", texts: [0], references: [] },
+      {
+        kind: "crate",
+        name: "tauri",
+        texts: [],
+        references: [{ license: "MIT", text: 0 }],
+      },
+      { kind: "npm", name: "react", texts: [0], references: [] },
+      { kind: "model", name: "nemotron", texts: [0], references: [] },
+      {
+        kind: "npm",
+        name: "khroma",
+        version: "2.1.0",
+        license: UNKNOWN_LICENSE,
+        texts: [],
+        references: [],
+      },
+    ],
+  };
+  assert.throws(
+    () => checkThirdPartyLicenses(data),
+    /sans texte de licence : npm khroma@2\.1\.0/,
+  );
+  // En développement, la liste npm de pnpm déborde du bundle : non exigé.
+  assert.equal(checkThirdPartyLicenses(data, { texts: false }).npm, 2);
 });

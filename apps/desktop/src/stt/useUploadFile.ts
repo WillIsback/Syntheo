@@ -27,7 +27,6 @@ import {
 } from "./audio-upload-stream";
 import { useListener } from "./contexts";
 import { fromResult } from "./fromResult";
-import { ChannelProfile } from "./segment";
 import { selectUploadFile } from "./select-upload-file";
 import { isStoppedTranscriptionError, useRunBatch } from "./useRunBatch";
 
@@ -42,6 +41,11 @@ import {
 } from "~/session/transcription-failure";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { createTranscript } from "~/stt/queries";
+import {
+  buildSubtitleSpeakerAssignments,
+  buildSubtitleTranscript,
+} from "~/stt/subtitle-import";
+import { resolveSubtitleSpeakerHumans } from "~/stt/subtitle-import-speakers";
 
 export const AUDIO_EXTENSIONS = [
   "wav",
@@ -337,30 +341,42 @@ export function useUploadFile(sessionId: string) {
 
             const transcriptId = crypto.randomUUID();
             const createdAt = new Date().toISOString();
-
-            const words = subtitle.tokens.map((token) => ({
-              id: crypto.randomUUID(),
-              transcript_id: transcriptId,
-              text: token.text,
-              start_ms: token.start_time,
-              end_ms: token.end_time,
-              channel: ChannelProfile.MixedCapture,
-              user_id: session?.user_id ?? "",
-              created_at: new Date().toISOString(),
-            }));
+            const ownerUserId = session?.user_id ?? "";
+            const { words, speakerHints, speakers } = buildSubtitleTranscript({
+              tokens: subtitle.tokens,
+              transcriptId,
+              userId: ownerUserId,
+              createdAt,
+              newId: () => crypto.randomUUID(),
+            });
 
             return Effect.tryPromise({
-              try: () =>
-                createTranscript({
+              try: async () => {
+                // Les voix <v Nom> deviennent des intervenants nommés
+                // (issue 785) ; sans balise, rien ne change.
+                const humanIdByName = await resolveSubtitleSpeakerHumans({
+                  sessionId,
+                  ownerUserId,
+                  speakers,
+                }).catch((error: unknown) => {
+                  console.error("[upload] subtitle speakers failed:", error);
+                  return new Map<string, string>();
+                });
+                await createTranscript({
                   id: transcriptId,
                   sessionId,
-                  ownerUserId: session?.user_id ?? "",
+                  ownerUserId,
                   createdAt,
                   startedAt: Date.now(),
                   memo: session?.raw_md ?? "",
                   source: "subtitle_import",
                   words,
-                }),
+                  speakerHints: [
+                    ...speakerHints,
+                    ...buildSubtitleSpeakerAssignments(speakers, humanIdByName),
+                  ],
+                });
+              },
               catch: (error) =>
                 error instanceof Error ? error : new Error(String(error)),
             }).pipe(

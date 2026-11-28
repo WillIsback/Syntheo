@@ -8,7 +8,11 @@ use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 
 mod activity;
+mod import_source;
 pub use activity::has_speech;
+pub use import_source::{
+    ImportSourceLimits, OpenedImportSource, open_import_source, read_import_source,
+};
 
 const AUDIO_FORMATS: [&str; 3] = ["audio.mp3", "audio.wav", "audio.ogg"];
 const AUDIO_ARTIFACTS: [&str; 7] = [
@@ -231,20 +235,25 @@ pub fn import_to_session(
     }
 }
 
+/// Formats acceptés pour un import demandé par un agent (même liste que la
+/// CLI, `crates/agent-access/src/recording_import.rs`).
+pub const AGENT_RECORDING_EXTENSIONS: [&str; 8] =
+    ["wav", "mp3", "ogg", "mp4", "m4a", "flac", "webm", "aac"];
+
 /// Revalidation au moment de l'import (issue 657) : le chemin est résolu
 /// (liens symboliques suivis) et doit mener à un fichier régulier non vide.
-/// Le chemin résolu est celui qui est lu ensuite : un lien remplacé entre la
-/// demande et la transcription ne redirige plus la lecture.
+/// Depuis l'issue 744, la vérification porte sur le fichier ouvert (voir
+/// `open_import_source`) ; la lecture d'un import d'agent rouvre le fichier
+/// une seule fois et lit ce même descripteur (`read_import_source`).
 fn validate_import_source(source_path: &Path) -> std::io::Result<PathBuf> {
-    let resolved = std::fs::canonicalize(source_path)?;
-    let metadata = std::fs::metadata(&resolved)?;
-    if !metadata.is_file() || metadata.len() == 0 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "audio_source_must_be_a_nonempty_file",
-        ));
-    }
-    Ok(resolved)
+    let opened = open_import_source(
+        source_path,
+        ImportSourceLimits {
+            max_len: u64::MAX,
+            extensions: &[],
+        },
+    )?;
+    Ok(opened.path)
 }
 
 fn system_time_to_iso(time: std::time::SystemTime) -> String {

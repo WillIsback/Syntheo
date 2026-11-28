@@ -45,6 +45,29 @@ impl AudioUploadRegistry {
         data.try_reserve_exact(expected_len)
             .map_err(|_| "audio_upload_out_of_memory".to_string())?;
 
+        self.register(PendingUpload {
+            file_name,
+            expected_len,
+            data,
+            sequence: 0,
+        })
+    }
+
+    /// Enregistre un fichier déjà lu en entier (import d'un agent, issue 744) :
+    /// le batch le reprend par son identifiant, comme un fichier déposé.
+    pub fn insert_complete(&self, file_name: String, data: Vec<u8>) -> Result<String, String> {
+        if data.is_empty() {
+            return Err("audio_upload_empty".to_string());
+        }
+        self.register(PendingUpload {
+            file_name,
+            expected_len: data.len(),
+            data,
+            sequence: 0,
+        })
+    }
+
+    fn register(&self, mut upload: PendingUpload) -> Result<String, String> {
         let mut inner = self.lock()?;
         while inner.uploads.len() >= MAX_PENDING_UPLOADS {
             let oldest = inner
@@ -62,16 +85,8 @@ impl AudioUploadRegistry {
 
         let upload_id = uuid::Uuid::new_v4().to_string();
         inner.next_sequence += 1;
-        let sequence = inner.next_sequence;
-        inner.uploads.insert(
-            upload_id.clone(),
-            PendingUpload {
-                file_name,
-                expected_len,
-                data,
-                sequence,
-            },
-        );
+        upload.sequence = inner.next_sequence;
+        inner.uploads.insert(upload_id.clone(), upload);
         Ok(upload_id)
     }
 
@@ -145,6 +160,51 @@ pub(crate) async fn append_audio_upload<R: tauri::Runtime>(
     let chunk = decode_chunk(&data_base64)?;
     app.state::<AudioUploadRegistry>()
         .append(&upload_id, &chunk)
+}
+
+/// Lit un enregistrement importé par un agent en **une seule ouverture**
+/// (issue 744) : la validation (format, fichier régulier, taille, absence de
+/// lien) porte sur le descripteur ouvert, et c'est ce descripteur qui est lu.
+/// Le contenu reste en mémoire jusqu'au batch, qui ne relit pas le chemin.
+pub(crate) fn read_recording_import(
+    registry: &AudioUploadRegistry,
+    file_path: &std::path::Path,
+) -> Result<String, String> {
+    use tauri_plugin_fs_sync::audio::{
+        AGENT_RECORDING_EXTENSIONS, ImportSourceLimits, read_import_source,
+    };
+
+    let (data, path) = read_import_source(
+        file_path,
+        ImportSourceLimits {
+            max_len: MAX_AUDIO_UPLOAD_BYTES,
+            extensions: &AGENT_RECORDING_EXTENSIONS,
+        },
+    )
+    .map_err(|error| error.to_string())?;
+    let file_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    registry.insert_complete(file_name, data)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub(crate) async fn open_recording_import<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    file_path: String,
+) -> Result<String, String> {
+    use tauri::Manager;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        read_recording_import(
+            &app.state::<AudioUploadRegistry>(),
+            std::path::Path::new(&file_path),
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
@@ -229,6 +289,26 @@ mod tests {
         registry.discard(&id);
 
         assert_eq!(registry.take(&id).unwrap_err(), "audio_upload_not_found");
+    }
+
+    #[test]
+    fn recording_import_is_read_once_into_memory() {
+        let dir = std::env::temp_dir().join(format!("recording-import-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("meeting.wav");
+        std::fs::write(&path, b"validated audio").unwrap();
+        let registry = AudioUploadRegistry::default();
+
+        let id = read_recording_import(&registry, &path).unwrap();
+        // Le fichier remplacé après la lecture ne change plus rien : le batch
+        // reprend le contenu validé, gardé en mémoire.
+        std::fs::write(&path, b"other content!!").unwrap();
+        let buffer = registry.take(&id).unwrap();
+        assert_eq!(buffer.len(), b"validated audio".len());
+
+        std::fs::write(dir.join("notes.txt"), b"text").unwrap();
+        assert!(read_recording_import(&registry, &dir.join("notes.txt")).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

@@ -1,4 +1,5 @@
 import { cleanup, render, waitFor } from "@testing-library/react";
+import { StrictMode, useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TranscriptionSession } from "@syntheo/plugin-transcription";
@@ -51,12 +52,43 @@ vi.mock("~/session/queries", () => ({
 
 vi.mock("~/services/enhancer", () => ({ getEnhancerService: () => null }));
 
-vi.mock("./useSTTConnection", () => ({
-  useSTTConnection: () => ({ conn: null, serverConn: null }),
+// Comme les requêtes en direct de la base (packages/db-react), la connexion de
+// transcription reste « en chargement » au premier rendu d'un composant : elle
+// n'arrive qu'au rendu suivant, une fois abonné (issue 795).
+const connection = vi.hoisted(() => {
+  let subscribers = 0;
+  const connected = { baseUrl: "http://transcription.test", apiKey: "key" };
+  return {
+    subscribe: (listener: () => void) => {
+      subscribers += 1;
+      queueMicrotask(listener);
+      return () => {
+        subscribers -= 1;
+      };
+    },
+    snapshot: () => (subscribers > 0 ? connected : null),
+  };
+});
+function useConnection() {
+  return useSyncExternalStore(connection.subscribe, connection.snapshot);
+}
+
+vi.mock("~/stt/useSTTConnection", () => ({
+  useSTTConnection: () => ({ isLoading: useConnection() === null }),
 }));
 
+// La reprise prend fournisseur et modèle dans la session, mais l'adresse et la
+// clé dans la connexion du rendu où runBatch a été créé.
 vi.mock("~/stt/useRunBatch", () => ({
-  useRunBatch: () => mocks.runBatch,
+  useRunBatch: () => {
+    const conn = useConnection();
+    return async (...args: unknown[]) => {
+      if (!conn?.baseUrl) {
+        throw new Error("Transcription server address is missing.");
+      }
+      return mocks.runBatch(...args);
+    };
+  },
   isStoppedTranscriptionError: (error: unknown) =>
     error instanceof Error && error.message === "Transcription stopped.",
 }));
@@ -124,6 +156,27 @@ describe("BatchTranscriptionRecovery", () => {
     ];
     expect(isStillRunning("session-1")).toBe(true);
     expect(isStillRunning("other")).toBe(false);
+  });
+
+  // Issue 795 : si la note arrive avant les réglages, la reprise ne doit pas
+  // partir avec la connexion vide du premier rendu.
+  test("resumes with the connection known after the first render", async () => {
+    mocks.runBatch.mockResolvedValue(undefined);
+
+    render(
+      <StrictMode>
+        <BatchTranscriptionRecovery />
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(mocks.runBatch).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(mocks.runBatch).toHaveBeenCalledWith(SESSION.file_path, {
+      promotion: { scope: "whole_session" },
+      resume: { provider: "realtime", model: "nvidia-streaming" },
+    });
+    expect(mocks.handleBatchFailed).not.toHaveBeenCalled();
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   test("keeps quiet when the user stopped the resumed import", async () => {

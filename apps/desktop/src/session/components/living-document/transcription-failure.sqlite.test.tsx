@@ -21,6 +21,7 @@ import {
 import { TranscriptionFailureNotice } from "./transcription-failure";
 
 import {
+  AGENT_IMPORT_FAILED_CODE,
   clearTranscriptionFailure,
   recordTranscriptionFailure,
 } from "~/session/transcription-failure";
@@ -39,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   database: null as null | import("node:sqlite").DatabaseSync,
   listeners: new Set<() => void>(),
   clearBatchSession: vi.fn(),
+  deleteSession: vi.fn(),
 }));
 
 function query(sql: string, params: unknown[] = []) {
@@ -88,6 +90,14 @@ vi.mock("~/stt/contexts", () => ({
     selector({ batch: {}, clearBatchSession: mocks.clearBatchSession }),
 }));
 
+// La suppression d'une note (annulation, fenêtres) est testée à part.
+vi.mock("~/session/hooks/useDeleteSession", () => ({
+  useDeleteSession: () => mocks.deleteSession,
+}));
+vi.mock("~/session/queries", () => ({
+  useSessionSummary: () => ({ title: "Agent import" }),
+}));
+
 const MIGRATIONS = resolve(process.cwd(), "../../crates/db-app/migrations");
 let schema = "";
 
@@ -114,6 +124,7 @@ describe("TranscriptionFailureNotice", () => {
     );
     mocks.database = database;
     mocks.clearBatchSession.mockReset();
+    mocks.deleteSession.mockReset();
   });
 
   afterEach(() => {
@@ -178,6 +189,27 @@ describe("TranscriptionFailureNotice", () => {
       expect(text).not.toContain(raw);
     },
   );
+
+  // Issue 794 : un import d'agent en échec laissait une réunion vide, sans
+  // explication. L'avis dit ce qui s'est passé et propose de supprimer la note.
+  it("shows a failed agent import with its reason and a delete action", async () => {
+    await recordTranscriptionFailure(
+      "session-1",
+      new Error("UnexpectedStatus { status: 500 }"),
+      AGENT_IMPORT_FAILED_CODE,
+    );
+    render(<TranscriptionFailureNotice sessionId="session-1" />);
+
+    const text = screen.getByRole("alert").textContent ?? "";
+    expect(text).toContain("The import requested by an agent failed.");
+    expect(text).toContain("The server returned an error (500)");
+    expect(text).not.toContain("The audio transcription failed.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
+    expect(mocks.deleteSession).toHaveBeenCalledWith("session-1", {
+      title: "Agent import",
+    });
+  });
 
   it("shows nothing for a note without failure, and clearing it is harmless", async () => {
     await clearTranscriptionFailure("session-1");

@@ -106,10 +106,16 @@ function textOf(value: unknown): string {
 // par markdown-it, HTML non interprété) : seul son texte alternatif reste
 // (QA 0.8.0-1, issue 678). Jamais dans du code.
 // Linéaires (CodeQL js/polynomial-redos) : le texte alternatif exclut les
-// crochets, l'adresse les parenthèses et la balise les chevrons, avec une
-// longueur bornée ; sinon `![\![\…`, `![](![](…` ou `<img<img…` répétés
-// coûtaient un temps quadratique.
-const RAW_MARKDOWN_IMAGE = /!\[([^[\]\n]{0,1000})\]\([^()\n]{0,2048}\)/g;
+// crochets et la balise les chevrons, avec une longueur bornée ; sinon
+// `![\![\…`, `![](![](…` ou `<img<img…` répétés coûtaient un temps quadratique.
+// L'adresse admet un niveau de parenthèses appariées, `javascript:alert(1)`
+// par exemple (issue 814) : chaque élément est soit un caractère hors
+// parenthèses, soit un groupe `(…)` sans parenthèse dedans. Les deux branches
+// commencent par des caractères disjoints, donc aucune ambiguïté ; et une
+// parenthèse restée ouverte arrête le parcours, si bien qu'une tentative
+// ratée ne traverse jamais la suivante.
+const RAW_MARKDOWN_IMAGE =
+  /!\[([^[\]\n]{0,1000})\]\((?:[^()\n]|\([^()\n]{0,2048}\)){0,2048}\)/g;
 const RAW_HTML_IMAGE = /<img\b[^<>]{0,4096}>/gi;
 const HTML_ALT = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
 

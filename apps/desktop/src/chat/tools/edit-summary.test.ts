@@ -85,6 +85,52 @@ describe("edit summary chat tool", () => {
     expect(mocks.applySessionProposal).toHaveBeenCalledWith("request-1");
   });
 
+  // Issue 697 : la relecture affiche une image jointe désignée par son
+  // identifiant ; l'instantané Markdown, lui, n'en garde rien.
+  it("keeps attached images by attachment id in the reviewed summary", async () => {
+    mocks.loadSessionContentSnapshot.mockResolvedValue({
+      enhancedNotes: [
+        {
+          id: "summary-1",
+          title: "Summary",
+          markdown: '![Tableau]( "char-editor-width=80")',
+          content: JSON.stringify({
+            type: "doc",
+            content: [
+              {
+                type: "image",
+                attrs: { attachmentId: "capture 1.png", alt: "Tableau" },
+              },
+            ],
+          }),
+          contentFormat: "json",
+          templateId: "",
+          position: 0,
+        },
+      ],
+    });
+    const editTool = buildEditSummaryTool({
+      getSessionId: () => "session-1",
+      getEnhancedNoteId: () => undefined,
+      openEditTab: (requestId) => {
+        usePendingEditStore.getState().resolveEdit(requestId, false);
+      },
+    });
+
+    await (editTool as any).execute(
+      { content: "Updated summary" },
+      { toolCallId: "request-1", messages: [] },
+    );
+
+    expect(mocks.persistChatSessionProposal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentMarkdown: expect.stringContaining(
+          "![Tableau](attachment://capture%201.png",
+        ),
+      }),
+    );
+  });
+
   it("declines the persisted proposal when review is rejected", async () => {
     const editTool = buildEditSummaryTool({
       getSessionId: () => "session-1",

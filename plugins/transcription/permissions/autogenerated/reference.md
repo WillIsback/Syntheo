@@ -51,6 +51,7 @@ Default permissions for the plugin
 - `allow-begin-audio-upload`
 - `allow-append-audio-upload`
 - `allow-discard-audio-upload`
+- `allow-open-recording-import`
 - `allow-probe-local-transcription`
 - `allow-on-device-status`
 - `allow-on-device-download-models`
@@ -1056,6 +1057,32 @@ Enables the on_device_status command without any pre-configured scope.
 <td>
 
 Denies the on_device_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-open-recording-import`
+
+</td>
+<td>
+
+Enables the open_recording_import command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-open-recording-import`
+
+</td>
+<td>
+
+Denies the open_recording_import command without any pre-configured scope.
 
 </td>
 </tr>

@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use super::*;
 use crate::docx::tests::{document, zip_with};
 
-const CORPUS: [(&str, &str); 4] = [
+const CORPUS: [(&str, &str); 5] = [
     (
         "comite-pilotage",
         include_str!("../corpus/comite-pilotage.md"),
@@ -23,6 +23,12 @@ const CORPUS: [(&str, &str); 4] = [
     (
         "revue-chantier",
         include_str!("../corpus/revue-chantier.md"),
+    ),
+    // Titre du document repris tel quel par une ligne du corps : une copie
+    // identique ne compte aucune retouche (règle v4, issue 767).
+    (
+        "jardin-partage",
+        include_str!("../corpus/jardin-partage.md"),
     ),
 ];
 

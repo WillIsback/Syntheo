@@ -59,6 +59,8 @@ Pour modifier une synthèse ou la note, appelez `propose_summary_edit` ou `propo
 
 `import_recording` crée une réunion à partir d'un fichier audio présent sur l'ordinateur du serveur MCP. L'application doit être ouverte : c'est elle qui transcrit le fichier avec le serveur de transcription configuré, puis génère la synthèse. Suivez l'avancement avec `get_recording_import`. N'utilisez cet outil que si l'utilisateur le demande.
 
+Au moment du traitement, l'application ouvre le fichier une seule fois, vérifie ce fichier ouvert (format audio, fichier ordinaire, 2 Go au plus) et transcrit le contenu lu en mémoire : remplacer le fichier pendant le traitement ne change pas ce qui est transcrit.
+
 ## Ressources
 
 Le serveur expose aussi des ressources MCP (`syntheo://meetings/...`, `syntheo://series/...`) en Markdown ou en texte brut, pour les clients qui préfèrent les ressources aux outils.

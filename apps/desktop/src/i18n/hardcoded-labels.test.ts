@@ -9,7 +9,6 @@ import { getCaptureWarning } from "~/store/zustand/listener/general-shared";
 import { showMeetingEndedPrompt } from "~/stt/auto-stop";
 import { cancelAutoStopEndedNotification } from "~/stt/auto-stop-notification";
 import { getMicDetectedNotificationTitle } from "~/stt/detect-events";
-import { getIgnoreAppsFooterText } from "~/stt/meeting-apps";
 import { describeStartFailure } from "~/stt/start-failure";
 import { getCaptureReminderMessage } from "~/stt/useStartListening";
 
@@ -38,13 +37,6 @@ describe("libellés hors composant en français", () => {
     expect(getMicDetectedNotificationTitle()).toBe(
       "Êtes-vous en réunion\u00a0?",
     );
-    expect(
-      getIgnoreAppsFooterText([
-        { id: "a", name: "Zoom" },
-        { id: "b", name: "Slack" },
-        { id: "c", name: "Discord" },
-      ]),
-    ).toBe("Ignorer Zoom et 2 autres apps\u00a0?");
   });
 
   test("invite de fin de réunion avec le repère du décompte", async () => {

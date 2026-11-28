@@ -126,12 +126,20 @@ jobs:
         run: cargo metadata --locked --format-version 1 > /dev/null
 
       # Page des licences (issue 747) : la liste générée depuis Cargo.lock,
-      # apps/speech/Cargo.lock, pnpm-lock.yaml et les modèles n'est pas vide
-      # et contient les composants connus. Le build de production fait le
-      # même contrôle.
+      # apps/speech/Cargo.lock et les modèles n'est pas vide, contient les
+      # composants connus, et chaque composant a un texte de licence (le sien
+      # ou un texte SPDX de référence, issue 776).
       - name: Licences des composants tiers
         timeout-minutes: 10
         run: node scripts/third-party-licenses.mjs --check
+
+      # Liste npm de la page des licences (issue 781) : relevée dans le bundle
+      # de production par le plugin Vite, qui fait échouer le build si un
+      # paquet embarqué n'a aucun texte de licence. Front seul (sans Tauri),
+      # sortie jetée ; @syntheo/ui est déjà construit par l'étape de typage.
+      - name: Licences des paquets npm embarqués (vite build)
+        timeout-minutes: 10
+        run: pnpm -F desktop exec vite build --outDir "$RUNNER_TEMP/licenses-dist" --emptyOutDir
 
   # Job Rust unique : métadonnées, clippy et tests partagent le même target/
   # compilé une seule fois (l'ancien découpage recompilait tout le workspace

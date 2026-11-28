@@ -59,6 +59,8 @@ To edit a summary or the note, call `propose_summary_edit` or `propose_memo_edit
 
 `import_recording` creates a meeting from an audio file on the MCP server's computer. The app must be open: it transcribes the file with the configured transcription server, then generates the summary. Track progress with `get_recording_import`. Only use this tool if the user asks for it.
 
+When processing starts, the app opens the file once, checks that open file (audio format, regular file, 2 GB at most), and transcribes the content it read into memory: replacing the file during processing does not change what is transcribed.
+
 ## Resources
 
 The server also exposes MCP resources (`syntheo://meetings/...`, `syntheo://series/...`) in Markdown or plain text, for clients that prefer resources to tools.

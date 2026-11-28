@@ -33,12 +33,38 @@
   background-color: var(--color-muted, #f5f5f4);
 }
 
+/* Name and parent of a subfolder share one box (issue 815). The label never
+ * shrinks: flex shrinking is weighted by the base width, so even a factor of
+ * 1 against 1000 took a fraction of a pixel from it and showed an ellipsis
+ * while the parent still had room. The parent alone gives way; the label is
+ * capped at the box width and truncates only once the parent is gone. The
+ * box clips the gap left after a zero-width parent. */
+.mention-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .mention-label {
+  flex-shrink: 0;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.875rem;
   line-height: 1rem;
+}
+
+/* Parent of a subfolder: the only part that gives way. */
+.mention-context {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, #a3a3a3);
 }
 
 .mention-description {
@@ -52,6 +78,12 @@
   text-overflow: ellipsis;
   font-size: 0.75rem;
   color: var(--color-muted-foreground, #a3a3a3);
+}
+
+/* Meeting count of a folder (issue 815): kept whole while the row has room,
+ * the name box shrinks first. A note's folder path still shares the space. */
+.mention-description.mention-count {
+  flex-shrink: 0;
 }
 
 .mention-type-icon {

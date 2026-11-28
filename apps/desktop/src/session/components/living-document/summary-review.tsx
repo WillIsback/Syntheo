@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Streamdown } from "streamdown";
 
+import { AttachmentResolverContext } from "@syntheo/editor/node-views";
 import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { cn } from "@syntheo/utils";
@@ -10,14 +11,16 @@ import { cn } from "@syntheo/utils";
 import { streamdownComponents } from "../streamdown";
 
 import { usePendingEditStore } from "~/chat/tools/pending-edit-store";
+import { useAttachmentResolver } from "~/session/hooks/useAttachmentResolver";
 import {
   applyProposalReview,
   declineProposalReview,
   diffMarkdownLines,
   type MarkdownDiffChunk,
 } from "~/session/proposal-review";
-import { usePendingSessionProposals } from "~/session/queries";
-import { safeRehypePlugins } from "~/shared/safe-markdown";
+import { useEnhancedNote, usePendingSessionProposals } from "~/session/queries";
+import { withSummaryAttachmentImages } from "~/session/summary-markdown";
+import { summaryRehypePlugins } from "~/shared/safe-markdown";
 
 type SummaryProposal = {
   id: string;
@@ -27,7 +30,10 @@ type SummaryProposal = {
 
 // Proposition de réécriture en attente sur le compte-rendu affiché : celle
 // du chat (instantanée, dans le store) ou, à défaut, celle enregistrée en
-// base (CLI, MCP, ou après un redémarrage).
+// base (CLI, MCP, ou après un redémarrage). Le texte actuel enregistré par
+// le CLI ou le MCP vient de la sérialisation Rust, qui n'écrit pas
+// l'identifiant d'une image jointe : il est rapproché du corps de la note
+// pour que l'image s'affiche dans la relecture (issue 697).
 export function useSummaryProposal(
   sessionId: string,
   enhancedNoteId: string,
@@ -50,6 +56,7 @@ export function useSummaryProposal(
       proposal.status === "pending" &&
       proposal.targetId === enhancedNoteId,
   );
+  const noteBody = useEnhancedNote(stored ? enhancedNoteId : "")?.content;
 
   return useMemo(() => {
     if (edit) {
@@ -62,22 +69,30 @@ export function useSummaryProposal(
     return stored
       ? {
           id: stored.id,
-          currentMarkdown: stored.currentMarkdown,
+          currentMarkdown: withSummaryAttachmentImages(
+            stored.currentMarkdown,
+            noteBody,
+          ),
           proposedMarkdown: stored.proposedMarkdown,
         }
       : null;
-  }, [edit, stored]);
+  }, [edit, stored, noteBody]);
 }
 
 // Revue d'une proposition dans l'étape Synthèse : le diff est rendu en
 // markdown (comme le compte-rendu), suppressions barrées, ajouts surlignés,
 // avec Refuser / Appliquer. Remplace l'onglet de diff en markdown brut.
+// Une image jointe s'y affiche si la session connaît sa pièce jointe
+// (issue 697).
 export function SummaryProposalReview({
+  sessionId,
   proposal,
 }: {
+  sessionId: string;
   proposal: SummaryProposal;
 }) {
   const { t } = useLingui();
+  const resolveAttachment = useAttachmentResolver(sessionId);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -150,11 +165,13 @@ export function SummaryProposalReview({
           <Trans>This edit could not be saved. Try again.</Trans>
         </p>
       ) : null}
-      <div className="flex flex-col gap-1.5 px-4 py-3">
-        {chunks.map((chunk, index) =>
-          chunk.text.trim() ? <DiffChunk key={index} chunk={chunk} /> : null,
-        )}
-      </div>
+      <AttachmentResolverContext.Provider value={resolveAttachment}>
+        <div className="flex flex-col gap-1.5 px-4 py-3">
+          {chunks.map((chunk, index) =>
+            chunk.text.trim() ? <DiffChunk key={index} chunk={chunk} /> : null,
+          )}
+        </div>
+      </AttachmentResolverContext.Provider>
     </section>
   );
 }
@@ -165,7 +182,7 @@ function DiffChunk({ chunk }: { chunk: MarkdownDiffChunk }) {
     <Streamdown
       icons={streamdownIcons}
       components={streamdownComponents}
-      rehypePlugins={safeRehypePlugins}
+      rehypePlugins={summaryRehypePlugins}
       className={cn(["note-typography", "flex flex-col"])}
       linkSafety={{ enabled: false }}
     >

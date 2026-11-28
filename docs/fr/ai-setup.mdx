@@ -51,7 +51,7 @@ Chaque page présente une carte « Mon serveur ». Elle fonctionne de la même f
 
 - **« Adresse du serveur »** : l'adresse de base de votre serveur. Elle est enregistrée automatiquement pendant la saisie.
 - **« Tester la connexion »** : interroge le serveur et affiche le résultat dans la pastille d'état. Syntheo teste aussi la connexion dès qu'une adresse est enregistrée.
-- **« Modèle »** : les modèles servis, en boutons radio. Cliquez sur un modèle pour le choisir. Si le vôtre n'apparaît pas, cliquez sur « Saisir un autre nom » et tapez son identifiant exact.
+- **« Modèle »** : les modèles servis, en boutons radio. Cliquez sur un modèle pour le choisir. Si le vôtre n'apparaît pas, cliquez sur « Saisir un autre nom », tapez son identifiant exact, puis appuyez sur Entrée ou quittez le champ : le nom est enregistré à ce moment-là.
 - **« Avancé »** (replié) : le champ « Clé d'API (facultative) » et « Réinitialiser ce serveur… », qui oublie l'adresse et la clé après confirmation (« Oublier l'adresse et la clé de ce serveur ? »).
 - **« Aide »** (replié) : un rappel des protocoles et des adresses types. Sur la page Transcription, le lien « Pas encore de serveur ? Installer le service de transcription en local » ouvre [cette page](/fr/local-transcription-service), qui donne aussi la configuration minimale.
 
@@ -65,7 +65,11 @@ La pastille d'état prend l'une de ces valeurs :
 | « Connecté · … ms » | Le serveur répond ; la pastille indique la latence mesurée. Pour la synthèse, elle indique plutôt le nombre de modèles disponibles (« Connecté · … modèles disponibles »). |
 | « Injoignable » | Le serveur n'a pas répondu. |
 | « Clé refusée » | Le serveur a refusé la clé d'API. |
+| « Route absente » | Le serveur répond, mais pas sur la route attendue : l'adresse ne mène pas à l'API (par exemple sans `/v1` pour la synthèse). |
+| « Erreur du serveur » | Le serveur a répondu par une erreur (HTTP 5xx) ; il est peut-être encore en train de démarrer. |
 | « Adresse invalide » | Une adresse enregistrée auparavant n'est plus acceptée (voir la note ci-dessus). À la saisie, une adresse refusée n'est pas enregistrée : le motif s'affiche sous le champ, par exemple « Saisissez une URL de base valide. ». |
+
+Le rappel en bas du menu des paramètres reprend la même raison, par exemple « Transcription · route absente ».
 
 En cas d'échec, un message sous le titre de la carte dit quoi faire, par exemple : « Le serveur n'a pas répondu à localhost:8000/v1. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. »
 
@@ -152,7 +156,7 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
     Cliquez sur « Tester la connexion ». Syntheo lit la liste dans `/v1/models` : seuls les modèles chargés par votre serveur apparaissent. Cliquez sur le modèle à utiliser.
   </Step>
   <Step title="Vérifier si le modèle lit les images">
-    « Le modèle lit les images » décide si les images collées dans la note sont jointes à la génération de la synthèse. En « Automatique », Syntheo le demande à votre serveur, une fois par adresse et par modèle, et garde le résultat : il lit d'abord ce que le serveur publie (Ollama, LM Studio, llama.cpp server), sinon il envoie une requête minimale avec une petite image de test fournie par Syntheo et demande au modèle la couleur du disque qu'elle montre. Le texte sous le choix dit d'où vient le résultat : « Annoncé par le serveur » quand le serveur le publie, « Le modèle a accepté l'image de test et l'a décrite » quand le modèle a nommé la bonne couleur. « Tester la connexion » refait la vérification ; le résultat gardé reste en place tant que le serveur ne répond pas clairement. Sans réponse claire (erreur, réponse vide ou sans rapport avec l'image), Syntheo se fie au nom du modèle. « Oui » et « Non » imposent le choix, par exemple si votre serveur sert la partie vision d'un modèle que la vérification ne reconnaît pas ; aucune vérification ne part alors. « Tester avec une image » envoie toujours l'image de test, même quand le serveur publie la réponse, et affiche ce que le modèle en a fait.
+    « Le modèle lit les images » décide si les images collées dans la note sont jointes à la génération de la synthèse. En « Automatique », Syntheo le demande à votre serveur, une fois par adresse et par modèle, et garde le résultat : il lit d'abord ce que le serveur publie (Ollama, LM Studio, llama.cpp server), sinon il envoie une requête minimale avec une petite image de test fournie par Syntheo et demande au modèle la couleur du disque qu'elle montre. Le texte sous le choix dit d'où vient le résultat : « Annoncé par le serveur » quand le serveur le publie, « Le modèle a accepté l'image de test et l'a décrite » quand le modèle a nommé la bonne couleur. « Tester la connexion » refait la vérification ; le résultat gardé reste en place tant que le serveur ne répond pas clairement. Sans réponse claire (erreur, réponse vide ou sans rapport avec l'image), Syntheo se fie au nom du modèle. « Oui » et « Non » imposent le choix, par exemple si votre serveur sert la partie vision d'un modèle que la vérification ne reconnaît pas ; aucune vérification ne part alors. « Tester avec une image » envoie toujours l'image de test, même quand le serveur publie la réponse, et affiche ce que le modèle en a fait. Son résultat s'affiche à part, après « Dernier test : », suivi de ce qui s'applique : un résultat net remplace le résultat gardé (« Ce résultat s'applique désormais. ») ; sinon le résultat gardé reste en vigueur, et un « Oui » ou un « Non » imposé s'applique toujours. Le dernier test concerne le serveur et le modèle testés : il ne s'affiche plus dès que vous choisissez un autre modèle. Quand le serveur répond sans que le modèle décrive l'image, la carte le dit : « Le serveur a répondu sans décrire l'image de test ».
   </Step>
   <Step title="Régler l'effort de raisonnement (facultatif)">
     « Effort de raisonnement » propose « Auto », « Faible », « Moyen » et « Élevé ». « Auto » laisse le serveur décider. Plus d'effort donne des synthèses plus fines, mais plus lentes. Les autres valeurs ne servent qu'avec un modèle qui sait raisonner et un serveur qui accepte ce paramètre.
@@ -195,6 +199,8 @@ Les clés API sont rangées dans le trousseau du système, jamais en clair dans 
 | « Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé. » | L'hôte n'est pas reconnu comme privé : passez en HTTPS (reverse proxy, VPN) ou utilisez une adresse privée. |
 | La pastille indique « Injoignable » | Le serveur n'a pas répondu. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. |
 | La pastille indique « Clé refusée » | Vérifiez la clé dans « Avancé », puis relancez le test. |
+| La pastille indique « Route absente » | Vérifiez l'adresse (pour la synthèse, elle se termine par `/v1`), puis relancez le test. |
+| La pastille indique « Erreur du serveur » | Le serveur démarre peut-être encore : attendez une minute, puis relancez le test. |
 | La liste des modèles de synthèse est vide | Vérifiez que `URL de base/models` répond (par exemple `curl http://localhost:11434/v1/models`) et que l'adresse se termine bien par `/v1`. |
 | La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter et rejoue une coupure courte de mémoire ; après une coupure plus longue, le passage manquant ne sera pas transcrit, faute d'audio enregistré sur le disque. |
 | Impossible de démarrer une écoute | Aucun serveur de transcription n'est configuré, ou le modèle choisi est un modèle « fichier ». |

@@ -15,6 +15,7 @@ import {
   declineSessionProposal,
   persistChatSessionProposal,
 } from "~/session/queries";
+import { summaryBodyToMarkdown } from "~/session/summary-markdown";
 
 type SummaryCandidate = {
   enhancedNoteId: string;
@@ -150,8 +151,15 @@ export const buildEditSummaryTool = (
         };
       }
 
-      const currentContent =
-        notes.find((note) => note.id === enhancedNoteId)?.markdown ?? "";
+      // Une image jointe garde son identifiant de pièce jointe, pour que la
+      // relecture l'affiche (issue 697).
+      const currentNote = notes.find((note) => note.id === enhancedNoteId);
+      const currentContent = currentNote
+        ? summaryBodyToMarkdown(
+            currentNote.content,
+            currentNote.contentFormat,
+          ) || currentNote.markdown
+        : "";
 
       try {
         await persistChatSessionProposal({

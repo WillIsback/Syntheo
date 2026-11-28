@@ -67,7 +67,9 @@ Choose an activity in the diagram below: it shows the destination that receives 
 
 Apart from the servers and addresses you configure (inference, webhooks) and the "On this computer" models (table above), only updates leave the computer, with no meeting content: Syntheo reads `latest.json` on GitHub 15 seconds after startup (can be turned off) or when you start the check, and this file also carries the new version's release notes. The installer is downloaded only if you choose to update.
 
-An image hosted on another site, in a summary, an edit proposal or a chat answer, is never loaded: its alternative text shows instead, and no request goes to that site.
+An image hosted on another site or given by a file address, in a summary, an edit proposal or a chat answer, is never loaded: only its alternative text shows instead, and no request goes to that site.
+
+An image attached to the summary also shows in an earlier version and in the review of an edit proposal. Syntheo only reads the meeting's own attachments there, never a file address written in generated text.
 
 Nothing is sent to the vendor: no account, no usage statistics, no error reports. The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
 

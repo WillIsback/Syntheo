@@ -23,7 +23,11 @@ vi.mock("virtual:third-party-licenses", () => ({
         holder: "Fastrepl, Inc.",
       },
     },
-    texts: ["Apache License 2.0 text", "MIT text of React"],
+    texts: [
+      "Apache License 2.0 text",
+      "MIT text of React",
+      "Mozilla Public License Version 2.0",
+    ],
     components: [
       {
         kind: "crate",
@@ -32,6 +36,18 @@ vi.mock("virtual:third-party-licenses", () => ({
         license: "MIT OR Apache-2.0",
         url: null,
         texts: [0],
+        authors: [],
+        references: [],
+      },
+      {
+        kind: "crate",
+        name: "symphonia-core",
+        version: "0.5.5",
+        license: "MPL-2.0",
+        url: null,
+        texts: [],
+        authors: ["Ada Exemple"],
+        references: [{ license: "MPL-2.0", text: 2 }],
       },
       {
         kind: "crate",
@@ -40,6 +56,8 @@ vi.mock("virtual:third-party-licenses", () => ({
         license: "MIT OR Apache-2.0",
         url: null,
         texts: [],
+        authors: [],
+        references: [],
       },
       {
         kind: "npm",
@@ -48,6 +66,8 @@ vi.mock("virtual:third-party-licenses", () => ({
         license: "NOASSERTION",
         url: null,
         texts: [],
+        authors: [],
+        references: [],
       },
       {
         kind: "npm",
@@ -56,6 +76,8 @@ vi.mock("virtual:third-party-licenses", () => ({
         license: "MIT",
         url: "https://react.dev",
         texts: [1],
+        authors: [],
+        references: [],
       },
       {
         kind: "model",
@@ -64,6 +86,8 @@ vi.mock("virtual:third-party-licenses", () => ({
         license: "OpenMDW-1.1",
         url: null,
         texts: [],
+        authors: [],
+        references: [],
       },
     ],
   },
@@ -84,7 +108,7 @@ function openLicenses() {
 it("lists the third-party components by kind, with version and license", async () => {
   openLicenses();
 
-  await screen.findByText("Rust crates (2)");
+  await screen.findByText("Rust crates (3)");
   expect(screen.getByText("npm packages (2)")).toBeTruthy();
   expect(screen.getByText("Models (1)")).toBeTruthy();
   expect(screen.getByText("serde")).toBeTruthy();
@@ -104,6 +128,26 @@ it("shows a license text only when its component is opened", async () => {
   fireEvent(details, new Event("toggle"));
 
   await screen.findByText("MIT text of React");
+});
+
+// Issue 776 : texte SPDX de référence, signalé comme tel, avec le nom du
+// composant et ses auteurs.
+it("shows the SPDX reference text when a component ships none", async () => {
+  openLicenses();
+  await screen.findByText("symphonia-core");
+  const details = screen
+    .getByText("symphonia-core")
+    .closest("details") as HTMLDetailsElement;
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+
+  await screen.findByText(/ships no license text/);
+  expect(screen.getByText("Component: symphonia-core 0.5.5")).toBeTruthy();
+  expect(screen.getByText("Authors: Ada Exemple")).toBeTruthy();
+  expect(
+    screen.getByText("Reference text of the MPL-2.0 license"),
+  ).toBeTruthy();
+  expect(screen.getByText("Mozilla Public License Version 2.0")).toBeTruthy();
 });
 
 it("says when a package ships no license file", async () => {

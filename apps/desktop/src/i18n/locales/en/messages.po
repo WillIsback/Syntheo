@@ -228,10 +228,6 @@ msgstr "{notice}. Open Syntheo to retry or change devices."
 msgid "{openPoints, plural, one {# open point} other {# open points}}"
 msgstr "{openPoints, plural, one {# open point} other {# open points}}"
 
-#: src/stt/meeting-apps.ts
-msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
-msgstr "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
-
 #: src/folders/project/folder-thread-card.tsx
 msgid "{pendingCount, plural, one {# meeting since} other {# meetings since}}"
 msgstr "{pendingCount, plural, one {# meeting since} other {# meetings since}}"
@@ -793,6 +789,10 @@ msgstr "Authenticate to continue."
 msgid "Authenticating…"
 msgstr "Authenticating…"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Authors: {authors}"
+msgstr "Authors: {authors}"
+
 #: src/settings/ai/llm/server-card.tsx
 msgid "Auto"
 msgstr "Auto"
@@ -1305,6 +1305,10 @@ msgstr "Completed by Syntheo"
 msgid "Completion sound"
 msgstr "Completion sound"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Component: {name} {version}"
+msgstr "Component: {name} {version}"
+
 #: src/composer/index.tsx
 msgid "Composer"
 msgstr "Composer"
@@ -1668,6 +1672,10 @@ msgstr "Delete folder"
 msgid "Delete folder “{name}”"
 msgstr "Delete folder “{name}”"
 
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "Delete note"
+msgstr "Delete note"
+
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
 msgstr "Delete section {position}"
@@ -1878,6 +1886,10 @@ msgstr "Draft a follow-up email to the participants"
 #: src/chat/components/body/empty.tsx
 msgid "Draft follow-up email."
 msgstr "Draft follow-up email."
+
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "Drop the recording into this note to import it again, or delete the note."
+msgstr "Drop the recording into this note to import it again, or delete the note."
 
 #: src/session/components/note-input/audio-drop-target.tsx
 msgid "Drop to upload and transcribe audio"
@@ -2535,22 +2547,6 @@ msgstr "Identity"
 msgid "Ignore"
 msgstr "Ignore"
 
-#: src/stt/meeting-apps.ts
-msgid "Ignore {firstName} and {secondName}?"
-msgstr "Ignore {firstName} and {secondName}?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore {firstName}?"
-msgstr "Ignore {firstName}?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore these apps?"
-msgstr "Ignore these apps?"
-
-#: src/stt/meeting-apps.ts
-msgid "Ignore this app?"
-msgstr "Ignore this app?"
-
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import"
 msgstr "Import"
@@ -2684,7 +2680,7 @@ msgstr "Instruction"
 msgid "Interface language"
 msgstr "Interface language"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Invalid address"
 msgstr "Invalid address"
 
@@ -2723,7 +2719,7 @@ msgstr "Keep this version"
 msgid "Keep unencrypted HTTP"
 msgstr "Keep unencrypted HTTP"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Key refused"
 msgstr "Key refused"
 
@@ -2799,6 +2795,10 @@ msgstr "Last run {relative}: {0}"
 #: src/settings/automations/markdown-export-config.tsx
 msgid "Last run failed {relative}: {0}"
 msgstr "Last run failed {relative}: {0}"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Last test:"
+msgstr "Last test:"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Launch it from a note: the ⋯ menu, the capsule in Synthesis, or Ask the note (Ctrl+J)."
@@ -4525,6 +4525,10 @@ msgstr "Recording with the default microphone instead. Check that the microphone
 msgid "Redo"
 msgstr "Redo"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Reference text of the {license} license"
+msgstr "Reference text of the {license} license"
+
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/template-picker.tsx
 #: src/session/late-filing.ts
@@ -4785,6 +4789,10 @@ msgstr "Review summary"
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"
 msgstr "Right Command"
+
+#: src/settings/ai/shared/server-failure-label.ts
+msgid "Route not found"
+msgstr "Route not found"
 
 #: src/automations/labels.ts
 msgid "Run a command"
@@ -5127,6 +5135,10 @@ msgstr "Server address"
 #: src/settings/ai/llm/server-card.tsx
 msgid "Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)"
 msgstr "Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)"
+
+#: src/settings/ai/shared/server-failure-label.ts
+msgid "Server error"
+msgstr "Server error"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Server status"
@@ -5793,6 +5805,10 @@ msgid "Syntheo uses it to recognize you among the participants of your meetings,
 msgstr "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 
 #: src/session/components/living-document/transcription-failure.tsx
+msgid "Syntheo was closed before the import finished."
+msgstr "Syntheo was closed before the import finished."
+
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/stt/audio-import-feedback.ts
 msgid "Syntheo was closed before the import finished. Import the file again."
 msgstr "Syntheo was closed before the import finished. Import the file again."
@@ -5815,20 +5831,16 @@ msgid "Synthesis"
 msgstr "Synthesis"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · {reason}"
+msgstr "Synthesis · {reason}"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · connected"
 msgstr "Synthesis · connected"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · disabled"
 msgstr "Synthesis · disabled"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · invalid address"
-msgstr "Synthesis · invalid address"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · key refused"
-msgstr "Synthesis · key refused"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
@@ -5841,10 +5853,6 @@ msgstr "Synthesis · not tested"
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · testing…"
 msgstr "Synthesis · testing…"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · unreachable"
-msgstr "Synthesis · unreachable"
 
 #: src/settings/appearance/theme.tsx
 msgid "System"
@@ -6155,6 +6163,10 @@ msgstr "The files could not be read or written (disk full?). Try again."
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "The import of {name} was abandoned: {reason}"
 
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "The import requested by an agent failed."
+msgstr "The import requested by an agent failed."
+
 #: src/stt/audio-import-feedback.ts
 msgid "The import was abandoned: {reason}"
 msgstr "The import was abandoned: {reason}"
@@ -6363,12 +6375,24 @@ msgid "The sent version still contains HTML codes (such as &eacute;) that could 
 msgstr "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
 
 #: src/settings/ai/llm/image-input-setting.tsx
-msgid "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
-msgstr "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
+msgid "The server accepted the test image, but the model did not describe it: it may not read images."
+msgstr "The server accepted the test image, but the model did not describe it: it may not read images."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+msgstr "The server answered without describing the test image and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image: going by its name, “{model}” reads images."
+msgstr "The server answered without describing the test image: going by its name, “{model}” reads images."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image."
+msgstr "The server answered without describing the test image."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-Speech.cpp. Check the address, then test again."
@@ -6637,6 +6661,10 @@ msgstr "This advanced step runs a program on your computer. It is only added if 
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "This component ships no license text. The reference text of its license, as published by SPDX, is shown instead."
+msgstr "This component ships no license text. The reference text of its license, as published by SPDX, is shown instead."
+
 #: src/onboarding/on-device-proposal.tsx
 msgid "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
 msgstr "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
@@ -6818,6 +6846,10 @@ msgstr "This recording is longer than 6 hours: split it into shorter files, then
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This result now applies."
+msgstr "This result now applies."
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
 msgstr "This server answers as {detectedLabel}."
@@ -6825,6 +6857,18 @@ msgstr "This server answers as {detectedLabel}."
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server has no diarization model loaded: transcripts will not tell speakers apart."
 msgstr "This server has no diarization model loaded: transcripts will not tell speakers apart."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: going by its name, “{model}” reads images."
+msgstr "This test is not kept: going by its name, “{model}” reads images."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: the note's images are not attached."
+msgstr "This test is not kept: the note's images are not attached."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: the result above still applies."
+msgstr "This test is not kept: the result above still applies."
 
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
@@ -6929,20 +6973,16 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · {reason}"
+msgstr "Transcription · {reason}"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · checking…"
 msgstr "Transcription · checking…"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connected"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · invalid address"
-msgstr "Transcription · invalid address"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · key refused"
-msgstr "Transcription · key refused"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · models need an update"
@@ -6967,10 +7007,6 @@ msgstr "Transcription · testing…"
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · this computer is not ready"
 msgstr "Transcription · this computer is not ready"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · unreachable"
-msgstr "Transcription · unreachable"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Transcription failed"
@@ -7161,7 +7197,7 @@ msgstr "Unpin"
 msgid "Unpin contact"
 msgstr "Unpin contact"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Unreachable"
 msgstr "Unreachable"
 
@@ -7619,6 +7655,14 @@ msgstr "Your administrator has disabled transcription on this computer."
 #: src/mesure/measure-dialog.tsx
 msgid "Your choice"
 msgstr "Your choice"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Your choice No still applies: the note's images are never attached."
+msgstr "Your choice No still applies: the note's images are never attached."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Your choice Yes still applies: the note's images are always attached."
+msgstr "Your choice Yes still applies: the note's images are always attached."
 
 #: src/shared/long-load-gate.tsx
 msgid "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."

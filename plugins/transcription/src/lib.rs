@@ -189,6 +189,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             audio_upload::begin_audio_upload::<tauri::Wry>,
             audio_upload::append_audio_upload::<tauri::Wry>,
             audio_upload::discard_audio_upload::<tauri::Wry>,
+            audio_upload::open_recording_import::<tauri::Wry>,
             local_probe::probe_local_transcription::<tauri::Wry>,
             on_device::on_device_status::<tauri::Wry>,
             on_device::on_device_download_models::<tauri::Wry>,

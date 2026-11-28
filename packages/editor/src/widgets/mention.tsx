@@ -22,9 +22,22 @@ export interface MentionItem {
   type: string;
   label: string;
   content?: string;
+  // Texte secondaire collé au libellé, qui cède la place avant lui : parent
+  // d'un sous-dossier.
+  context?: string;
   // Précision affichée après le libellé : dossier d'une note, nombre de
   // notes d'un dossier.
   description?: string;
+  // Infobulle de la ligne : chemin complet d'un dossier.
+  title?: string;
+}
+
+// Issue 815 : seul le compteur d'un dossier (« 3 réunions ») reste entier ;
+// le dossier d'une note cède encore la place à son titre.
+export function mentionDescriptionClass(item: MentionItem): string {
+  return item.type === "folder"
+    ? "mention-description mention-count"
+    : "mention-description";
 }
 
 // Mêmes résultats que la palette `Ctrl+K`, tronqués à cette longueur.
@@ -187,6 +200,7 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
         <button
           key={`${item.type}:${item.id}`}
           className={`mention-item ${index === selectedIndex ? "is-selected" : ""}`}
+          title={item.title}
           onClick={() => insertMention(item)}
           onMouseEnter={() => setSelectedIndex(index)}
         >
@@ -199,9 +213,16 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
           ) : item.type === "folder" ? (
             <Folder className="mention-type-icon mention-type-folder" />
           ) : null}
-          <span className="mention-label">{item.label}</span>
+          <span className="mention-name">
+            <span className="mention-label">{item.label}</span>
+            {item.context ? (
+              <span className="mention-context">{item.context}</span>
+            ) : null}
+          </span>
           {item.description ? (
-            <span className="mention-description">{item.description}</span>
+            <span className={mentionDescriptionClass(item)}>
+              {item.description}
+            </span>
           ) : null}
         </button>
       ))}

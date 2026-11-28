@@ -18,8 +18,18 @@ type SearchNoteSqlRow = {
 
 const EMPTY_NOTES: SearchNote[] = [];
 
+// Issue 799 : une réunion écrite par un autre processus (CLI, MCP) ne réveille
+// pas les requêtes vives, qui ne voient que les écritures de l'application.
+// Le moteur d'indexation de l'application, lui, traite cette réunion puis
+// acquitte search_index_dirty : lire cette table (sous-requête évaluée une
+// seule fois, valeur ignorée) fait relancer la requête à ce moment-là.
 const SEARCH_NOTES_SQL = `
-  SELECT id, title, created_at, folder_path
+  SELECT
+    id,
+    title,
+    created_at,
+    folder_path,
+    (SELECT 1 FROM search_index_dirty LIMIT 1) AS search_index_marker
   FROM sessions
   WHERE deleted_at IS NULL
   ORDER BY created_at DESC, id

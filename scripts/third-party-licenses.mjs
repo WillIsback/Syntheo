@@ -2,16 +2,19 @@
 // Licences des composants tiers (issue 747), générées au build, jamais tenues à
 // la main : crates Rust des deux espaces de travail livrés (application et
 // module syntheo-speech, d'après Cargo.lock via `cargo metadata`), paquets npm
-// de l'interface (pnpm-lock.yaml via `pnpm licenses list --prod`, limités
-// aux paquets réellement livrés d'après `pnpm list --prod`), ONNX
-// Runtime et modèles de la transcription sur le poste (apps/speech). Le
-// texte des licences vient des fichiers LICENSE, COPYING et NOTICE de chaque
-// composant ; les textes identiques ne sont gardés qu'une fois. Une licence
-// non déclarée est déduite de son texte, sinon notée UNKNOWN_LICENSE, que
-// l'interface traduit (issue 775).
+// réellement présents dans le bundle de production (relevés par le plugin
+// Vite dans les chunks rendus, issue 781), ONNX Runtime et modèles de la
+// transcription sur le poste (apps/speech). Le texte des licences vient des
+// fichiers LICENSE, COPYING et NOTICE de chaque composant ; les textes
+// identiques ne sont gardés qu'une fois. Une licence non déclarée est déduite
+// de son texte, sinon notée UNKNOWN_LICENSE, que l'interface traduit
+// (issue 775). Un composant sans texte reçoit le texte SPDX officiel de sa
+// licence, signalé comme référence (issue 776) : copies de license-list-data
+// (SPDX, v3.28.0, via le crate spdx 0.13.4) dans scripts/spdx-licenses.
 //
-// Usage : node scripts/third-party-licenses.mjs --check   (compte et contrôle)
+// Usage : node scripts/third-party-licenses.mjs --check   (crates, modèles)
 //         node scripts/third-party-licenses.mjs --json    (écrit le JSON)
+//         La liste npm se contrôle au build de production (`vite build`).
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -23,9 +26,10 @@ import {
   readdirSync,
   readFileSync,
   readSync,
+  realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -33,65 +37,13 @@ const LICENSE_FILE =
   /^(?:licen[cs]e|copying|notice|unlicense)(?:[-._][\w.-]*)?$/i;
 const MAX_TEXT_BYTES = 128 * 1024;
 const MAX_FILES_PER_COMPONENT = 6;
+const MAX_MANIFEST_BYTES = 4 * 1024 * 1024;
 
 /** Licence inconnue : marqueur stable des données, traduit par l'interface. */
 export const UNKNOWN_LICENSE = "NOASSERTION";
 
 /** Dépôt de Syntheo, affiché dans le bloc de sa licence (issue 775). */
 export const SYNTHEO_REPOSITORY = "https://github.com/WillIsback/Syntheo";
-
-/**
- * Dépendances déclarées par un paquet livré mais absentes de son module
- * navigateur (issue 775) : outils de sa CLI, de son plugin de build ou de ses
- * macros, compilées au build. `pnpm licenses list --prod` les comptait comme
- * livrées (eslint, typescript, vite, terser via React Scan). Le contrôle du
- * build vérifie que le module d'entrée du paquet ne les importe pas.
- */
-export const UNSHIPPED_DEPENDENCIES = {
-  // Barre développeur : seul le module navigateur (bippy, preact,
-  // react-grab) est livré ; react-doctor, unplugin et le reste servent à sa
-  // CLI et à son plugin de build.
-  "react-scan": [
-    "react-doctor",
-    "unplugin",
-    "@babel/core",
-    "@babel/types",
-    "@rollup/pluginutils",
-    "commander",
-    "prompts",
-    "picocolors",
-  ],
-  // Macros Lingui : compilées au build, jamais chargées par l'application.
-  "@lingui/core": ["@lingui/babel-plugin-lingui-macro", "babel-plugin-macros"],
-  "@lingui/react": ["@lingui/babel-plugin-lingui-macro", "babel-plugin-macros"],
-  // Plugin Babel d'Emotion (et toute la chaîne @babel/*, babel-plugin-macros,
-  // cosmiconfig, source-map) : transformation de build, jamais importée par
-  // le module navigateur.
-  "@emotion/react": ["@emotion/babel-plugin"],
-  "@emotion/css": ["@emotion/babel-plugin"],
-  // CLI de react-grab (ora, prompts, agent-install…) : outil en ligne de
-  // commande, absent du module navigateur.
-  "react-grab": ["@react-grab/cli"],
-  // Chargeur d'icônes de Node (installation de paquets, résolution de
-  // modules) : absent du module d'entrée d'@iconify/utils.
-  "@iconify/utils": ["@antfu/install-pkg", "import-meta-resolve"],
-  // Exécutables `katex` et `dsv2json` : seuls leurs scripts importent
-  // commander.
-  katex: ["commander"],
-  "d3-dsv": ["commander"],
-  // Composants « awesome » d'@lobehub/ui (sous-chemin `@lobehub/ui/awesome`)
-  // : ni @lobehub/icons ni l'application ne les importent, son module
-  // d'entrée non plus.
-  "@lobehub/ui": ["@giscus/react", "@splinetool/runtime"],
-};
-
-/**
- * Paquets de déclarations TypeScript (`@types/*`) : des fichiers `.d.ts`
- * seulement, effacés à la compilation. checkTypesOnly le vérifie au build.
- */
-export function isTypesOnlyPackage(name) {
-  return name.startsWith("@types/");
-}
 
 const normalize = (text) => text.replace(/\s+/g, " ").toLowerCase();
 
@@ -181,11 +133,11 @@ export function readLicenseFiles(dir) {
 }
 
 /**
- * Texte d'un fichier régulier d'au plus MAX_TEXT_BYTES, ou null. Le contrôle
- * et la lecture passent par le même descripteur (issue 780, CodeQL
+ * Texte d'un fichier régulier d'au plus `maxBytes` octets, ou null. Le
+ * contrôle et la lecture passent par le même descripteur (issue 780, CodeQL
  * js/file-system-race) : le chemin n'est ouvert qu'une fois.
  */
-export function readTextFile(path) {
+export function readTextFile(path, maxBytes = MAX_TEXT_BYTES) {
   let fd;
   try {
     fd = openSync(path, "r");
@@ -194,16 +146,16 @@ export function readTextFile(path) {
   }
   try {
     const stat = fstatSync(fd);
-    if (!stat.isFile() || stat.size > MAX_TEXT_BYTES) return null;
+    if (!stat.isFile() || stat.size > maxBytes) return null;
     // Un octet de plus que la limite : un fichier qui grandit est refusé.
-    const buffer = Buffer.alloc(MAX_TEXT_BYTES + 1);
+    const buffer = Buffer.alloc(maxBytes + 1);
     let length = 0;
     while (length < buffer.length) {
       const read = readSync(fd, buffer, length, buffer.length - length, null);
       if (read === 0) break;
       length += read;
     }
-    if (length > MAX_TEXT_BYTES) return null;
+    if (length > maxBytes) return null;
     return buffer.toString("utf8", 0, length).replace(/\r\n/g, "\n").trim();
   } catch {
     return null;
@@ -254,107 +206,23 @@ export function cratesFromMetadata(metadata, rootName) {
       version: pkg.version,
       license: pkg.license ?? null,
       url: pkg.repository ?? null,
+      authors: authorNames(pkg.authors),
       dir: resolve(pkg.manifest_path, ".."),
     }));
 }
 
 /**
- * Dossiers des paquets livrés par `rootName`, d'après `pnpm list --prod
- * --json --depth Infinity` : la fermeture de ses dépendances, sans les arêtes
- * de `unshipped` ni les paquets `@types/*`. pnpm ne détaille qu'une fois chaque paquet (les suivantes
- * sont marquées `deduped`) : le graphe est indexé par dossier.
+ * Paquets npm d'après `pnpm licenses list --prod --json`, en développement
+ * seulement : la liste des paquets atteignables, plus large que le bundle.
+ * Le build de production dérive la sienne des modules livrés
+ * (npmPackagesFromModules, issue 781).
  */
-export function shippedPackageDirs(
-  projects,
-  rootName,
-  unshipped = UNSHIPPED_DEPENDENCIES,
-) {
-  const children = new Map();
-  const names = new Map();
-  const index = (path, name, deps) => {
-    if (!path) return;
-    names.set(path, name);
-    const entries = Object.entries(deps ?? {});
-    if (entries.length > 0 && !children.has(path)) {
-      children.set(
-        path,
-        entries.map(([child, dep]) => ({ name: child, path: dep.path })),
-      );
-    }
-    for (const [child, dep] of entries)
-      index(dep.path, child, dep.dependencies);
-  };
-  for (const project of projects) {
-    if (project.name) index(project.path, project.name, project.dependencies);
-  }
-  const root = projects.find((project) => project.name === rootName);
-  if (!root) throw new Error(`projet npm introuvable : ${rootName}`);
-  const seen = new Set();
-  const queue = [root.path];
-  while (queue.length > 0) {
-    const path = queue.pop();
-    if (seen.has(path)) continue;
-    seen.add(path);
-    const skipped = unshipped[names.get(path)] ?? [];
-    for (const child of children.get(path) ?? []) {
-      if (
-        child.path &&
-        !skipped.includes(child.name) &&
-        !isTypesOnlyPackage(child.name)
-      )
-        queue.push(child.path);
-    }
-  }
-  return seen;
-}
-
-/**
- * Dossiers de l'arbre `pnpm list` : `projects`, ceux des projets de l'espace
- * de travail ; `all`, tous les dossiers, projets compris.
- */
-export function pnpmTreeDirs(projects) {
-  const workspace = new Set();
-  const all = new Set();
-  const visit = (deps) => {
-    for (const dep of Object.values(deps ?? {})) {
-      if (dep.path) all.add(dep.path);
-      visit(dep.dependencies);
-    }
-  };
-  for (const project of projects) {
-    if (project.path) {
-      workspace.add(project.path);
-      all.add(project.path);
-    }
-    visit(project.dependencies);
-  }
-  return { workspace, all };
-}
-
-/**
- * Paquets npm livrés, d'après `pnpm licenses list --prod --json`, limités aux
- * dossiers de `shipped` quand il est fourni. Avec `tree` (pnpmTreeDirs), les
- * deux commandes doivent concorder, sans tolérance (issue 775) : un dossier
- * livré sans entrée de licence, ou une entrée hors de l'arbre, lève une
- * erreur au lieu d'être ignoré.
- */
-export function packagesFromPnpm(report, shipped = null, tree = null) {
+export function packagesFromPnpm(report) {
   const out = [];
-  const reported = new Set();
-  const strays = [];
   for (const [license, entries] of Object.entries(report)) {
     for (const entry of entries) {
+      if (entry.name.startsWith("@syntheo/")) continue;
       entry.versions.forEach((version, index) => {
-        // Sans contrôle, un seul dossier vaut pour toutes les versions.
-        const dir =
-          entry.paths?.[index] ?? (tree ? null : entry.paths?.[0]) ?? null;
-        if (dir) reported.add(dir);
-        if (entry.name.startsWith("@syntheo/")) return;
-        if (tree && !tree.all.has(dir)) {
-          strays.push(`${entry.name}@${version} (${dir ?? "sans dossier"})`);
-          return;
-        }
-        if (shipped && !shipped.has(dir)) return;
         // pnpm range sous « Unknown » les paquets sans champ `license`.
         const declared = entry.license ?? license;
         out.push({
@@ -363,77 +231,85 @@ export function packagesFromPnpm(report, shipped = null, tree = null) {
           version,
           license: declared && declared !== "Unknown" ? declared : null,
           url: entry.homepage ?? null,
-          dir,
+          authors: [],
+          dir: entry.paths?.[index] ?? entry.paths?.[0] ?? null,
         });
       });
-    }
-  }
-  if (tree && shipped) {
-    const unlisted = [...shipped].filter(
-      (dir) => !tree.workspace.has(dir) && !reported.has(dir),
-    );
-    const problems = [
-      ...(unlisted.length > 0
-        ? [`livrés sans licence : ${unlisted.sort().join(", ")}`]
-        : []),
-      ...(strays.length > 0
-        ? [`absents de pnpm list : ${strays.sort().join(", ")}`]
-        : []),
-    ];
-    if (problems.length > 0) {
-      throw new Error(
-        `pnpm licenses list et pnpm list divergent : ${problems.join(" ; ")}.`,
-      );
     }
   }
   return out;
 }
 
-const IMPORT_SPECIFIER =
-  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'](@?[\w.][^"'\s]*)["']/g;
-const ENTRY_CONDITIONS = [
-  "browser",
-  "production",
-  "import",
-  "module",
-  "default",
-];
+const CSS_FILE = /\.(?:css|less|sass|scss|styl|stylus|pcss|postcss)$/;
 
-function exportTarget(target) {
-  if (typeof target === "string")
-    return /\.d\.[cm]?ts$/.test(target) ? null : target;
-  if (!target || typeof target !== "object") return null;
-  for (const condition of ENTRY_CONDITIONS) {
-    const found = exportTarget(target[condition]);
-    if (found) return found;
+/**
+ * Modules livrés d'après les chunks rendus (`meta.chunks` du hook
+ * renderChunk) : ceux dont il reste du code après le tree-shaking, et les
+ * feuilles de style, extraites du code JavaScript mais livrées (polices
+ * comprises).
+ */
+export function shippedModuleIds(chunks) {
+  const ids = new Set();
+  for (const chunk of chunks) {
+    for (const [id, module] of Object.entries(chunk.modules ?? {})) {
+      if (module.renderedLength > 0 || CSS_FILE.test(id.split("?")[0])) {
+        ids.add(id);
+      }
+    }
+  }
+  return ids;
+}
+
+/** Dossier du paquet npm qui contient le fichier `id`, ou null. */
+export function packageDirFromModuleId(id) {
+  const path = id.replace(/^\0/, "").split("?")[0].replace(/\\/g, "/");
+  const marker = "/node_modules/";
+  const at = path.lastIndexOf(marker);
+  if (at < 0) return null;
+  const parts = path.slice(at + marker.length).split("/");
+  const size = parts[0].startsWith("@") ? 2 : 1;
+  if (parts.length <= size) return null;
+  return path.slice(0, at + marker.length) + parts.slice(0, size).join("/");
+}
+
+/**
+ * Modules virtuels injectés par le bundler (`\0vite/preload-helper.js`,
+ * `\0rolldown/runtime.js`) : du code de ce paquet, livré. Les assistants
+ * d'Oxc (`\0@oxc-project+runtime@x/…`) sont embarqués dans le binaire de
+ * Rolldown, sans paquet npm installé. Les autres modules virtuels (`\0virtual:`)
+ * sont générés par Syntheo.
+ */
+const EMBEDDED_HELPERS = { "@oxc-project/runtime": "rolldown" };
+
+/** Paquet d'un module virtuel du bundler, ou null (module de Syntheo). */
+export function virtualModulePackage(id) {
+  if (!id.startsWith("\0")) return null;
+  const match = /^(@[\w.-]+[+/][\w.-]+|[\w.-]+)(?:@[^/]+)?\/./.exec(
+    id.slice(1),
+  );
+  if (!match) return null;
+  const name = match[1].replace("+", "/");
+  return EMBEDDED_HELPERS[name] ?? name;
+}
+
+/**
+ * Dossier réel du paquet `name`, résolu comme Node depuis chacun des
+ * dossiers de `from` (node_modules des dossiers parents), ou null.
+ */
+export function findPackageDir(name, from) {
+  for (const start of from) {
+    let dir = resolve(start);
+    for (;;) {
+      const candidate = join(dir, "node_modules", name);
+      if (isFile(join(candidate, "package.json")))
+        return realpathSync(candidate);
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
   return null;
 }
-
-const SCRIPT_FILE = /\.[cm]?jsx?$/;
-const RESOLVE_SUFFIXES = [
-  "",
-  ".js",
-  ".mjs",
-  ".cjs",
-  ".jsx",
-  ".json",
-  "/index.js",
-  "/index.mjs",
-  "/index.cjs",
-];
-const MAX_ENTRY_FILES = 20000;
-
-/**
- * Faux imports relatifs, par paquet : du texte que l'expression régulière
- * prend pour un import. Seuls ceux-ci sont tolérés ; tout autre import
- * introuvable lève une erreur.
- */
-export const NOT_IMPORTS = {
-  // Script `pack:bump` de son package.json, recopié dans un gabarit de
-  // chaîne : « require('./package.json') ».
-  "react-scan": ["./package.json"],
-};
 
 function isFile(path) {
   try {
@@ -443,120 +319,160 @@ function isFile(path) {
   }
 }
 
-/**
- * Fichier désigné par un import relatif, comme un bundler le résout
- * (extension implicite, dossier et son index), ou erreur.
- */
-function resolveRelative(path, from) {
-  const found = RESOLVE_SUFFIXES.map((suffix) => path + suffix).find(isFile);
-  if (!found) {
-    throw new Error(
-      `import introuvable : ${path} (depuis ${from ?? "package.json"})`,
-    );
+/** Nom d'un auteur npm ou Cargo, sans adresse ni site. */
+function authorName(author) {
+  const raw = typeof author === "string" ? author : author?.name;
+  if (typeof raw !== "string") return null;
+  const name = raw
+    .replace(/<[^>]*>/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .trim();
+  return name || null;
+}
+
+export function authorNames(authors) {
+  const list = Array.isArray(authors) ? authors : authors ? [authors] : [];
+  return [...new Set(list.map(authorName).filter(Boolean))];
+}
+
+/** Licence déclarée par un package.json (champ moderne ou ancien). */
+function manifestLicense(manifest) {
+  const { license, licenses } = manifest;
+  if (typeof license === "string" && license) return license;
+  if (license && typeof license.type === "string") return license.type;
+  if (Array.isArray(licenses)) {
+    const types = licenses
+      .map((item) => (typeof item === "string" ? item : item?.type))
+      .filter((type) => typeof type === "string" && type);
+    if (types.length > 0) return types.join(" OR ");
   }
-  return found;
+  return null;
+}
+
+/** Adresse du projet : `homepage`, sinon le dépôt. */
+function manifestUrl(manifest) {
+  if (typeof manifest.homepage === "string" && manifest.homepage) {
+    return manifest.homepage;
+  }
+  const repository =
+    typeof manifest.repository === "string"
+      ? manifest.repository
+      : manifest.repository?.url;
+  if (typeof repository !== "string" || !repository) return null;
+  const url = repository.replace(/^git\+/, "").replace(/\.git$/, "");
+  if (/^[\w.-]+\/[\w.-]+$/.test(url)) return `https://github.com/${url}`;
+  return url.replace(/^github:/, "https://github.com/");
 }
 
 /**
- * Paquets importés par le module d'entrée d'un paquet (export « . », champ
- * `module` ou `main`) et par ses fichiers relatifs, dans son dossier. Lève
- * une erreur si un module manque, sort du paquet ou dépasse la borne
- * (issue 775) : un contrôle incomplet ne doit pas passer pour réussi.
- * `notImports` : spécifieurs à ignorer (voir NOT_IMPORTS).
+ * Paquets npm livrés (issue 781) : les paquets qui contiennent les modules
+ * de `ids` (voir shippedModuleIds), lus dans leur package.json. Les
+ * paquets de l'espace de travail (hors node_modules) sont ceux de Syntheo.
+ * `from` : dossiers depuis lesquels résoudre les paquets des modules
+ * virtuels du bundler. Un module virtuel dont le paquet est introuvable lève
+ * une erreur : la liste serait incomplète.
  */
-export function entryImports(dir, notImports = []) {
-  const manifestText = readTextFile(join(dir, "package.json"));
-  if (manifestText == null) {
-    throw new Error(`package.json illisible : ${dir}`);
+export function npmPackagesFromModules(ids, from) {
+  const dirs = new Set();
+  for (const id of ids) {
+    const dir = packageDirFromModuleId(id);
+    if (dir) {
+      dirs.add(dir);
+      continue;
+    }
+    const name = virtualModulePackage(id);
+    if (!name) continue;
+    const found = findPackageDir(name, from);
+    if (!found) {
+      throw new Error(
+        `paquet du module virtuel introuvable : ${name} (${JSON.stringify(id)})`,
+      );
+    }
+    dirs.add(found);
   }
-  const manifest = JSON.parse(manifestText);
-  const exported = manifest.exports;
-  const entry =
-    exportTarget(
-      typeof exported === "object" && exported && "." in exported
-        ? exported["."]
-        : exported,
-    ) ??
-    manifest.module ??
-    manifest.main ??
-    "index.js";
-  const imports = new Set();
-  const seen = new Set();
-  const queue = [{ file: resolveRelative(resolve(dir, entry), null) }];
-  while (queue.length > 0) {
-    const { file } = queue.pop();
-    if (seen.has(file)) continue;
-    if (relative(dir, file).startsWith("..")) {
-      throw new Error(`import hors du paquet : ${file} (${dir})`);
-    }
-    seen.add(file);
-    if (seen.size > MAX_ENTRY_FILES) {
-      throw new Error(`plus de ${MAX_ENTRY_FILES} modules depuis ${dir}`);
-    }
-    if (!SCRIPT_FILE.test(file)) continue;
-    const source = readFileSync(file, "utf8");
-    for (const [, specifier] of source.matchAll(IMPORT_SPECIFIER)) {
-      if (notImports.includes(specifier)) continue;
-      if (specifier.startsWith(".")) {
-        queue.push({
-          file: resolveRelative(resolve(dirname(file), specifier), file),
-        });
-      } else if (!specifier.startsWith("node:")) {
-        const parts = specifier.split("/");
-        imports.add(
-          specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0],
-        );
-      }
-    }
-  }
-  return imports;
+  return [...dirs].map((dir) => npmPackageFromDir(dir));
 }
 
-/**
- * Contrôle de l'exclusion des `@types/*` : aucun script dans leurs dossiers,
- * sinon ils pourraient être livrés.
- */
-export function checkTypesOnly(dirs) {
-  const scripts = [];
-  const walk = (dir) => {
-    for (const item of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, item.name);
-      if (item.isDirectory()) {
-        if (item.name !== "node_modules") walk(path);
-      } else if (SCRIPT_FILE.test(item.name)) {
-        scripts.push(path);
-      }
-    }
+/** Composant npm d'un dossier de paquet. */
+export function npmPackageFromDir(dir) {
+  // Certains manifestes listent des milliers d'exports (date-fns : 200 Ko).
+  const text = readTextFile(join(dir, "package.json"), MAX_MANIFEST_BYTES);
+  if (text == null) throw new Error(`package.json illisible : ${dir}`);
+  const manifest = JSON.parse(text);
+  return {
+    kind: "npm",
+    name: manifest.name,
+    version: manifest.version,
+    license: manifestLicense(manifest),
+    url: manifestUrl(manifest),
+    authors: authorNames(manifest.author),
+    dir,
   };
-  for (const dir of dirs) walk(dir);
-  if (scripts.length > 0) {
-    throw new Error(
-      `Paquets @types écartés mais porteurs de scripts : ${scripts.join(", ")}.`,
-    );
-  }
 }
 
 /**
- * Contrôle de UNSHIPPED_DEPENDENCIES : le module d'entrée de chaque paquet
- * n'importe aucune des dépendances écartées. Sinon, la liste se tromperait.
+ * Paquets npm importés par une feuille de style (`@import "tailwindcss"`) :
+ * le CSS qu'ils fournissent est inliné à la compilation, sans module dans
+ * le graphe du bundler.
  */
-export function checkUnshippedDependencies(
-  packageDirs,
-  unshipped = UNSHIPPED_DEPENDENCIES,
-) {
-  const problems = [];
-  for (const [name, dir] of packageDirs) {
-    const imported = entryImports(dir, NOT_IMPORTS[name]);
-    for (const dependency of unshipped[name] ?? []) {
-      if (imported.has(dependency))
-        problems.push(`${name} importe ${dependency}`);
-    }
+export function cssPackageImports(code) {
+  const names = [];
+  for (const [, specifier] of code.matchAll(
+    /@import\s+(?:url\(\s*)?["']([^"']+)["']/g,
+  )) {
+    if (/^(?:[./~]|[a-z]+:)/i.test(specifier)) continue;
+    const parts = specifier.split("/");
+    const name = specifier.startsWith("@")
+      ? parts.slice(0, 2).join("/")
+      : parts[0];
+    if (!names.includes(name)) names.push(name);
   }
-  if (problems.length > 0) {
-    throw new Error(
-      `Dépendances écartées de la liste des licences mais livrées : ${problems.join(", ")}.`,
-    );
+  return names;
+}
+
+/** Textes SPDX de référence (issue 776), copiés de license-list-data. */
+const SPDX_DIR = join(ROOT, "scripts/spdx-licenses");
+
+/**
+ * Identifiants d'une expression SPDX, dans l'ordre : « (MIT OR Apache-2.0)
+ * AND Unicode-3.0 » donne MIT, Apache-2.0, Unicode-3.0 ; les champs non
+ * normalisés (« MIT/Apache-2.0 ») se découpent aussi.
+ */
+export function licenseIds(expression) {
+  const ids = [];
+  for (const token of String(expression ?? "").split(/[\s()/,]+/)) {
+    if (!token || /^(?:and|or|with)$/i.test(token)) continue;
+    if (!ids.includes(token)) ids.push(token);
   }
+  return ids;
+}
+
+let spdxIndex = null;
+
+/** Nom de fichier de chaque texte SPDX de référence, par identifiant en minuscules. */
+function spdxFiles(dir) {
+  if (spdxIndex?.dir === dir) return spdxIndex.files;
+  const files = new Map();
+  for (const name of readdirSync(dir)) {
+    if (name.endsWith(".txt")) files.set(name.slice(0, -4).toLowerCase(), name);
+  }
+  spdxIndex = { dir, files };
+  return files;
+}
+
+/** Identifiant SPDX canonique d'un texte de référence connu, ou null. */
+export function spdxReferenceId(id, dir = SPDX_DIR) {
+  const files = spdxFiles(dir);
+  const lower = id.toLowerCase().replace(/\+$/, "");
+  const name =
+    files.get(lower) ?? files.get(lower.replace(/-(?:only|or-later)$/, ""));
+  return name ? name.slice(0, -4) : null;
+}
+
+/** Texte SPDX officiel de la licence `id`, ou null s'il n'est pas copié. */
+export function spdxReferenceText(id, dir = SPDX_DIR) {
+  const canonical = spdxReferenceId(id, dir);
+  return canonical ? readTextFile(join(dir, `${canonical}.txt`)) : null;
 }
 
 /** Contenu d'un fichier, ou null s'il n'existe pas (une seule ouverture). */
@@ -634,7 +550,6 @@ function cargoMetadata(manifestPath, target) {
 }
 
 const PNPM_LICENSES_ARGS = ["licenses", "list", "--prod", "--json"];
-const PNPM_LIST_ARGS = ["list", "--prod", "--json", "--depth", "Infinity"];
 
 /**
  * Commande qui lance `pnpm licenses list`. Sous Windows, `pnpm` est un script
@@ -680,10 +595,13 @@ function pnpmJson(args) {
 
 /**
  * Données de la page des licences. `sources` permet de les fournir dans les
- * tests ; par défaut, elles sont lues dans le dépôt.
+ * tests ; par défaut, elles sont lues dans le dépôt. `sources.npm` : paquets
+ * npm livrés, relevés dans le bundle par le plugin Vite (issue 781) ; à
+ * défaut (développement), ceux de `pnpm licenses list --prod`.
  */
 export function buildThirdPartyLicenses(sources = {}) {
   const root = sources.root ?? ROOT;
+  const spdxDir = sources.spdxDir ?? SPDX_DIR;
   const target =
     sources.appMetadata && sources.speechMetadata ? null : hostTarget();
   const appMetadata =
@@ -691,22 +609,14 @@ export function buildThirdPartyLicenses(sources = {}) {
   const speechMetadata =
     sources.speechMetadata ??
     cargoMetadata(join(root, "apps/speech/Cargo.toml"), target);
-  const pnpm = sources.pnpm ?? pnpmJson(PNPM_LICENSES_ARGS);
-  const pnpmTree =
-    sources.pnpmTree ?? (sources.pnpm ? null : pnpmJson(PNPM_LIST_ARGS));
-  const shipped = pnpmTree
-    ? shippedPackageDirs(pnpmTree, "@syntheo/desktop")
-    : null;
-  if (pnpmTree && !sources.pnpmTree) {
-    checkUnshippedDependencies(unshippedPackageDirs(pnpmTree));
-    checkTypesOnly(typesPackageDirs(pnpmTree));
-  }
-  const tree = pnpmTree ? pnpmTreeDirs(pnpmTree) : null;
+  const npm =
+    sources.npm ??
+    packagesFromPnpm(sources.pnpm ?? pnpmJson(PNPM_LICENSES_ARGS));
 
   const raw = [
     ...cratesFromMetadata(appMetadata, "desktop"),
     ...cratesFromMetadata(speechMetadata, "syntheo-speech"),
-    ...packagesFromPnpm(pnpm, shipped, tree),
+    ...npm.filter((component) => !component.name.startsWith("@syntheo/")),
     ...(sources.speech ?? speechComponents(root)),
   ];
   const unique = new Map();
@@ -717,6 +627,14 @@ export function buildThirdPartyLicenses(sources = {}) {
 
   const texts = [];
   const textIndex = new Map();
+  const indexOf = (text) => {
+    const hash = createHash("sha256").update(text).digest("hex");
+    if (!textIndex.has(hash)) {
+      textIndex.set(hash, texts.length);
+      texts.push(text);
+    }
+    return textIndex.get(hash);
+  };
   const components = [...unique.values()]
     .sort(
       (a, b) =>
@@ -729,17 +647,32 @@ export function buildThirdPartyLicenses(sources = {}) {
       const selected = only
         ? only.flatMap((name) => readNamed(dir, name))
         : readLicenseFiles(dir);
-      const indices = selected.map((text) => {
-        const hash = createHash("sha256").update(text).digest("hex");
-        if (!textIndex.has(hash)) {
-          textIndex.set(hash, texts.length);
-          texts.push(text);
-        }
-        return textIndex.get(hash);
-      });
       const license =
         component.license ?? licenseFromTexts(selected) ?? UNKNOWN_LICENSE;
-      return { ...component, license, texts: indices };
+      // Issue 776 : sans texte propre, le texte SPDX officiel de chaque
+      // licence de l'expression, signalé comme référence ; une licence sans
+      // texte copié reste dans `missing`.
+      const references = [];
+      const missing = [];
+      if (selected.length === 0 && license !== UNKNOWN_LICENSE) {
+        for (const id of licenseIds(license)) {
+          const canonical = spdxReferenceId(id, spdxDir);
+          const text = canonical
+            ? readTextFile(join(spdxDir, `${canonical}.txt`))
+            : null;
+          if (text)
+            references.push({ license: canonical, text: indexOf(text) });
+          else missing.push(id);
+        }
+      }
+      return {
+        ...component,
+        authors: component.authors ?? [],
+        license,
+        texts: selected.map(indexOf),
+        references,
+        ...(missing.length > 0 ? { missing } : {}),
+      };
     });
 
   return {
@@ -759,52 +692,39 @@ export function buildThirdPartyLicenses(sources = {}) {
   };
 }
 
-/** Dossier de chaque paquet de UNSHIPPED_DEPENDENCIES présent dans l'arbre. */
-function unshippedPackageDirs(projects) {
-  const found = new Map();
-  const visit = (deps) => {
-    for (const [name, dep] of Object.entries(deps ?? {})) {
-      if (name in UNSHIPPED_DEPENDENCIES && dep.path && !found.has(dep.path)) {
-        found.set(dep.path, name);
-      }
-      visit(dep.dependencies);
-    }
-  };
-  for (const project of projects) visit(project.dependencies);
-  return [...found].map(([path, name]) => [name, path]);
-}
-
-/** Dossiers des paquets `@types/*` de l'arbre. */
-function typesPackageDirs(projects) {
-  const found = new Set();
-  const visit = (deps) => {
-    for (const [name, dep] of Object.entries(deps ?? {})) {
-      if (isTypesOnlyPackage(name) && dep.path) found.add(dep.path);
-      visit(dep.dependencies);
-    }
-  };
-  for (const project of projects) visit(project.dependencies);
-  return found;
-}
-
 function readNamed(dir, name) {
   const text = dir ? readTextFile(join(dir, name)) : null;
   return text ? [text] : [];
 }
 
-/** Contrôle du build : listes non vides et composants connus présents. */
-export function checkThirdPartyLicenses(data) {
+/**
+ * Contrôle du build : listes non vides, composants connus présents, et
+ * aucun composant livré sans texte de licence, ni le sien ni un texte SPDX
+ * de référence (issues 776 et 781). `npm: false` : liste npm non relevée
+ * (contrôle des crates seul, `--check`). `texts: false` : textes non exigés
+ * (développement, où la liste npm de pnpm déborde du bundle).
+ */
+export function checkThirdPartyLicenses(
+  data,
+  { npm = true, texts = true } = {},
+) {
   const count = (kind) => data.components.filter((c) => c.kind === kind).length;
   const has = (kind, name) =>
     data.components.some((c) => c.kind === kind && c.name === name);
   const problems = [];
   if (count("crate") === 0) problems.push("aucune crate");
-  if (count("npm") === 0) problems.push("aucun paquet npm");
+  if (npm && count("npm") === 0) problems.push("aucun paquet npm");
   if (!has("crate", "serde")) problems.push("crate serde absente");
   if (!has("crate", "tauri")) problems.push("crate tauri absente");
-  if (!has("npm", "react")) problems.push("paquet react absent");
+  if (npm && !has("npm", "react")) problems.push("paquet react absent");
   if (count("model") === 0) problems.push("aucun modèle");
   if (!data.syntheo.text) problems.push("LICENSE de Syntheo absent");
+  const bare = data.components
+    .filter((c) => c.texts.length === 0 && (c.references ?? []).length === 0)
+    .map((c) => `${c.kind} ${c.name}@${c.version} (${c.license})`);
+  if (texts && bare.length > 0) {
+    problems.push(`sans texte de licence : ${bare.join(", ")}`);
+  }
   if (problems.length > 0) {
     throw new Error(`Licences des composants tiers : ${problems.join(", ")}.`);
   }
@@ -814,17 +734,28 @@ export function checkThirdPartyLicenses(data) {
     native: count("native"),
     models: count("model"),
     texts: data.texts.length,
+    references: data.components.filter((c) => c.references.length > 0).length,
+    missing: [
+      ...new Set(data.components.flatMap((c) => c.missing ?? [])),
+    ].sort(),
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const data = buildThirdPartyLicenses();
-  const summary = checkThirdPartyLicenses(data);
+  // La liste npm se relève dans le bundle (plugin Vite, `vite build`) : ce
+  // contrôle couvre les crates, les composants natifs et les modèles.
+  const data = buildThirdPartyLicenses({ npm: [] });
+  const summary = checkThirdPartyLicenses(data, { npm: false });
   if (process.argv.includes("--json")) {
     process.stdout.write(JSON.stringify(data));
   } else {
     console.log(
-      `${summary.crates} crates, ${summary.npm} paquets npm, ${summary.native} composants natifs, ${summary.models} modèles, ${summary.texts} textes de licence.`,
+      `${summary.crates} crates, ${summary.native} composants natifs, ${summary.models} modèles, ${summary.texts} textes de licence, ${summary.references} composants avec un texte de référence.`,
     );
+    if (summary.missing.length > 0) {
+      console.log(
+        `Textes de référence manquants : ${summary.missing.join(", ")}.`,
+      );
+    }
   }
 }

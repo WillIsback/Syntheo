@@ -508,6 +508,89 @@ describe("recherche commune dans la palette", () => {
     expect(hebdo.textContent).toContain(ATLAS);
   });
 
+  // Issue 628 : deux sous-dossiers de même nom se distinguent par leur parent.
+  it("affiche le dossier parent d'un sous-dossier, pas celui d'un dossier racine", () => {
+    setCatalog(notes, [
+      "Comité",
+      ATLAS,
+      `${ATLAS}/Ateliers`,
+      "Equipe Projet",
+      "Equipe Projet/Ateliers",
+    ]);
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("ateliers");
+
+    const folderOption = (path: string) =>
+      screen
+        .getAllByRole("option")
+        .find(
+          (option) => option.getAttribute("data-value") === `folder-${path}`,
+        );
+    const parentOf = (path: string) =>
+      folderOption(path)?.querySelector("[data-testid=palette-folder-parent]")
+        ?.textContent;
+    expect(parentOf(`${ATLAS}/Ateliers`)).toBe(`${ATLAS} ›`);
+    expect(parentOf("Equipe Projet/Ateliers")).toBe("Equipe Projet ›");
+
+    type("comité");
+    expect(folderOption("Comité")).toBeTruthy();
+    expect(parentOf("Comité")).toBeUndefined();
+  });
+
+  // Issues 792 et 815 : un parent long se réduit avant le nom du
+  // sous-dossier, et l'infobulle donne le chemin complet.
+  it("réduit le parent avant le nom et donne le chemin complet en infobulle", () => {
+    const longParent = "Comptes rendus du comité de pilotage trimestriel";
+    setCatalog(notes, [longParent, `${longParent}/Ateliers`, "Comité"]);
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("ateliers");
+
+    const option = screen
+      .getAllByRole("option")
+      .find(
+        (candidate) =>
+          candidate.getAttribute("data-value") ===
+          `folder-${longParent}/Ateliers`,
+      );
+    expect(option?.getAttribute("title")).toBe(`${longParent} › Ateliers`);
+
+    const name = option?.querySelector("[data-testid=palette-folder-name]");
+    const parent = option?.querySelector("[data-testid=palette-folder-parent]");
+    const classesOf = (element: Element | null | undefined) =>
+      element?.getAttribute("class")?.split(/\s+/) ?? [];
+    // Issue 815 : le nom ne rétrécit jamais, même d'un facteur infime (le
+    // rétrécissement pondéré lui prenait une fraction de pixel, d'où une
+    // ellipse avec un parent encore large). Plafonné à la boîte qu'il
+    // partage avec le parent, il ne se tronque qu'une fois le parent à zéro.
+    expect(classesOf(name)).toEqual(
+      expect.arrayContaining(["shrink-0", "max-w-full", "truncate"]),
+    );
+    expect(classesOf(parent)).toEqual(
+      expect.arrayContaining(["min-w-0", "truncate"]),
+    );
+    expect(classesOf(parent).some((name) => name.startsWith("shrink-"))).toBe(
+      false,
+    );
+    const box = name?.parentElement;
+    expect(box).toBe(parent?.parentElement);
+    expect(box).not.toBe(option);
+    expect(classesOf(box)).toEqual(
+      expect.arrayContaining(["flex", "min-w-0", "overflow-hidden"]),
+    );
+
+    type("comité");
+    const rootOption = screen
+      .getAllByRole("option")
+      .find(
+        (candidate) => candidate.getAttribute("data-value") === "folder-Comité",
+      );
+    expect(rootOption?.getAttribute("title")).toBe("Comité");
+  });
+
   it("cherche aussi dans le contenu des notes (index plein texte)", async () => {
     searchHits([
       { id: "comite", score: 3, snippet: "date de livraison du 27" },

@@ -9,6 +9,7 @@ import {
   type JSONContent,
   md2json,
   parseJsonContent,
+  stripRemoteImages,
 } from "./markdown";
 import { schema as noteSchema } from "./note/schema";
 
@@ -1074,6 +1075,67 @@ describe("md2json stripRemoteImages", () => {
     );
     expect(text).toContain('"text":"Avant photo après"');
   });
+
+  // Issue 814 : une adresse avec des parenthèses appariées (un niveau) ne
+  // laisse pas l'image en Markdown brut.
+  it("garde le texte alternatif d'une image brute dont l'adresse a des parenthèses", () => {
+    const text = (md: string) =>
+      JSON.stringify(md2json(md, { stripRemoteImages: true }));
+    expect(text("![Image javascript](javascript:alert(1))")).toContain(
+      '"text":"Image javascript"',
+    );
+    expect(text("Avant ![le plan](file:///plans/plan(2).png) après")).toContain(
+      '"text":"Avant le plan après"',
+    );
+    expect(
+      text("Voir ![x](javascript:alert(1)) et ![y](file:///a(b)c(d))"),
+    ).toContain('"text":"Voir x et y"');
+    // Deux niveaux de parenthèses : hors du motif, rien n'est réécrit à moitié.
+    expect(text("![z](javascript:f(g(1)))")).toContain(
+      "![z](javascript:f(g(1)))",
+    );
+    // Dans du code, rien n'est touché.
+    expect(text("`![x](javascript:alert(1))`")).toContain(
+      "![x](javascript:alert(1))",
+    );
+    expect(text("```\n![x](javascript:alert(1))\n```")).toContain(
+      "![x](javascript:alert(1))",
+    );
+  });
+
+  // Nettoyage seul (sans le parseur) d'un nœud texte : le temps doit croître
+  // linéairement quand la taille double. Borne large (un coût quadratique
+  // donnerait un rapport proche de 4) et plancher absolu contre le bruit.
+  const scrubTime = (text: string) => {
+    const doc: JSONContent = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    };
+    const runs: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const started = performance.now();
+      stripRemoteImages(doc);
+      runs.push(performance.now() - started);
+    }
+    return runs.sort((a, b) => a - b)[1];
+  };
+  it.each([
+    ["![](", 20_000],
+    ["(", 50_000],
+    ["![a](b(", 20_000],
+    ["![a](![b](c)", 10_000],
+    ["![a](b(c)", 20_000],
+    ["![a](x(y)z", 20_000],
+    ["](", 50_000],
+  ])(
+    "nettoie en temps linéaire les répétitions de « %s » (%i puis le double)",
+    (motif, count) => {
+      const single = scrubTime(motif.repeat(count));
+      const double = scrubTime(motif.repeat(count * 2));
+      expect(double).toBeLessThan(750);
+      expect(double).toBeLessThan(Math.max(3.5 * single, 25));
+    },
+  );
 
   it("retire une image distante de bloc et garde son texte alternatif", () => {
     const json = md2json(

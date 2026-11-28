@@ -1332,9 +1332,9 @@ fn function_word_list_is_lowercase_and_unique() {
 }
 
 #[test]
-fn rule_version_is_three() {
-    assert_eq!(RULE_VERSION, 3);
-    assert_eq!(run(GENERATED, GENERATED).rule_version, 3);
+fn rule_version_is_four() {
+    assert_eq!(RULE_VERSION, 4);
+    assert_eq!(run(GENERATED, GENERATED).rule_version, 4);
 }
 
 // Texte brut collé (issue 730, suite) : un titre corrigé d'un mot ouvre
@@ -1537,4 +1537,142 @@ fn aggregation_tool_uses_the_crate_guard_thresholds() {
         "{GUARD_VERSION}: {{ mots_retrouves_min_pourcent: {MIN_KEPT_PERCENT}, sections_non_retrouvees_max_pourcent: {MAX_UNMATCHED_PERCENT}, }}"
     );
     assert!(tool.contains(&line), "{line}");
+}
+
+// --- Règle v4 (issue 767) ------------------------------------------------
+// Une ligne de corps identique à un titre généré n'ouvre pas de section dans
+// une copie identique : le titre reste le titre, la ligne reste du corps.
+
+const TITLE_IN_BODY: &str = "# Point d'étape Orphée
+
+Le projet avance selon le calendrier prévu.
+
+## Contexte
+
+Point d'étape Orphée
+
+Le chantier de Valbrune tient ses délais malgré la pluie.
+
+## Décisions
+
+- Garder le prestataire actuel.
+";
+
+const TITLE_BEFORE_HEADING: &str = "# Revue du lot Hélianthe
+
+Le lot avance.
+
+- Décisions
+
+Les points ci-dessous ont été tranchés en séance.
+
+## Décisions
+
+- Garder le prestataire actuel.
+- Reporter la recette au printemps.
+";
+
+// Titre présent deux fois dans la générée, sous deux sujets : chaque ligne
+// identique d'un texte brut ou d'un collage wiki ouvre sa section.
+const DUPLICATE_TITLE: &str = "# Bilan Orphée
+
+## Lot A
+
+Le lot A avance.
+
+## Décisions
+
+- Garder le prestataire.
+
+## Lot B
+
+Le lot B prend du retard.
+
+## Décisions
+
+- Relancer le fournisseur.
+";
+
+fn html_of(markdown: &str) -> String {
+    markdown
+        .split("\n\n")
+        .filter(|block| !block.trim().is_empty())
+        .map(|block| {
+            let block = block.trim();
+            if let Some(t) = block.strip_prefix("## ") {
+                format!("<h2>{t}</h2>")
+            } else if let Some(t) = block.strip_prefix("# ") {
+                format!("<h1>{t}</h1>")
+            } else if let Some(t) = block.strip_prefix("- ") {
+                let items: Vec<String> = std::iter::once(t)
+                    .chain(block.lines().skip(1).map(|l| l.trim_start_matches("- ")))
+                    .map(|l| format!("<li>{}</li>", l.lines().next().unwrap_or(l)))
+                    .collect();
+                format!("<ul>{}</ul>", items.join(""))
+            } else {
+                format!("<p>{block}</p>")
+            }
+        })
+        .collect()
+}
+
+fn text_of(markdown: &str) -> String {
+    markdown
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| {
+            l.trim_start_matches("## ")
+                .trim_start_matches("# ")
+                .trim_start_matches("- ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[test]
+fn a_body_line_repeating_a_title_gives_no_rework_on_an_identical_copy() {
+    for generated in [TITLE_IN_BODY, TITLE_BEFORE_HEADING, DUPLICATE_TITLE] {
+        let words = run(generated, generated).total.generated;
+        for (name, sent, format) in [
+            ("markdown", generated.to_owned(), Format::Markdown),
+            ("html", html_of(generated), Format::Html),
+            ("text", text_of(generated), Format::Text),
+        ] {
+            let report = measure(
+                generated,
+                Format::Markdown,
+                &sent,
+                format,
+                &Dictionary::default(),
+            )
+            .unwrap();
+            assert!(report.aligned, "{name}");
+            assert_eq!(report.headings_matched, report.headings_generated, "{name}");
+            assert_eq!(report.total, counters(words, 0, 0, 0, 0), "{name}");
+            assert_eq!(report.content_per_mille, Some(0.0), "{name}");
+        }
+    }
+}
+
+// Un titre perdu au collage (wiki) reste retrouvé par sa ligne, même quand
+// la même ligne figure aussi dans le corps.
+#[test]
+fn a_pasted_title_is_still_found_when_a_body_line_repeats_it() {
+    let sent = TITLE_IN_BODY.replace("## Contexte", "Contexte");
+    let report = run(TITLE_IN_BODY, &sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, report.headings_generated);
+    assert_eq!(report.total.added + report.total.deleted, 0);
+}
+
+// Collage wiki d'une générée dont un titre figure deux fois : les deux lignes
+// sans mise en forme ouvrent leur section, comme dans la générée.
+#[test]
+fn a_pasted_duplicate_title_opens_a_section_at_each_line() {
+    let sent = DUPLICATE_TITLE.replace("## ", "");
+    let report = run(DUPLICATE_TITLE, &sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, report.headings_generated);
+    assert_eq!(report.total.added + report.total.deleted, 0);
+    assert_eq!(report.content_per_mille, Some(0.0));
 }

@@ -297,6 +297,10 @@ pub(crate) const EXCLUDED_COMMANDS: &[(&str, &str)] = &[
         "lit un fichier local au choix",
     ),
     (
+        "plugin:transcription|open_recording_import",
+        "ouvre et lit en mémoire un fichier local au choix",
+    ),
+    (
         "install_agent_skill",
         "écrit dans la configuration des agents",
     ),

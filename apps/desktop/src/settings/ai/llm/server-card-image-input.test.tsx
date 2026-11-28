@@ -278,7 +278,7 @@ const imageUrlParts = (body: { messages: Array<{ content: unknown }> }) =>
 
 it("keeps the image detection through Test the connection, and the next summary still sends the image", async () => {
   // La nouvelle détection ne tranche pas (serveur occupé, réponse ambiguë).
-  mocks.detect.mockResolvedValue(null);
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unrelated" });
   const card = renderCard();
   expect(
     screen.getByText(/^The model accepted the test image and described it/),
@@ -310,9 +310,12 @@ it("keeps the image detection through Test the connection, and the next summary 
 
 it("saves a clear new detection made after Test the connection", async () => {
   mocks.detect.mockResolvedValue({
-    reads: false,
-    source: "metadata",
-    checkedAt: "2026-11-26T12:00:00.000Z",
+    status: "detected",
+    detection: {
+      reads: false,
+      source: "metadata",
+      checkedAt: "2026-11-26T12:00:00.000Z",
+    },
   });
   const card = renderCard();
 

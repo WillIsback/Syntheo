@@ -43,6 +43,52 @@ const SELECT_SQL = `
 /** Code d'un import interrompu par la fermeture de Syntheo (issue 714). */
 export const INTERRUPTED_IMPORT_CODE = "interrupted";
 
+/** Code d'un import demandé par un agent qui a échoué (issue 794). */
+export const AGENT_IMPORT_FAILED_CODE = "agent_import";
+
+/** Message gardé pour un import d'agent interrompu par la fermeture de
+ * Syntheo (issue 794) : l'avis l'affiche traduit. */
+export const AGENT_IMPORT_INTERRUPTED_MESSAGE = "agent import interrupted";
+
+// Issue 794 : un import d'agent interrompu (Syntheo fermé pendant l'import ou
+// la transcription) est passé en échec par le battement de cœur suivant, sans
+// passer par le catch de l'import. Cette instruction, jouée dans la même
+// transaction juste avant, garde l'échec dans la note. Un résumé interrompu
+// est exclu : la transcription est déjà dans la note. Issue 816 : une tâche
+// tenue par un autre worker que le worker courant est interrompue tout de
+// suite (application à instance unique, voir recording-import.tsx).
+export function agentImportInterruptedFailureStatement(
+  currentWorkerId: string,
+  staleSeconds: number,
+): {
+  sql: string;
+  params: unknown[];
+} {
+  return {
+    sql: `UPDATE sessions
+      SET metadata_json = json_set(
+            CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+            '$.transcription_failure',
+            json(?)
+          ),
+          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+      WHERE deleted_at IS NULL
+        AND id IN (
+          SELECT meeting_id FROM local_recording_import_jobs
+          WHERE processing_status IN ('importing', 'transcribing')
+            AND (worker_id IS NOT ? OR updated_at < unixepoch() - ?)
+        )`,
+    params: [
+      JSON.stringify({
+        code: AGENT_IMPORT_FAILED_CODE,
+        message: AGENT_IMPORT_INTERRUPTED_MESSAGE,
+      } satisfies TranscriptionFailure),
+      currentWorkerId,
+      staleSeconds,
+    ],
+  };
+}
+
 function toTranscriptionFailure(
   error: unknown,
   code?: string,

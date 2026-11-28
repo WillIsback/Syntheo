@@ -263,13 +263,21 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
       lastUserMessageIndex >= 0
         ? options.messages[lastUserMessageIndex]
         : undefined;
+    // Dossiers des outils : ceux @-mentionnés dans le dernier message, à
+    // défaut le dossier de la page d'où il a été envoyé (« Demander au
+    // dossier », Ctrl+J), le même que le bloc « Folder context » (issue 805).
+    const lastFolderRefs = (
+      lastUserMessage?.metadata?.contextRefs ?? []
+    ).filter((ref) => ref.kind === "folder");
+    const manualFolderRefs = lastFolderRefs.filter(
+      (ref) => ref.source === "manual",
+    );
     const mentionedFolderPaths = [
       ...new Set(
-        (lastUserMessage?.metadata?.contextRefs ?? []).flatMap((ref) =>
-          ref.kind === "folder" && ref.source === "manual"
-            ? [ref.folderId]
-            : [],
-        ),
+        (manualFolderRefs.length > 0
+          ? manualFolderRefs
+          : lastFolderRefs.filter((ref) => ref.source === "auto-current")
+        ).map((ref) => ref.folderId),
       ),
     ];
 

@@ -6,6 +6,11 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
 import {
+  clearImportPending,
+  listPendingImports,
+  recordTranscriptionFailure,
+} from "~/session/transcription-failure";
+import {
   acknowledgeCompletedBatch,
   recoverRunningBatchSessions,
 } from "~/store/zustand/listener/general-batch";
@@ -14,6 +19,7 @@ import { notifyResumedImportAbandoned } from "~/stt/audio-import-feedback";
 import { parseBatchResumeContext } from "~/stt/batch-resume-context";
 import { recoverInterruptedImports } from "~/stt/interrupted-imports";
 import { isStoppedTranscriptionError, useRunBatch } from "~/stt/useRunBatch";
+import { useSTTConnection } from "~/stt/useSTTConnection";
 
 export function BatchTranscriptionRecovery() {
   const [resumable, setResumable] = useState<TranscriptionSession[]>([]);
@@ -69,20 +75,36 @@ function ResumeBatchTranscription({
   const sessionId = session.session_id;
   const record = useSession(sessionId);
   const runBatch = useRunBatch(sessionId);
+  // Issue 795 : la reprise prend fournisseur et modèle dans la session, mais
+  // l'adresse et la clé dans la connexion. Au premier rendu, les réglages lus
+  // en direct sont encore « en chargement » (packages/db-react) : la reprise
+  // attend qu'ils soient chargés et appelle le runBatch du dernier rendu.
+  const { isLoading: connectionLoading } = useSTTConnection();
+  const runBatchRef = useRef(runBatch);
+  useEffect(() => {
+    runBatchRef.current = runBatch;
+  }, [runBatch]);
   const started = useRef(false);
 
   useEffect(() => {
-    if (started.current || !record) return;
+    if (started.current || !record || connectionLoading) return;
     const context = parseBatchResumeContext(session.resume_context);
     if (!context || !session.provider || !session.model) return;
     started.current = true;
 
-    void runBatch(session.file_path, {
-      promotion: { scope: context.promotion },
-      resume: { provider: session.provider, model: session.model },
-    })
+    void runBatchRef
+      .current(session.file_path, {
+        promotion: { scope: context.promotion },
+        resume: { provider: session.provider, model: session.model },
+      })
       .then(() =>
-        getEnhancerService()?.queueAutoEnhanceIfSummaryEmpty(sessionId),
+        // Comme useUploadFile : une erreur du résumé n'est pas un échec de la
+        // transcription, qui est déjà enregistrée.
+        getEnhancerService()
+          ?.queueAutoEnhanceIfSummaryEmpty(sessionId)
+          .catch((error: unknown) => {
+            console.error("[listener] failed to queue auto summary", error);
+          }),
       )
       .catch(async (error) => {
         if (isStoppedTranscriptionError(error)) return;
@@ -96,13 +118,35 @@ function ResumeBatchTranscription({
         // Transcription, et un toast le signale une fois.
         listenerStore.getState().handleBatchFailed(sessionId, message);
         await acknowledgeCompletedBatch(sessionId);
+        // Gardé dans la note, comme un import direct (issue 559), pour un
+        // import par l'interface seulement (marqueur « import en cours ») :
+        // l'échec d'un import d'agent est écrit par son worker.
+        const pending = await listPendingImports().catch(() => []);
+        if (pending.some((item) => item.sessionId === sessionId)) {
+          await recordTranscriptionFailure(sessionId, error).catch(
+            (persistError: unknown) => {
+              console.error(
+                "[listener] failed to record resumed import failure",
+                persistError,
+              );
+            },
+          );
+        }
         notifyResumedImportAbandoned({
           sessionId,
           name: fileName(session.file_path) ?? (record.title || null),
           error,
         });
-      });
-  }, [record, runBatch, session, sessionId]);
+      })
+      // Issue 822 : succès, échec ou arrêt, comme useUploadFile, le marqueur
+      // « import en cours » est retiré ; sinon le lancement suivant annonce
+      // l'import interrompu alors que la reprise a abouti.
+      .finally(() =>
+        clearImportPending(sessionId).catch((error: unknown) => {
+          console.error("[listener] failed to clear import pending", error);
+        }),
+      );
+  }, [connectionLoading, record, session, sessionId]);
 
   return null;
 }
