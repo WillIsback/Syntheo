@@ -221,4 +221,67 @@ describe("CustomChatTransport", () => {
       }),
     );
   });
+
+  describe("folders passed to tools", () => {
+    const folderRef = (
+      folderId: string,
+      source: "manual" | "auto-current",
+    ): ContextRef => ({
+      kind: "folder",
+      key: `folder:${source === "manual" ? "manual" : "auto"}:${folderId}`,
+      source,
+      folderId,
+    });
+
+    async function toolFoldersFor(contextRefsByMessage: ContextRef[][]) {
+      mocks.renderTemplate.mockResolvedValue({ status: "ok", data: "" });
+      const transport = new CustomChatTransport({} as never, {
+        read_folder_material: {} as never,
+      });
+      await transport.sendMessages({
+        chatId: "chat-1",
+        abortSignal: undefined,
+        messageId: undefined,
+        messages: contextRefsByMessage.flatMap((contextRefs, index) => [
+          {
+            id: `user-${index}`,
+            role: "user" as const,
+            parts: [{ type: "text" as const, text: `question ${index}` }],
+            metadata: { contextRefs },
+          },
+          {
+            id: `assistant-${index}`,
+            role: "assistant" as const,
+            parts: [{ type: "text" as const, text: `answer ${index}` }],
+          },
+        ]),
+        trigger: "submit-message",
+      });
+      const { toolsContext } = mocks.agentOptions.mock.calls[0]![0];
+      return toolsContext.read_folder_material.mentionedFolderPaths;
+    }
+
+    it("passes the folder page folder of the latest message", async () => {
+      await expect(
+        toolFoldersFor([[folderRef("Projets/Atelier", "auto-current")]]),
+      ).resolves.toEqual(["Projets/Atelier"]);
+    });
+
+    it("prefers folders mentioned in the latest message", async () => {
+      await expect(
+        toolFoldersFor([
+          [
+            folderRef("Projets/Atelier", "auto-current"),
+            folderRef("Archives/Salon", "manual"),
+          ],
+        ]),
+      ).resolves.toEqual(["Archives/Salon"]);
+    });
+
+    it("ignores a folder page folder from an earlier message", async () => {
+      await expect(
+        toolFoldersFor([[folderRef("Projets/Atelier", "auto-current")], []]),
+      ).resolves.toEqual([]);
+    });
+  });
 });

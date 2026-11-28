@@ -71,6 +71,31 @@ describe("read_folder_material", () => {
     });
   });
 
+  it("reads the material of the folder passed by the chat", async () => {
+    const tool = buildReadFolderMaterialTool({
+      getFolderFilter: () => null,
+    } as any);
+    const result = await (tool as any).execute(
+      { materialId: "mat-1" },
+      {
+        context: {
+          currentSessionId: undefined,
+          mentionedFolderPaths: ["Projets/Atelier"],
+        },
+      },
+    );
+
+    expect(mocks.loadFolderMaterial).toHaveBeenCalledWith(
+      "Projets/Atelier",
+      "mat-1",
+    );
+    expect(result).toMatchObject({
+      status: "ok",
+      materialId: "mat-1",
+      contextText: "Week 1: intro",
+    });
+  });
+
   it("extracts text from folder-scoped PDFs", async () => {
     const { deflateSync } = await import("node:zlib");
     const compressed = deflateSync(
