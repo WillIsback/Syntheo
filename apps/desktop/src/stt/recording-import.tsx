@@ -198,6 +198,10 @@ async function processImport(
     phase = "transcribing";
     await update(phase);
     await runBatch("", {
+      // Issue 793 : sans modèle par lot (serveur NVIDIA, NeMo-Speech.cpp),
+      // l'enregistrement passe par le flux temps réel, comme un fichier
+      // déposé dans une note.
+      allowRealtimeStream: true,
       promotion: { scope: "whole_session" },
       audioUploadId: uploadId,
     });
