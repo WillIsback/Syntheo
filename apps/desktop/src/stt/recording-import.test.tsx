@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render } from "@testing-library/react";
-import { StrictMode } from "react";
+import { StrictMode, useSyncExternalStore } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import {
@@ -41,7 +41,41 @@ vi.mock("@syntheo/plugin-fs-sync", () => ({
   },
 }));
 vi.mock("~/session/queries", () => ({ useSession: () => ({ id: "meeting" }) }));
-vi.mock("~/stt/useRunBatch", () => ({ useRunBatch: () => mocks.transcribe }));
+// Comme les requêtes en direct de la base (packages/db-react), la connexion de
+// transcription reste « en chargement » au premier rendu d'un composant : elle
+// n'arrive qu'au rendu suivant, une fois abonné (issue 793).
+const connection = vi.hoisted(() => {
+  let subscribers = 0;
+  return {
+    subscribe: (listener: () => void) => {
+      subscribers += 1;
+      queueMicrotask(listener);
+      return () => {
+        subscribers -= 1;
+      };
+    },
+    snapshot: () => (subscribers > 0 ? "connected" : null),
+  };
+});
+function useConnection() {
+  return useSyncExternalStore(connection.subscribe, connection.snapshot);
+}
+vi.mock("~/stt/useRunBatch", () => ({
+  useRunBatch: () => {
+    const conn = useConnection();
+    return async (...args: unknown[]) => {
+      if (!conn) {
+        throw new Error(
+          "The selected transcription provider can't transcribe a recording afterwards.",
+        );
+      }
+      return mocks.transcribe(...args);
+    };
+  },
+}));
+vi.mock("~/stt/useSTTConnection", () => ({
+  useSTTConnection: () => ({ isLoading: useConnection() === null }),
+}));
 vi.mock("~/services/enhancer", () => ({
   getEnhancerService: () => ({ enhanceAndWait: mocks.summarize }),
 }));
@@ -208,6 +242,25 @@ it("transcribes an agent import with a server that has no batch mode", async () 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(100);
   });
+  expect(job.state().status).toBe("summarizing");
+  await act(async () => {
+    job.finishSummary();
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(job.state().status).toBe("done");
+  job.view.unmount();
+  job.client.clear();
+});
+
+// Issue 793 : l'import ne doit pas garder la connexion du premier rendu, encore
+// vide, mais celle que les réglages chargés donnent ensuite.
+it("transcribes with the connection known after the first render", async () => {
+  vi.useFakeTimers();
+  const job = setupJob(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(mocks.transcribe).toHaveBeenCalledTimes(1);
   expect(job.state().status).toBe("summarizing");
   await act(async () => {
     job.finishSummary();

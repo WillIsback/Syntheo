@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
 import { commands as fsSyncCommands } from "@syntheo/plugin-fs-sync";
 import { commands as settingsCommands } from "@syntheo/plugin-settings";
@@ -12,6 +13,7 @@ import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { discardAudioUpload } from "~/stt/audio-upload-stream";
 import { useRunBatch } from "~/stt/useRunBatch";
+import { useSTTConnection } from "~/stt/useSTTConnection";
 
 const workerId = crypto.randomUUID();
 // The agent CLI treats the desktop as available while this heartbeat is fresher
@@ -123,20 +125,30 @@ const runningImports = new Set<string>();
 
 function RunImport({ job }: { job: ImportJob }) {
   const runBatch = useRunBatch(job.meeting_id);
-  useMountEffect(() => {
+  // Issue 793 : au premier rendu, les réglages lus en direct sont encore « en
+  // chargement » (packages/db-react), donc la connexion de transcription est
+  // vide. L'import démarre seulement quand ce composant les voit chargés, et
+  // appelle toujours le runBatch du dernier rendu.
+  const { isLoading: connectionLoading } = useSTTConnection();
+  const runBatchRef = useRef(runBatch);
+  useEffect(() => {
+    runBatchRef.current = runBatch;
+  }, [runBatch]);
+  useEffect(() => {
+    if (connectionLoading) return;
     // Defer acquisition until after React's mount/cleanup probe. Once started,
     // processing outlives this component so navigation does not fail the job.
     const start = setTimeout(() => {
       if (runningImports.has(job.id)) return;
       runningImports.add(job.id);
-      void processImport(job, runBatch)
+      void processImport(job, (...args) => runBatchRef.current(...args))
         .catch(console.error)
         .finally(() => runningImports.delete(job.id));
     }, 0);
     return () => {
       clearTimeout(start);
     };
-  });
+  }, [connectionLoading, job]);
   return null;
 }
 
