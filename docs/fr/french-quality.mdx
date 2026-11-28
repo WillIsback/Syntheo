@@ -1,0 +1,98 @@
+---
+title: "Qualité de la transcription en français"
+sidebarTitle: "Qualité en français"
+description: "Taux d'erreur sur les mots (WER) de la transcription sur ce poste, mesuré sur 150 énoncés de parole lue en français : résultats, conditions, méthode reproductible, limites et sources."
+---
+
+Sur 150 énoncés de parole lue en français, la transcription **Sur ce poste** fait **12,55 %** d'erreurs sur les mots (intervalle à 95 % : 10,73 à 14,45 %), soit environ un mot sur huit. La quantification int8 des modèles livrés ne dégrade pas ce résultat de façon mesurable face aux poids d'origine en FP32 (12,52 %).
+
+Ces chiffres portent sur de la parole lue, enregistrée proprement. Ils ne mesurent ni une réunion réelle ni la qualité des synthèses : lisez [Ce que ces chiffres ne mesurent pas](#ce-que-ces-chiffres-ne-mesurent-pas) avant de les comparer à votre usage.
+
+## Résultats par moteur
+
+Le taux d'erreur sur les mots (WER) compte les mots remplacés, oubliés ou ajoutés, rapportés au nombre de mots de la référence. Plus il est bas, mieux c'est.
+
+| Moteur de transcription | Modèle | WER | Intervalle à 95 % | Énoncés | Mots |
+| --- | --- | --- | --- | --- | --- |
+| [Sur ce poste](/fr/on-device-transcription) (`syntheo-speech`), Syntheo 0.8.0 à 0.8.2 | NVIDIA Nemotron 3.5 ASR Streaming 0.6B, int8 à plage réduite (modèles livrés) | 12,55 % | 10,73 à 14,45 % | 150 | 4 208 |
+| Référence, non livrée | Même modèle, poids d'origine en FP32 | 12,52 % | 10,72 à 14,35 % | 150 | 4 208 |
+| [Service de transcription en local](/fr/local-transcription-service) (NVIDIA NeMo-Speech.cpp) | Nemotron 3.5 ASR Streaming 0.6B, quantifié `q8_0` | Non mesuré | — | — | — |
+| Serveur compatible OpenAI ([Configurer la transcription et l'IA](/fr/ai-setup)) | Le modèle que vous choisissez | Dépend du modèle choisi, non mesuré | — | — | — |
+
+L'écart apparié entre les modèles livrés et la référence FP32 est de +0,02 point (intervalle à 95 % : −0,39 à +0,44) : il n'est pas mesurable avec cet échantillon. Le service NeMo-Speech.cpp utilise le même modèle de base, mais une autre quantification et un autre moteur d'exécution : le résultat ci-dessus ne s'y applique pas.
+
+Par jeu de données :
+
+| Jeu | Énoncés | Mots | Modèles livrés (int8) | Référence FP32 |
+| --- | --- | --- | --- | --- |
+| FLEURS `fr_fr` | 100 | 2 550 | 12,47 % (10,23 à 14,88) | 12,59 % (10,39 à 14,92) |
+| Multilingual LibriSpeech `french` | 50 | 1 658 | 12,67 % (9,91 à 16,11) | 12,42 % (9,44 à 15,81) |
+| **Total** | **150** | **4 208** | **12,55 % (10,73 à 14,45)** | **12,52 % (10,72 à 14,35)** |
+
+## Conditions de la mesure
+
+- **Date** : 22 novembre 2026.
+- **Modèles** : les fichiers de `apps/speech/models/models.json`, identiques octet pour octet à ceux que Syntheo 0.8.0, 0.8.1 et 0.8.2 téléchargent. Ils sont quantifiés depuis l'export ONNX `altunenes/parakeet-rs` (révision `26684938ff242cb4f7a65fad712476c6015a4477`) de `nvidia/nemotron-3.5-asr-streaming-0.6b` (révision `ea30d66debe3740a08b573244286791d423d6b3e`). La référence FP32 est ce même export, non quantifié.
+- **Matériel** : AMD Ryzen 9 9950X (AVX-512 avec VNNI), limité à 4 cœurs, 4 fils ONNX Runtime.
+- **Exécution** : chaque fichier est transcrit en entier, hors temps réel, sans la chaîne de capture de l'application (micro, son du poste, annulation d'écho). La diarisation n'intervient pas dans le WER.
+- **Audio** : 29,9 min au total, WAV 16 kHz, mono, PCM 16 bits.
+
+Sur un processeur sans VNNI, le calcul int8 arrondit autrement. Mesuré en émulation sur 16 énoncés de ce corpus, l'écart avec le FP32 reste dans le bruit de la mesure (voir la fiche des modèles, `apps/speech/models/model-card.md`).
+
+## Ce que ces chiffres ne mesurent pas
+
+- **Parole lue, pas de réunion** : des phrases lues par une seule personne, sans hésitation, reprise ni conversation.
+- **Pas de recouvrement de parole** : jamais deux personnes en même temps.
+- **Peu d'accents** : les lecteurs de FLEURS et de LibriVox ne représentent pas la variété des accents d'une réunion.
+- **Micro propre** : enregistrements nets, sans bruit de salle, écho, visioconférence compressée ni micro éloigné.
+- **Vocabulaire général** : textes encyclopédiques et littéraires, sans jargon métier, noms propres de votre organisation ni sigles (le [dictionnaire](/fr/languages#noms-propres-et-jargon) sert à cela).
+- **Pas les synthèses** : le WER mesure la transcription seule, pas la qualité des synthèses rédigées ensuite par votre serveur LLM.
+- **Échantillon limité** : 150 énoncés ne détectent pas un écart inférieur à environ 0,5 point entre deux variantes.
+- **Partie MLS** : elle vient du sous-ensemble « 1 heure » du split d'entraînement de Multilingual LibriSpeech. Si le modèle a été entraîné sur MLS, ce qui n'est pas vérifié ici, cette partie peut être optimiste.
+
+En réunion réelle, attendez-vous à un taux d'erreur plus élevé.
+
+## Méthode
+
+### Corpus
+
+- 100 énoncés de **FLEURS** `fr_fr`, split `test` : 100 phrases distinctes tirées avec `random.Random(20261122)`, puis un enregistrement par phrase.
+- 50 énoncés de **Multilingual LibriSpeech** `french`, sous-ensemble `1_hours` : tirés avec `random.Random(20261123)` parmi les énoncés triés par identifiant.
+- Les références sont les transcriptions des jeux de données, sans modification (pour FLEURS, la transcription brute, avec ponctuation).
+
+Le dépôt de Syntheo ne contient aucun audio. Le dossier [`apps/speech/wer-corpus`](https://github.com/WillIsback/Syntheo/tree/main/apps/speech/wer-corpus) contient la liste des énoncés (`utterances.tsv` : identifiant, jeu, split, fichier d'origine, empreintes SHA-256, référence), les sources (`sources.json`), l'attribution et les scripts.
+
+### Normalisation et score
+
+Avant de compter les erreurs, références et transcriptions sont normalisées : forme Unicode NFC, minuscules, apostrophes typographiques ramenées à `'`, apostrophe à l'intérieur d'un mot gardée, autre ponctuation remplacée par une espace. Les nombres ne sont pas normalisés : « 12 » et « douze » comptent comme une erreur.
+
+Le WER est le total des éditions mot à mot (substitutions, suppressions, insertions) divisé par le total des mots des références. L'intervalle à 95 % vient de 1 000 tirages bootstrap des énoncés avec remise (`random.Random(12345)`). L'écart entre deux variantes est apparié : il est calculé sur les mêmes tirages.
+
+### Reproduire
+
+Depuis une copie du dépôt de Syntheo, avec `uv` et `ffmpeg` :
+
+```sh
+# 1. Reconstruire le corpus (plusieurs centaines de Mo téléchargés depuis Hugging Face)
+uv run --locked --script apps/speech/wer-corpus/prepare.py "$HOME/wer-fr"
+
+# 2. Transcrire chaque $HOME/wer-fr/wav/<id>.wav en $HOME/hyp-int8/<id>.txt
+
+# 3. Calculer le WER et son intervalle
+python3 -I apps/speech/wer-corpus/score.py "$HOME/wer-fr/refs.tsv" int8="$HOME/hyp-int8"
+```
+
+`prepare.py` vérifie les empreintes des fichiers source, refait le tirage avec les graines et s'arrête s'il ne redonne pas exactement la liste du dépôt. Il compare aussi chaque WAV produit à celui de la mesure ; une autre version de ffmpeg peut donner d'autres octets, ce qu'il signale sans s'arrêter.
+
+<Note>
+  Le banc qui a transcrit les fichiers pour ces mesures est un outil local, pas encore publié dans le dépôt : l'étape 2 n'est pas encore reproductible à l'identique. La révision Hugging Face de FLEURS n'a pas été relevée lors de la mesure ; `prepare.py` prend la dernière et vérifie l'empreinte de chaque fichier retenu.
+</Note>
+
+## Sources et licences
+
+Le corpus est tiré de deux jeux de données publics. Syntheo en a tiré un sous-ensemble au hasard (graines ci-dessus) et converti chaque énoncé en WAV 16 kHz, mono, PCM 16 bits ; les références sont inchangées.
+
+- **FLEURS** : A. Conneau, M. Ma, S. Khanuja, Y. Zhang, V. Axelrod, S. Dalmia, J. Riesa, C. Rivera, A. Bapna, « FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech », IEEE SLT 2022 (arXiv:2205.12446). Jeu de données [google/fleurs](https://huggingface.co/datasets/google/fleurs), licence CC BY 4.0. Les phrases lues viennent du jeu de traduction FLoRes, que ses auteurs publient sous licence CC BY-SA 4.0.
+- **Multilingual LibriSpeech (MLS)** : V. Pratap, Q. Xu, A. Sriram, G. Synnaeve, R. Collobert, « MLS: A Large-Scale Multilingual Dataset for Speech Research », Interspeech 2020. Jeu de données [facebook/multilingual_librispeech](https://huggingface.co/datasets/facebook/multilingual_librispeech), licence CC BY 4.0. Les enregistrements viennent de LibriVox et sont dans le domaine public.
+
+Les modèles NVIDIA sont sous licence OpenMDW-1.1 (voir [Transcrire sur ce poste](/fr/on-device-transcription#licences)).

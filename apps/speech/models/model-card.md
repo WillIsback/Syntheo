@@ -109,10 +109,34 @@ paired difference is +0.02 point (−0.39 to +0.44): no measurable degradation.
 
 The sample holds 150 utterances (4,208 words, 29.9 minutes of read speech): 100
 from FLEURS `fr_fr` (test split) and 50 from Multilingual LibriSpeech `french`
-(test split), drawn at random with fixed seeds. The intervals come from 1,000
-bootstrap resamples of the utterances. With this sample size, a degradation
-smaller than about 0.5 point between int8 and FP32 cannot be detected, and
-spontaneous, noisy or far-field speech is not measured.
+(the 1-hour subset `1_hours`, taken from the training split), drawn at random
+with fixed seeds. The intervals come from 1,000 bootstrap resamples of the
+utterances. With this sample size, a degradation smaller than about 0.5 point
+between int8 and FP32 cannot be detected, and spontaneous, noisy or far-field
+speech is not measured. Measured on November 22, 2026, with the files listed
+in `models.json` (shipped with Syntheo 0.8.0 to 0.8.2).
+
+The list of utterances, their references and the script that rebuilds the
+sample are in
+[`apps/speech/wer-corpus`](https://github.com/WillIsback/Syntheo/tree/main/apps/speech/wer-corpus)
+of the Syntheo repository, which holds no audio. The method and limits are
+described on the
+[French quality](https://docs.syntheo.studio/en/french-quality) page.
+
+Sample sources and licenses:
+
+- **FLEURS**: A. Conneau, M. Ma, S. Khanuja, Y. Zhang, V. Axelrod, S. Dalmia,
+  J. Riesa, C. Rivera, A. Bapna, "FLEURS: Few-shot Learning Evaluation of
+  Universal Representations of Speech", IEEE SLT 2022 (arXiv:2205.12446).
+  [google/fleurs](https://huggingface.co/datasets/google/fleurs), CC BY 4.0.
+  The sentences come from FLoRes, published by its authors under CC BY-SA 4.0.
+- **Multilingual LibriSpeech**: V. Pratap, Q. Xu, A. Sriram, G. Synnaeve,
+  R. Collobert, "MLS: A Large-Scale Multilingual Dataset for Speech Research",
+  Interspeech 2020.
+  [facebook/multilingual_librispeech](https://huggingface.co/datasets/facebook/multilingual_librispeech),
+  CC BY 4.0. The recordings come from LibriVox and are in the public domain.
+- **Changes**: random subset (seeds 20261122 for FLEURS and 20261123 for MLS),
+  converted to 16 kHz mono 16-bit WAV; references unchanged.
 
 ## CPU compatibility
 

@@ -86,7 +86,8 @@
                   "en/chat",
                   "en/contacts",
                   "en/automations",
-                  "en/languages"
+                  "en/languages",
+                  "en/french-quality"
                 ]
               },
               {
@@ -231,7 +232,8 @@
                   "fr/chat",
                   "fr/contacts",
                   "fr/automations",
-                  "fr/languages"
+                  "fr/languages",
+                  "fr/french-quality"
                 ]
               },
               {
