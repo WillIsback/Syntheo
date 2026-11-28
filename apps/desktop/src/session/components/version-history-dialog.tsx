@@ -9,8 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@syntheo/ui/components/ui/dialog";
-import { cn, formatDistanceToNow, safeParseDate } from "@syntheo/utils";
+import { cn, safeParseDate } from "@syntheo/utils";
 
+import { useRelativeTime } from "~/automations/labels";
 import {
   previewFromBody,
   restoreSessionDocumentBody,
@@ -28,6 +29,7 @@ export function VersionHistoryDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useLingui();
+  const relativeTime = useRelativeTime();
   const conflicts = useSessionConflicts(sessionId);
   const versions = useSessionDocumentVersions(sessionId);
 
@@ -87,11 +89,7 @@ export function VersionHistoryDialog({
                   <div className="min-w-0">
                     <p className="text-xs font-medium">{entry.label}</p>
                     <p className="text-muted-foreground mt-0.5 text-[11px]">
-                      {entry.at > 0
-                        ? formatDistanceToNow(new Date(entry.at), {
-                            addSuffix: true,
-                          })
-                        : null}
+                      {entry.at > 0 ? relativeTime(new Date(entry.at)) : null}
                     </p>
                     <p
                       className={cn([

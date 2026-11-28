@@ -19,8 +19,9 @@ import {
   DropdownMenuTrigger,
 } from "@syntheo/ui/components/ui/dropdown-menu";
 import { appFloatingItemClassName } from "@syntheo/ui/components/ui/floating-content";
-import { cn, formatDistanceToNow } from "@syntheo/utils";
+import { cn } from "@syntheo/utils";
 
+import { useRelativeTime } from "~/automations/labels";
 import {
   type ChatGroupRecord,
   useRecentChatGroups,
@@ -250,10 +251,9 @@ function ChatGroupItem({
   isActive: boolean;
   onSelect: (groupId: string) => void;
 }) {
+  const relativeTime = useRelativeTime();
   const formattedTime = chatGroup.createdAt
-    ? formatDistanceToNow(new Date(chatGroup.createdAt), {
-        addSuffix: true,
-      })
+    ? relativeTime(chatGroup.createdAt)
     : "";
 
   return (
