@@ -78,9 +78,12 @@ function setup(connected = true) {
 
 it("checks the server once in Automatic and keeps the result", async () => {
   mocks.detect.mockResolvedValue({
-    reads: true,
-    source: "probe",
-    checkedAt: "2026-11-26T10:00:00.000Z",
+    status: "detected",
+    detection: {
+      reads: true,
+      source: "probe",
+      checkedAt: "2026-11-26T10:00:00.000Z",
+    },
   });
   setup();
 
@@ -95,7 +98,7 @@ it("checks the server once in Automatic and keeps the result", async () => {
 });
 
 it("says when Automatic cannot check an unrecognized model", async () => {
-  mocks.detect.mockResolvedValue(null);
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
   setup();
 
   await screen.findByText(
@@ -231,7 +234,7 @@ it("keeps the stored result when the model answers beside the test image", async
   fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
 
   await screen.findByText(
-    "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide.",
+    "The server accepted the test image, but the model did not describe it: it may not read images.",
   );
   expect(JSON.parse(mocks.stored)[KEY]).toEqual({ detected });
 });
@@ -255,7 +258,7 @@ it.each([
 ])("does not probe again when the page opens with %s", async (_, entry) => {
   mocks.stored = JSON.stringify({ [KEY]: entry });
   mocks.ready = false;
-  mocks.detect.mockResolvedValue(null);
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
   const client = new QueryClient();
   const view = render(
     <QueryClientProvider client={client}>
@@ -276,7 +279,7 @@ it.each([
 });
 
 it("does not probe again on a second visit after an unclear answer", async () => {
-  mocks.detect.mockResolvedValue(null);
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
   const client = new QueryClient();
   const open = () =>
     render(
@@ -306,7 +309,7 @@ it("ignores a connection test made while the choice was forced", async () => {
     checkedAt: "2026-11-26T10:00:00.000Z",
   };
   mocks.stored = JSON.stringify({ [KEY]: { choice: "yes", detected } });
-  mocks.detect.mockResolvedValue(null);
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
   const client = new QueryClient();
   const tree = (recheck: number) => (
     <QueryClientProvider client={client}>
@@ -369,7 +372,7 @@ it("keeps only the latest detection after two quick connection tests", async () 
           answerOlder = resolve;
         }),
     )
-    .mockResolvedValueOnce(latest);
+    .mockResolvedValueOnce({ status: "detected", detection: latest });
   const client = new QueryClient();
   const tree = (recheck: number) => (
     <QueryClientProvider client={client}>
@@ -390,9 +393,153 @@ it("keeps only the latest detection after two quick connection tests", async () 
   await waitFor(() =>
     expect(JSON.parse(mocks.stored)[KEY].detected).toEqual(latest),
   );
-  answerOlder(older);
+  answerOlder({ status: "detected", detection: older });
   await new Promise((resolve) => setTimeout(resolve, 20));
 
   expect(mocks.detect).toHaveBeenCalledTimes(2);
   expect(JSON.parse(mocks.stored)[KEY].detected).toEqual(latest);
+});
+
+// Issue 784 : après un test non concluant, la carte sépare le résultat
+// gardé du dernier test et dit lequel s'applique.
+it("says the kept result still applies after an unclear test", async () => {
+  const detected = {
+    reads: true,
+    source: "probe",
+    checkedAt: "2026-11-26T10:00:00.000Z",
+  };
+  mocks.stored = JSON.stringify({ [KEY]: { detected } });
+  mocks.probe.mockResolvedValue({ status: "unclear", reason: "unrelated" });
+  setup();
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+
+  const status = await screen.findByRole("status");
+  expect(status.textContent).toContain("Last test:");
+  expect(status.textContent).toContain(
+    "This test is not kept: the result above still applies.",
+  );
+  expect(
+    screen.getByText(/^The model accepted the test image and described it/),
+  ).toBeTruthy();
+});
+
+it("says a clear test result now applies", async () => {
+  mocks.probe.mockResolvedValue({
+    status: "refused",
+    detection: {
+      reads: false,
+      source: "probe",
+      checkedAt: "2026-11-26T11:00:00.000Z",
+    },
+  });
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
+  setup();
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+
+  await screen.findByText("This result now applies.");
+});
+
+it("says a forced choice still applies after a test", async () => {
+  mocks.stored = JSON.stringify({ [KEY]: { choice: "no" } });
+  mocks.probe.mockResolvedValue({ status: "unclear", reason: "no-answer" });
+  setup();
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+
+  await screen.findByText(
+    "The server answered without describing the test image.",
+  );
+  expect(
+    screen.getByText(
+      "Your choice No still applies: the note's images are never attached.",
+    ),
+  ).toBeTruthy();
+});
+
+// Une réponse 200 ambiguë de la détection automatique : le serveur a bien
+// répondu, il n'a simplement pas décrit l'image.
+it("says the server answered without describing the image", async () => {
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unrelated" });
+  setup();
+
+  await screen.findByText(
+    "The server answered without describing the test image and “qwen3.8-flash” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model.",
+  );
+  expect(mocks.stored).toBe("{}");
+});
+
+// Le dernier test appartient au serveur et au modèle testés : passer à un
+// autre modèle sans remonter la carte ne doit pas reporter son résultat ni
+// la phrase « ce qui s'applique » sur le nouveau modèle.
+function treeFor(client: QueryClient, model: string) {
+  return (
+    <QueryClientProvider client={client}>
+      <ImageInputSetting baseUrl={BASE} apiKey="" model={model} connected />
+    </QueryClientProvider>
+  );
+}
+
+it("drops the last test when another model is chosen", async () => {
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
+  mocks.probe.mockResolvedValue({
+    status: "reads",
+    detection: {
+      reads: true,
+      source: "probe",
+      checkedAt: "2026-11-26T11:00:00.000Z",
+    },
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(treeFor(client, MODEL));
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+  await screen.findByText("This result now applies.");
+
+  view.rerender(treeFor(client, "llama-text-only"));
+
+  await screen.findByText(/“llama-text-only” is not recognized/);
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByText(/^Last test:/)).toBeNull();
+
+  view.rerender(treeFor(client, MODEL));
+  expect(screen.getByText("This result now applies.")).toBeTruthy();
+});
+
+it("keeps a test that ends after a model change for the tested model", async () => {
+  mocks.detect.mockResolvedValue({ status: "unclear", reason: "unreachable" });
+  let answer: (value: unknown) => void = () => {};
+  mocks.probe.mockReturnValue(
+    new Promise((resolve) => {
+      answer = resolve;
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(treeFor(client, MODEL));
+
+  fireEvent.click(screen.getByRole("button", { name: "Test with an image" }));
+  view.rerender(treeFor(client, "llama-text-only"));
+  expect(
+    screen.getByRole("button", { name: "Test with an image" }),
+  ).toBeTruthy();
+
+  answer({
+    status: "reads",
+    detection: {
+      reads: true,
+      source: "probe",
+      checkedAt: "2026-11-26T11:00:00.000Z",
+    },
+  });
+
+  await waitFor(() =>
+    expect(JSON.parse(mocks.stored)[KEY]?.detected?.reads).toBe(true),
+  );
+  expect(JSON.parse(mocks.stored)[`${BASE}|llama-text-only`]).toBeUndefined();
+  expect(screen.queryByRole("status")).toBeNull();
 });
