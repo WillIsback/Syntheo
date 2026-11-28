@@ -125,6 +125,10 @@ vi.mock("streamdown", () => ({
   ),
 }));
 
+vi.mock("~/session/hooks/useAttachmentResolver", () => ({
+  useAttachmentResolver: () => () => null,
+}));
+
 vi.mock("~/session/components/note-input/enhanced-actions", () => ({
   useEnhancedNoteActions: () => ({
     isGenerating: false,

@@ -1,7 +1,46 @@
-import { parseImageMetadata } from "@syntheo/editor/node-views";
+import {
+  parseImageMetadata,
+  useAttachmentResolver,
+} from "@syntheo/editor/node-views";
 import { cn } from "@syntheo/utils";
 
+import { attachmentIdFromImageSrc } from "~/session/summary-markdown";
 import { isGeneratedImageSrc } from "~/shared/safe-markdown";
+
+// Contenu généré : seule une image `data:image` est affichée ; toute autre
+// adresse (distante ou de fichier local) laisse son texte alternatif, sans
+// aucune requête (issues 642, 677 et 678). Exception (issue 697) : une image
+// désignée par l'identifiant de sa pièce jointe (`attachment://<id>`)
+// s'affiche si la session la connaît ; son adresse locale vient alors du
+// résolveur de la session, jamais du Markdown. Sans résolveur fourni (rendu
+// en direct de la synthèse), elle laisse aussi son texte alternatif.
+function StreamdownImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const resolveAttachment = useAttachmentResolver();
+  const attachmentId = attachmentIdFromImageSrc(props.src);
+  const src = attachmentId
+    ? (resolveAttachment?.(attachmentId)?.src ?? null)
+    : isGeneratedImageSrc(props.src)
+      ? props.src
+      : null;
+  if (!src) {
+    return props.alt ? <span>{props.alt}</span> : null;
+  }
+  const { editorWidth, title } = parseImageMetadata(props.title);
+  const className = cn(["max-w-full", props.className]);
+  const style = {
+    ...(editorWidth ? { width: `${editorWidth}%` } : {}),
+    ...(props.style || {}),
+  };
+  return (
+    <img
+      {...props}
+      src={src}
+      title={title}
+      className={className}
+      style={style}
+    />
+  );
+}
 
 // Typography comes from the shared `.note-typography` scope (see
 // packages/editor styles) so the streaming view matches the editor exactly;
@@ -26,19 +65,5 @@ export const streamdownComponents = {
       ])}
     />
   ),
-  // Contenu généré : seule une image `data:image` est affichée ; toute autre
-  // adresse (distante ou de fichier local) laisse son texte alternatif, sans
-  // aucune requête (issues 642, 677 et 678).
-  img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
-    if (!isGeneratedImageSrc(props.src)) {
-      return props.alt ? <span>{props.alt}</span> : null;
-    }
-    const { editorWidth, title } = parseImageMetadata(props.title);
-    const className = cn(["max-w-full", props.className]);
-    const style = {
-      ...(editorWidth ? { width: `${editorWidth}%` } : {}),
-      ...(props.style || {}),
-    };
-    return <img {...props} title={title} className={className} style={style} />;
-  },
+  img: StreamdownImage,
 } as const;

@@ -4,9 +4,8 @@
 // lecture seule. Tout le reste de l'application ne voit que la version
 // actuelle.
 
-import { json2md } from "@syntheo/editor/markdown";
-
 import { useLiveQuery } from "~/db";
+import { summaryBodyToMarkdown } from "~/session/summary-markdown";
 
 type SummaryGenerationMetadata = {
   generatedAt: string | null;
@@ -88,18 +87,6 @@ export function parseSummaryGenerationMetadata(
   };
 }
 
-function bodyToMarkdown(body: string, format: string): string {
-  if (!body || format === "markdown") {
-    return body;
-  }
-  try {
-    return json2md(JSON.parse(body));
-  } catch (error) {
-    console.error("[session] failed to read a summary version", error);
-    return "";
-  }
-}
-
 export function mapSummaryVersionRow(
   row: SummaryVersionSqlRow,
 ): SummaryVersionRecord {
@@ -109,7 +96,8 @@ export function mapSummaryVersionRow(
     version: Number(row.version),
     title: row.title,
     templateId: row.template_id,
-    markdown: bodyToMarkdown(row.body, row.body_format),
+    // Une image jointe y garde son identifiant de pièce jointe (issue 697).
+    markdown: summaryBodyToMarkdown(row.body, row.body_format),
     generatedAt: row.generated_at || null,
     supersededAt: row.superseded_at,
   };
