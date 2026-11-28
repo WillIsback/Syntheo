@@ -22,12 +22,32 @@ import { isNoSpeechDetectedError } from "~/stt/no-speech-error";
 import { useRunBatch } from "~/stt/useRunBatch";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
-const workerId = crypto.randomUUID();
+const WORKER_ID_STORAGE_KEY = "syntheo.recording-import.worker-id";
+
+/** Issue 817 : l'identifiant du worker vit autant que la fenêtre principale,
+ * pas autant qu'un chargement de l'interface. sessionStorage survit à
+ * location.reload() mais pas au redémarrage de l'application. */
+function stableWorkerId(): string {
+  try {
+    const saved = sessionStorage.getItem(WORKER_ID_STORAGE_KEY);
+    if (saved) return saved;
+    const created = crypto.randomUUID();
+    sessionStorage.setItem(WORKER_ID_STORAGE_KEY, created);
+    return created;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+const workerId = stableWorkerId();
 // The agent CLI treats the desktop as available while this heartbeat is fresher
 // than 90 s (`crates/agent-access`). Each beat is a SQLite write, so it stays
 // sparse: every 5 s kept the WAL busy even when the app was idle (issue 271).
 const RECORDING_IMPORT_HEARTBEAT_MS = 30_000;
 // A running job refreshes its row every 10 s; past this age it was interrupted.
+// Issue 816 : Syntheo is single-instance and only the main window runs this
+// worker, so a running job held by another worker id lost its processing and
+// is interrupted on the first beat, without waiting for this delay.
 const STALE_JOB_SECONDS = 120;
 type ImportJob = { id: string; meeting_id: string; file_path: string };
 
@@ -62,13 +82,14 @@ export async function recordingImportHeartbeat() {
         ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at, vault_path = excluded.vault_path`,
       params: [workerId, vault.data],
     },
-    agentImportInterruptedFailureStatement(STALE_JOB_SECONDS),
+    agentImportInterruptedFailureStatement(workerId, STALE_JOB_SECONDS),
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed',
         error = 'Desktop processing was interrupted. The meeting and any completed transcript were preserved.',
         updated_at = unixepoch()
-        WHERE processing_status IN ('importing', 'transcribing', 'summarizing') AND updated_at < unixepoch() - ?`,
-      params: [STALE_JOB_SECONDS],
+        WHERE processing_status IN ('importing', 'transcribing', 'summarizing')
+          AND (worker_id IS NOT ? OR updated_at < unixepoch() - ?)`,
+      params: [workerId, STALE_JOB_SECONDS],
     },
     {
       sql: `UPDATE local_recording_import_jobs SET processing_status = 'failed', error = 'Meeting was deleted.', updated_at = unixepoch()
