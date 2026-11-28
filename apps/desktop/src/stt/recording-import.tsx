@@ -26,7 +26,27 @@ const WORKER_ID_STORAGE_KEY = "syntheo.recording-import.worker-id";
 
 /** Issue 817 : l'identifiant du worker vit autant que la fenêtre principale,
  * pas autant qu'un chargement de l'interface. sessionStorage survit à
- * location.reload() mais pas au redémarrage de l'application. */
+ * location.reload() mais pas au redémarrage de l'application.
+ *
+ * Repli : sans sessionStorage (exception) ou si la fenêtre principale est
+ * recréée (macOS, rebuild_main_window), l'identifiant change ; une tâche en
+ * cours est alors déclarée interrompue au premier battement au lieu de
+ * +120 s. L'état final est le même qu'avant l'issue 816.
+ *
+ * Hypothèse : un seul worker vivant par base. Syntheo est à instance unique
+ * (launch lock, channel lock, tauri_plugin_single_instance) et seule la
+ * fenêtre principale monte ce worker. Le battement déclare donc interrompue
+ * toute tâche en cours d'un autre worker (`worker_id IS NOT ?`). Limites
+ * connues, où deux instances peuvent tourner sur la même base :
+ * - launch.lock est relâché une fois le builder Tauri terminé
+ *   (apps/desktop/src-tauri/src/lib.rs, `drop(launch_lock)`), le relais
+ *   revenant à tauri_plugin_single_instance ;
+ * - sous Linux, sans bus D-Bus de session, tauri_plugin_single_instance se
+ *   lance normalement, sans exclure une seconde instance ;
+ * - LaunchLockState::Unavailable et ChannelLockState::Unavailable démarrent
+ *   sans verrou.
+ * Deux workers vivants se déclarent alors interrompus l'un l'autre au premier
+ * battement. Ce cas n'est pas pris en charge (suite en issue 817, v0.8.4). */
 function stableWorkerId(): string {
   try {
     const saved = sessionStorage.getItem(WORKER_ID_STORAGE_KEY);
@@ -50,6 +70,10 @@ const RECORDING_IMPORT_HEARTBEAT_MS = 30_000;
 // is interrupted on the first beat, without waiting for this delay.
 const STALE_JOB_SECONDS = 120;
 type ImportJob = { id: string; meeting_id: string; file_path: string };
+// Bounded number of rows read by the job selection (see nextImportJob).
+const IMPORT_CANDIDATES_LIMIT = 8;
+// Jobs processed by this load of the interface (not by a previous one).
+const runningImports = new Set<string>();
 
 /** Formats acceptés pour un import demandé par un agent (même liste que la
  * CLI, crates/agent-access/src/recording_import.rs). */
@@ -123,13 +147,7 @@ export function RecordingImportWorker() {
   });
   const { data: jobs = [] } = useQuery({
     queryKey: ["local-recording-import-jobs"],
-    queryFn: () =>
-      liveQueryClient.execute<ImportJob>(
-        `SELECT id, meeting_id, file_path FROM local_recording_import_jobs
-       WHERE processing_status = 'queued' OR (worker_id = ? AND processing_status IN ('importing', 'transcribing', 'summarizing'))
-       ORDER BY CASE WHEN processing_status = 'queued' THEN 1 ELSE 0 END, updated_at, id LIMIT 1`,
-        [workerId],
-      ),
+    queryFn: nextImportJob,
     refetchInterval: 2000,
     refetchIntervalInBackground: true,
   });
@@ -142,6 +160,32 @@ export function RecordingImportWorker() {
   );
 }
 
+/** Choisit la tâche à porter : celle en cours dans ce chargement de
+ * l'interface (elle reste montée, sans traitement en parallèle), sinon la
+ * première en file. Issue 816 : l'identifiant survit à location.reload(), donc
+ * une tâche en cours du worker courant absente de runningImports a été
+ * abandonnée par le chargement précédent. Elle est ignorée ici, sinon elle
+ * bloquerait la file jusqu'à sa péremption (~150 s), et laissée au battement
+ * (échec à +120 s, en attendant l'issue 817). */
+export async function nextImportJob(): Promise<ImportJob[]> {
+  const rows = await liveQueryClient.execute<
+    ImportJob & { processing_status: string }
+  >(
+    `SELECT id, meeting_id, file_path, processing_status FROM local_recording_import_jobs
+     WHERE processing_status = 'queued' OR (worker_id = ? AND processing_status IN ('importing', 'transcribing', 'summarizing'))
+     ORDER BY CASE WHEN processing_status = 'queued' THEN 1 ELSE 0 END, updated_at, id LIMIT ?`,
+    [workerId, IMPORT_CANDIDATES_LIMIT],
+  );
+  const next = rows.find(
+    (row) => row.processing_status === "queued" || runningImports.has(row.id),
+  );
+  // Same shape as before: the status stays out so the job keeps its identity
+  // when it goes from queued to importing.
+  return next
+    ? [{ id: next.id, meeting_id: next.meeting_id, file_path: next.file_path }]
+    : [];
+}
+
 function ReadyImport({ job }: { job: ImportJob }) {
   const session = useSession(job.meeting_id);
   const settingsReady = useSettingsReady();
@@ -151,8 +195,6 @@ function ReadyImport({ job }: { job: ImportJob }) {
     <RunImport job={job} />
   ) : null;
 }
-
-const runningImports = new Set<string>();
 
 function RunImport({ job }: { job: ImportJob }) {
   const runBatch = useRunBatch(job.meeting_id);

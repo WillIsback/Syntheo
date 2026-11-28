@@ -214,7 +214,9 @@ describe("recording import heartbeat", () => {
   // Issue 817 : un rechargement de l'interface (location.reload) relit le
   // module. Le worker garde son identifiant pour toute la vie de la fenêtre,
   // sinon sa propre tâche en cours passerait pour celle d'un worker disparu.
-  it("keeps the same worker and its running job after the interface reloads", async () => {
+  // Base pour l'issue 817 : seul l'identifiant est vérifié ; la reprise de la
+  // tâche jusqu'à done n'est pas livrée.
+  it("keeps the same worker id and its running job after the interface reloads (base for issue 817)", async () => {
     await recordingImportHeartbeat();
     const [current] = workerIds();
     insertJob("job-5", "meeting-5", "transcribing", {
@@ -229,5 +231,32 @@ describe("recording import heartbeat", () => {
     expect(workerIds()).toEqual([current]);
     expect(jobStatus("job-5")).toBe("transcribing");
     expect(metadata("meeting-5")).toEqual({ welcome_note: "kept" });
+  });
+
+  // Issue 816 : après un rechargement, l'identifiant est le même mais le
+  // nouveau chargement ne traite rien. La tâche en cours abandonnée par le
+  // chargement précédent ne doit pas bloquer la file jusqu'à sa péremption :
+  // la tâche en attente est prise tout de suite, l'abandonnée reste au
+  // battement.
+  it("picks a queued job at once when a reload abandoned a running job", async () => {
+    await recordingImportHeartbeat();
+    const [current] = workerIds();
+    insertJob("job-6", "meeting-6", "transcribing", {
+      workerId: current,
+      ageSeconds: 5,
+    });
+    insertJob("job-7", "meeting-7", "queued");
+
+    vi.resetModules();
+    const reloaded = await import("./recording-import");
+
+    expect(await reloaded.nextImportJob()).toEqual([
+      {
+        id: "job-7",
+        meeting_id: "meeting-7",
+        file_path: "/recordings/call.wav",
+      },
+    ]);
+    expect(jobStatus("job-6")).toBe("transcribing");
   });
 });
