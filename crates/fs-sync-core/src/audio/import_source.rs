@@ -57,8 +57,10 @@ pub(crate) fn open_import_source_observed(
     limits: ImportSourceLimits<'_>,
     observe: &mut dyn FnMut(ImportStage),
 ) -> std::io::Result<OpenedImportSource> {
-    // Le chemin canonique ne contient plus aucun lien symbolique : l'ouvrir
-    // sans suivre de lien refuse un lien posé à sa place entre-temps.
+    // Le chemin canonique ne contient plus aucun lien symbolique. Sous Unix,
+    // l'ouvrir sans suivre de lien refuse un lien posé à sa place
+    // entre-temps ; sous Windows, `still_at` refuse le handle s'il mène
+    // ailleurs.
     let canonical = std::fs::canonicalize(source_path)?;
     if !limits.extensions.is_empty() {
         let extension = canonical
@@ -72,7 +74,7 @@ pub(crate) fn open_import_source_observed(
     }
     observe(ImportStage::PathChecked);
 
-    let file = platform::open_no_follow(&canonical)?;
+    let file = platform::open_once(&canonical)?;
     let metadata = file.metadata()?;
     if !metadata.is_file() || metadata.len() == 0 {
         return Err(invalid("audio_source_must_be_a_nonempty_file"));
@@ -145,7 +147,7 @@ mod platform {
     /// `O_NOFOLLOW` : un lien symbolique au dernier composant fait échouer
     /// l'ouverture (`ELOOP`). `O_NONBLOCK` : une FIFO posée à la place du
     /// fichier ne bloque pas l'ouverture ; elle est refusée par `fstat`.
-    pub(super) fn open_no_follow(path: &Path) -> std::io::Result<File> {
+    pub(super) fn open_once(path: &Path) -> std::io::Result<File> {
         std::fs::OpenOptions::new()
             .read(true)
             .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC)
@@ -185,30 +187,20 @@ mod platform {
     use std::ffi::OsString;
     use std::fs::{File, Metadata};
     use std::os::windows::ffi::OsStringExt;
-    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
     use std::os::windows::io::AsRawHandle;
     use std::path::{Path, PathBuf};
 
     use windows::Win32::Foundation::HANDLE;
     use windows::Win32::Storage::FileSystem::{FILE_NAME_NORMALIZED, GetFinalPathNameByHandleW};
 
-    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-
-    /// `FILE_FLAG_OPEN_REPARSE_POINT` : un lien symbolique ou une jonction est
-    /// ouvert lui-même, sans être suivi ; il est ensuite refusé.
-    pub(super) fn open_no_follow(path: &Path) -> std::io::Result<File> {
-        let file = std::fs::OpenOptions::new()
-            .read(true)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
-            .open(path)?;
-        if file.metadata()?.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "audio_source_is_a_link",
-            ));
-        }
-        Ok(file)
+    /// Ouverture ordinaire, sans `FILE_FLAG_OPEN_REPARSE_POINT` : beaucoup de
+    /// points d'analyse ne sont pas des liens (fichiers OneDrive « à la
+    /// demande », déduplication…) et doivent être ouverts normalement, pour
+    /// que le pilote les rapatrie. Un lien symbolique ou une jonction posé à
+    /// la place du fichier ou d'un dossier parent est suivi ici, mais le handle
+    /// mène alors à un autre chemin final : `still_at` refuse l'ouverture.
+    pub(super) fn open_once(path: &Path) -> std::io::Result<File> {
+        std::fs::OpenOptions::new().read(true).open(path)
     }
 
     /// Chemin final du handle ouvert, comparé au chemin canonique validé
@@ -341,6 +333,35 @@ mod tests {
         .unwrap();
 
         assert_eq!(data, b"validated audio");
+    }
+
+    /// Windows : lien symbolique posé à la place du fichier entre la
+    /// vérification du chemin et l'ouverture. Le handle suit le lien mais son
+    /// chemin final n'est plus le chemin validé : refus. Ignoré si le compte
+    /// n'a pas le droit de créer un lien symbolique (mode développeur absent).
+    #[cfg(windows)]
+    #[test]
+    fn a_symlink_swapped_in_before_opening_is_refused_on_windows() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("meeting.wav");
+        std::fs::write(&path, b"validated audio").unwrap();
+        let secret = temp.path().join("secret.wav");
+        std::fs::write(&secret, b"secret content!").unwrap();
+        let mut linked = true;
+
+        let result = read_import_source_observed(&path, LIMITS, &mut |stage| {
+            if stage == ImportStage::PathChecked {
+                std::fs::remove_file(&path).unwrap();
+                linked = std::os::windows::fs::symlink_file(&secret, &path).is_ok();
+                if !linked {
+                    std::fs::write(&path, b"validated audio").unwrap();
+                }
+            }
+        });
+
+        if linked {
+            assert!(result.is_err(), "the swapped-in link must not be read");
+        }
     }
 
     /// Dossier parent remplacé par un lien entre la vérification du chemin et
