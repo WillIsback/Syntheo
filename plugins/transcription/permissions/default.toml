@@ -48,6 +48,7 @@ permissions = [
     "allow-begin-audio-upload",
     "allow-append-audio-upload",
     "allow-discard-audio-upload",
+    "allow-open-recording-import",
   "allow-probe-local-transcription",
   "allow-on-device-status",
   "allow-on-device-download-models",

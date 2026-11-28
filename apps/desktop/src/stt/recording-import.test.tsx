@@ -13,7 +13,15 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   transcribe: vi.fn(),
   summarize: vi.fn(),
+  openRecordingImport: vi.fn(),
+  discardAudioUpload: vi.fn(),
   importedPath: "/audio.wav",
+}));
+vi.mock("@syntheo/plugin-transcription", () => ({
+  commands: {
+    openRecordingImport: mocks.openRecordingImport,
+    discardAudioUpload: mocks.discardAudioUpload,
+  },
 }));
 vi.mock("@syntheo/plugin-settings", () => ({
   commands: { vaultBase: async () => ({ status: "ok", data: "/vault" }) },
@@ -52,6 +60,11 @@ function setupJob(fails: boolean) {
     finish = resolve;
   });
   mocks.transcribe.mockResolvedValue(undefined);
+  mocks.openRecordingImport.mockResolvedValue({
+    status: "ok",
+    data: "upload-1",
+  });
+  mocks.discardAudioUpload.mockResolvedValue({ status: "ok", data: null });
   mocks.summarize.mockImplementation(async () => {
     await summary;
     if (fails) throw new Error("provider-secret-must-not-leak");
@@ -149,6 +162,46 @@ it("fails an agent import whose resolved file is not a recording", async () => {
   } finally {
     mocks.importedPath = "/audio.wav";
   }
+});
+
+// Issue 744 : le fichier est ouvert une seule fois côté Rust, validé sur le
+// descripteur ouvert et lu en mémoire ; la transcription reprend ce contenu
+// et ne relit jamais le chemin, qui pourrait avoir été remplacé entre-temps.
+it("transcribes the recording read once in memory, never its path", async () => {
+  vi.useFakeTimers();
+  const job = setupJob(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(mocks.openRecordingImport).toHaveBeenCalledWith("/audio.wav");
+  expect(mocks.transcribe).toHaveBeenCalledWith("", {
+    promotion: { scope: "whole_session" },
+    audioUploadId: "upload-1",
+  });
+  await act(async () => {
+    job.finishSummary();
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(job.state().status).toBe("done");
+  expect(mocks.discardAudioUpload).toHaveBeenCalledWith("upload-1");
+  job.view.unmount();
+  job.client.clear();
+});
+
+it("fails an agent import whose recording cannot be opened safely", async () => {
+  vi.useFakeTimers();
+  const job = setupJob(false);
+  mocks.openRecordingImport.mockResolvedValue({
+    status: "error",
+    error: "audio_source_changed_during_import",
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(job.state().status).toBe("failed");
+  expect(mocks.transcribe).not.toHaveBeenCalled();
+  job.view.unmount();
+  job.client.clear();
 });
 
 it("runs imports without any account and finishes them after the worker unmounts", async () => {

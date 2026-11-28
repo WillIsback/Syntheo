@@ -3432,6 +3432,7 @@ dependencies = [
  "frontmatter",
  "fs-format",
  "glob",
+ "libc",
  "predicates",
  "rayon",
  "rodio",
@@ -3447,6 +3448,7 @@ dependencies = [
  "tracing",
  "uuid",
  "vad",
+ "windows",
 ]
 
 [[package]]
