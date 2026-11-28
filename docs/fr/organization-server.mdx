@@ -1,0 +1,114 @@
+---
+title: "Serveur fourni par votre organisation"
+description: "Brancher Syntheo sur le serveur de modèles que votre organisation met à disposition, dont Albert API pour les administrations de l'État."
+---
+
+Syntheo se connecte à un serveur compatible OpenAI : le vôtre, ou celui que votre organisation met à votre disposition (serveur de la DSI, plateforme mutualisée entre organismes, ou Albert API pour les administrations de l'État). Syntheo ne fournit aucun de ces serveurs, n'en recommande aucun et n'a de lien avec aucun d'eux. L'application ne contient aucune adresse par défaut : c'est vous qui la saisissez.
+
+## Qui fournit quoi
+
+- **L'organisation** fournit l'adresse du serveur, en `https://`, et dit qui a le droit de s'en servir et pour quelles données.
+- **L'utilisateur** saisit l'adresse dans **Paramètres › Synthèse**, carte « Mon serveur », et sa clé d'API personnelle sous « Avancé ». La clé est rangée dans le trousseau du système.
+- **Syntheo** envoie les requêtes directement du poste au serveur. Il n'y a ni intermédiaire, ni compte, ni télémétrie.
+
+Un serveur exploité par un tiers, même votre propre organisation, traite vos transcriptions pour le compte du responsable de traitement : voir [Données et confidentialité](/fr/data-and-privacy) et [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
+
+Le fichier `managed_settings.json` peut imposer le serveur de transcription à tous les postes. Il ne peut pas imposer le serveur de synthèse : chaque poste saisit l'adresse (voir [Sécurité](/fr/security#déploiement-en-entreprise)).
+
+## Agents de l'État : Albert API
+
+<Note>
+  Cette section est offerte aux services publics, à titre d'information et sans contrepartie. Syntheo n'est ni affilié à Albert API ni recommandé par ses opérateurs, et aucun accord ne les lie. Syntheo ne reçoit rien de ce que vous y envoyez. Les faits ci-dessous ont été relus le 28/11/2026. Ils évoluent vite : la [documentation officielle d'Albert API](https://guides.ia.numerique.gouv.fr/albert-api) fait foi. Cette section pourra être modifiée ou retirée si le service change.
+</Note>
+
+Albert API est un service de modèles de langage compatible OpenAI, opéré par la DINUM pour les administrations de l'État. Syntheo s'y branche comme à tout autre serveur.
+
+### Qui y a droit
+
+- Les administrations de l'État et les organismes placés sous leur tutelle. Les collectivités et les associations chargées d'une mission de service public n'y ont droit que si elles sont **sous co-tutelle de l'État**. Pour un établissement de santé, renseignez-vous auprès de l'équipe Albert API.
+- Les agents, contractuels compris, et les prestataires invités par leur administration.
+- Certaines pages d'Albert API réservent le niveau « Expérimentation » aux agents de la fonction publique d'État : vérifiez votre cas.
+- Un agent peut créer seul sa clé, en se connectant avec ProConnect. Si son organisme n'est pas reconnu, l'administration dépose une demande DataPass « produits DINUM ».
+
+<Warning>
+  **Pouvoir créer une clé ne suffit pas.** Le service est mis à disposition par l'administration de rattachement, à des fins d'expérimentation, dans le respect de sa doctrine d'emploi de l'IA. Avant d'y envoyer des transcriptions de réunions, obtenez l'accord de votre administration : hiérarchie, DSI, délégué à la protection des données.
+</Warning>
+
+### Ce que garantit la note « Sécurité des données » d'Albert API
+
+Note du 18/11/2026, pour l'inférence seulement :
+
+- **Le contenu n'est pas conservé.** Consignes, transcriptions et synthèses sont traitées en mémoire le temps de la requête. Elles ne sont ni journalisées, ni réutilisées pour entraîner ou évaluer un modèle. Le corps d'une requête peut passer par un tampon disque transitoire, détruit à la fin de la requête.
+- **Hébergement.** Les modèles sont à poids ouverts, hébergés chez Outscale (qualifié SecNumCloud) et sur Nubo. Aucun appel ne part vers un fournisseur de modèles externe.
+- **Métadonnées gardées 24 mois** : horodatage, identifiant du compte ou de la clé, modèle et point d'accès, nombre de jetons, code de réponse et durée, **adresse IP source**.
+- **Homologation** par une décision du 24/11/2026, pour 2 ans. Elle couvre les données d'une sensibilité particulière au sens de la loi SREN, **sauf la mention « Diffusion restreinte »**.
+- **Sur demande** : le code de la passerelle, le dossier de sécurité et un atelier technique pour les questions qui restent dans une analyse d'impact (AIPD).
+
+### Ce qu'elle ne couvre pas
+
+- **Le trajet.** Albert API n'est joignable que par Internet, pas par le RIE. Les requêtes sortent de votre réseau, chiffrées en TLS.
+- **Les métadonnées.** La clé et l'adresse IP de sortie, souvent celle de la passerelle de votre administration, peuvent identifier l'agent ou son service : mentionnez-les dans l'information des agents.
+- **Le contrôle a posteriori.** Albert API ne peut ni restituer un contenu ni l'analyser après un incident : ce contrôle relève de l'application et de l'administration. Syntheo n'a pas d'opérateur central : seul l'historique local du poste existe.
+- **Les données les plus sensibles.** La mention « Diffusion restreinte » est exclue dans tous les cas. Pour les données des articles 9 et 10 du RGPD (santé, opinions, condamnations…), les modalités d'utilisation du 21/10/2025 disent qu'Albert API « n'a pas vocation à recevoir » ces données, alors que la note de sécurité dit le service compatible avec les données de santé. Tant que votre délégué à la protection des données ne s'est pas prononcé, considérez ces données comme exclues.
+- **Votre propre traitement.** L'homologation d'Albert API ne couvre ni le poste, ni le stockage des notes, ni l'usage qu'en fait votre administration.
+
+### Qui est responsable de quoi (RGPD)
+
+| Acteur | Rôle |
+| --- | --- |
+| L'administration de l'agent | Responsable de traitement : elle fixe les finalités et les données envoyées, tient le registre, mène l'AIPD si elle est requise et informe les participants aux réunions |
+| La DINUM (Albert API) | Sous-traitant au sens de l'article 28, pour l'inférence seulement |
+| Syntheo et son auteur | Ni l'un ni l'autre : un logiciel installé sur le poste, qui n'exploite aucun serveur et ne reçoit ni contenu, ni clé, ni métadonnée |
+
+L'article 28 exige un contrat ou un acte juridique entre le responsable de traitement et son sous-traitant. Seules les modalités d'utilisation sont publiées : demandez à l'équipe Albert API ce qui en tient lieu.
+
+### Brancher un poste
+
+<Steps>
+  <Step title="Créer une clé">
+    Dans un navigateur, connectez-vous au playground d'Albert API (`albert.playground.etalab.gouv.fr`) avec ProConnect, puis créez une clé. Elle ne s'affiche qu'une fois, expire au plus tard au bout d'un an, et sa révocation est définitive. Ne la partagez pas.
+  </Step>
+  <Step title="Saisir l'adresse et la clé">
+    Dans **Paramètres › Synthèse**, carte « Mon serveur », saisissez `https://albert.api.etalab.gouv.fr/v1`. Collez la clé sous « Avancé », puis cliquez sur « Tester la connexion ».
+  </Step>
+  <Step title="Choisir un modèle de discussion">
+    Choisissez un modèle fait pour la discussion. Écartez les modèles de code, d'OCR, d'embeddings et de rerank. Préférez l'identifiant d'un modèle à ses alias (`openweight-…`), qui peuvent changer sans préavis. Les modèles sont retirés selon un calendrier publié par Albert API : consultez-le, et changez de modèle avant son retrait.
+  </Step>
+</Steps>
+
+### Réseau
+
+- Depuis les postes : HTTPS (port 443) vers `albert.api.etalab.gouv.fr`. Dans le navigateur, pour créer les clés : `albert.playground.etalab.gouv.fr` et les domaines de ProConnect.
+- Syntheo tient compte des variables `HTTPS_PROXY` et `NO_PROXY`. Les fichiers PAC ne sont pas garantis : testez sur un poste type.
+- Syntheo ne fait confiance qu'aux autorités de certification publiques. Un proxy qui inspecte le TLS empêchera probablement la connexion : exemptez `albert.api.etalab.gouv.fr` de l'inspection.
+
+### Limites
+
+- **Quotas par agent**, toutes clés et tous outils confondus. En expérimentation, pour `gpt-oss-120b` : 10 requêtes par minute et 1 000 par jour.
+- **Disponibilité** : aucune garantie en expérimentation, et un accès restreint en période de forte demande.
+- **4 minutes au plus par requête.** La synthèse d'une très longue réunion peut s'en approcher.
+- Les modalités d'utilisation peuvent changer à tout moment, sans préavis.
+
+### À valider avant d'y envoyer des réunions
+
+- L'accord de l'administration sur la finalité (synthèse de réunions de travail) et sa conformité à la doctrine d'emploi de l'IA.
+- Les données exclues : « Diffusion restreinte » dans tous les cas ; articles 9 et 10 du RGPD tant que le point n'est pas tranché.
+- L'AIPD si elle est requise, avec l'atelier proposé par l'équipe Albert API.
+- L'acte qui tient lieu de contrat au titre de l'article 28, et le traitement des métadonnées gardées 24 mois.
+- L'homologation du traitement local : poste, Syntheo, stockage des notes.
+- L'ouverture des flux réseau et l'exemption d'inspection TLS.
+- L'information des agents et des participants aux réunions.
+
+Contact du service : `albert.api@numerique.gouv.fr`. État du service : `albert.status.etalab.gouv.fr`.
+
+## Adapter Syntheo à votre système d'information
+
+Syntheo est distribué sous licence MIT. Une organisation peut copier le projet sur sa forge interne et l'adapter à son écosystème, par exemple :
+
+- préremplir l'adresse de son serveur de modèles, ou la rendre impossible à changer ;
+- ajouter ses autorités de certification internes ;
+- brancher ses propres outils de déploiement, de journalisation ou de supervision.
+
+La licence demande seulement de conserver les mentions de copyright et le texte de la licence (fichiers `LICENSE` et `NOTICE.md`).
+
+Le projet public reste neutre : il ne livre aucune adresse de service, aucun préréglage d'hébergeur et aucun intermédiaire. Sans copier le projet, une DSI peut déjà imposer le serveur de transcription, couper la synthèse ou désigner un miroir interne des modèles avec `managed_settings.json` : voir [Sécurité](/fr/security#déploiement-en-entreprise).

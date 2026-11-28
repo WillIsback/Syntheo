@@ -96,6 +96,7 @@
                   "en/beta",
                   "en/offline",
                   "en/security",
+                  "en/organization-server",
                   "en/conformite/rgpd"
                 ]
               },
@@ -240,6 +241,7 @@
                   "fr/beta",
                   "fr/offline",
                   "fr/security",
+                  "fr/organization-server",
                   "fr/conformite/rgpd"
                 ]
               },

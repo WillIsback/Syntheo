@@ -17,7 +17,8 @@ not the data controller: the user is, on their own computer.
 > memory; the imported file is read where it is, without a copy in the data
 > folder.
 >
-> **Providers**: on-premise endpoints only. Transcription speaks the OpenAI
+> **Providers**: only the endpoints the user or their organization configures;
+> no cloud provider is built in. Transcription speaks the OpenAI
 > and NVIDIA NeMo-Speech.cpp protocols; the summary, the chat and the template
 > generator speak to a single configured LLM endpoint, an OpenAI-compatible API
 > (vLLM, Ollama, llama.cpp server…).
@@ -165,7 +166,9 @@ a deletion, erasure is retried at the next launch.
   in Settings → Meetings ("Remind participants about recording").
 - **Choose the inference endpoints** and take responsibility for the
   processing: a self-hosted endpoint stays under the user's control; a
-  third-party endpoint is a processor.
+  third-party endpoint is a processor. For a server provided by the
+  organization, including Albert API for French State administrations, see
+  [Server provided by your organization](/en/organization-server).
 - **Manage the retention period** of transcripts and notes, and delete them
   when they are no longer needed. Deleting a meeting in the app removes it
   from the app and from search, but its content stays in the local database.

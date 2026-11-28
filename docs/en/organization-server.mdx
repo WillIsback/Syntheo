@@ -1,0 +1,114 @@
+---
+title: "Server provided by your organization"
+description: "Connect Syntheo to the model server your organization provides, including Albert API for French State administrations."
+---
+
+Syntheo connects to an OpenAI-compatible server: your own, or one your organization provides (an IT department server, a platform shared between organizations, or Albert API for French State administrations). Syntheo provides none of these servers, recommends none of them and has no tie with any of them. The app contains no default address: you enter it yourself.
+
+## Who provides what
+
+- **The organization** provides the server address, in `https://`, and says who may use it and for which data.
+- **The user** enters the address in **Settings › Synthesis**, "My server" card, and their personal API key under "Advanced". The key is stored in the system keychain.
+- **Syntheo** sends requests straight from the computer to the server. There is no intermediary, no account and no telemetry.
+
+A server run by a third party, even your own organization, processes your transcripts on behalf of the data controller: see [Data and privacy](/en/data-and-privacy) and [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+
+The `managed_settings.json` file can enforce the transcription server on every computer. It cannot enforce the synthesis server: each computer enters the address (see [Security](/en/security#enterprise-deployment)).
+
+## French State employees: Albert API
+
+<Note>
+  This section is offered to public services, for information and with nothing in return. Syntheo is neither affiliated with Albert API nor endorsed by its operators, and no agreement binds them. Syntheo receives nothing of what you send there. The facts below were checked on 2026-11-28. They change quickly: the [official Albert API documentation](https://guides.ia.numerique.gouv.fr/albert-api) prevails. This section may be changed or removed if the service changes.
+</Note>
+
+Albert API is an OpenAI-compatible language model service, run by the DINUM (the French interministerial digital directorate) for French State administrations. Syntheo connects to it like to any other server.
+
+### Who is entitled
+
+- French State administrations and the bodies under their supervision. Local authorities and associations with a public service mission are entitled only when **jointly supervised by the State**. For a healthcare institution, ask the Albert API team.
+- Employees, contract staff included, and contractors invited by their administration.
+- Some Albert API pages reserve the "Experimentation" tier to State civil servants: check your case.
+- An employee can create a key on their own, by signing in with ProConnect. If their body is not recognized, the administration files a DataPass "produits DINUM" request.
+
+<Warning>
+  **Being able to create a key is not enough.** The service is provided by the employee's administration, for experimentation, within its AI usage policy. Before sending meeting transcripts there, get your administration's approval: line management, IT department, data protection officer.
+</Warning>
+
+### What Albert API's "Data security" note guarantees
+
+Note dated 2026-11-18, for inference only:
+
+- **Content is not kept.** Prompts, transcripts and summaries are processed in memory for the duration of the request. They are neither logged nor reused to train or evaluate a model. A request body may go through a transient disk buffer, destroyed at the end of the request.
+- **Hosting.** The models are open-weight, hosted at Outscale (SecNumCloud qualified) and on Nubo. No call goes to an external model provider.
+- **Metadata kept 24 months**: timestamp, account or key identifier, model and endpoint, token counts, response code and duration, **source IP address**.
+- **Security accreditation** by a decision dated 2026-11-24, for 2 years. It covers data of particular sensitivity under the French SREN law, **except data marked "Diffusion restreinte"** (restricted distribution).
+- **On request**: the gateway source code, the security file and a technical workshop for the questions left in a data protection impact assessment (DPIA).
+
+### What it does not cover
+
+- **The route.** Albert API is reachable over the Internet only, not over the RIE (the State's interministerial network). Requests leave your network, encrypted with TLS.
+- **Metadata.** The key and the outgoing IP address, often that of your administration's gateway, can identify the employee or their department: mention them when informing employees.
+- **After-the-fact control.** Albert API can neither return content nor analyze it after an incident: that control belongs to the application and the administration. Syntheo has no central operator: only the computer's local history exists.
+- **The most sensitive data.** Data marked "Diffusion restreinte" is excluded in all cases. For data under GDPR articles 9 and 10 (health, opinions, convictions…), the terms of use dated 2025-10-21 say Albert API "is not meant to receive" such data, while the security note says the service is compatible with health data. Until your data protection officer has decided, treat such data as excluded.
+- **Your own processing.** Albert API's accreditation covers neither the computer, nor note storage, nor your administration's use of it.
+
+### Who is responsible for what (GDPR)
+
+| Party | Role |
+| --- | --- |
+| The employee's administration | Data controller: sets the purposes and the data sent, keeps the record, runs the DPIA when required and informs meeting participants |
+| The DINUM (Albert API) | Processor under article 28, for inference only |
+| Syntheo and its author | Neither: software installed on the computer, which runs no server and receives no content, key or metadata |
+
+Article 28 requires a contract or legal act between the controller and its processor. Only the terms of use are published: ask the Albert API team what stands in for it.
+
+### Connect a computer
+
+<Steps>
+  <Step title="Create a key">
+    In a browser, sign in to the Albert API playground (`albert.playground.etalab.gouv.fr`) with ProConnect, then create a key. It is shown only once, expires after one year at most, and revoking it is final. Do not share it.
+  </Step>
+  <Step title="Enter the address and the key">
+    In **Settings › Synthesis**, "My server" card, enter `https://albert.api.etalab.gouv.fr/v1`. Paste the key under "Advanced", then click "Test connection".
+  </Step>
+  <Step title="Pick a chat model">
+    Pick a model made for chat. Leave out code, OCR, embedding and rerank models. Prefer a model's identifier to its aliases (`openweight-…`), which may change without notice. Models are retired on a schedule published by Albert API: check it, and switch models before a retirement.
+  </Step>
+</Steps>
+
+### Network
+
+- From the computers: HTTPS (port 443) to `albert.api.etalab.gouv.fr`. In the browser, to create keys: `albert.playground.etalab.gouv.fr` and the ProConnect domains.
+- Syntheo honors the `HTTPS_PROXY` and `NO_PROXY` variables. PAC files are not guaranteed: test on a typical computer.
+- Syntheo only trusts public certificate authorities. A proxy that inspects TLS will probably block the connection: exempt `albert.api.etalab.gouv.fr` from inspection.
+
+### Limits
+
+- **Per-employee quotas**, across all keys and tools. In experimentation, for `gpt-oss-120b`: 10 requests per minute and 1,000 per day.
+- **Availability**: no guarantee in experimentation, and restricted access during peak demand.
+- **4 minutes at most per request.** Summarizing a very long meeting may come close.
+- The terms of use may change at any time, without notice.
+
+### To validate before sending meetings there
+
+- The administration's approval of the purpose (summarizing work meetings) and its fit with its AI usage policy.
+- Excluded data: "Diffusion restreinte" in all cases; GDPR articles 9 and 10 until the question is settled.
+- The DPIA when required, with the workshop offered by the Albert API team.
+- The act standing in for a contract under article 28, and the handling of metadata kept 24 months.
+- The accreditation of the local processing: computer, Syntheo, note storage.
+- Opening the network flows and the TLS inspection exemption.
+- Informing employees and meeting participants.
+
+Service contact: `albert.api@numerique.gouv.fr`. Service status: `albert.status.etalab.gouv.fr`.
+
+## Adapt Syntheo to your information system
+
+Syntheo is distributed under the MIT license. An organization can copy the project to its internal forge and adapt it to its ecosystem, for example:
+
+- prefill the address of its model server, or lock it;
+- add its internal certificate authorities;
+- plug in its own deployment, logging or monitoring tools.
+
+The license only asks to keep the copyright notices and the license text (`LICENSE` and `NOTICE.md` files).
+
+The public project stays neutral: it ships no service address, no hosting provider preset and no intermediary. Without copying the project, an IT department can already enforce the transcription server, turn off the synthesis or point to an internal model mirror with `managed_settings.json`: see [Security](/en/security#enterprise-deployment).
