@@ -793,6 +793,10 @@ msgstr "Authenticate to continue."
 msgid "Authenticating…"
 msgstr "Authenticating…"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Authors: {authors}"
+msgstr "Authors: {authors}"
+
 #: src/settings/ai/llm/server-card.tsx
 msgid "Auto"
 msgstr "Auto"
@@ -1304,6 +1308,10 @@ msgstr "Completed by Syntheo"
 #: src/settings/search-index.ts
 msgid "Completion sound"
 msgstr "Completion sound"
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "Component: {name} {version}"
+msgstr "Component: {name} {version}"
 
 #: src/composer/index.tsx
 msgid "Composer"
@@ -4529,6 +4537,10 @@ msgstr "Recording with the default microphone instead. Check that the microphone
 msgid "Redo"
 msgstr "Redo"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "Reference text of the {license} license"
+msgstr "Reference text of the {license} license"
+
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/template-picker.tsx
 #: src/session/late-filing.ts
@@ -6652,6 +6664,10 @@ msgstr "This advanced step runs a program on your computer. It is only added if 
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
+
+#: src/settings/general/third-party-licenses.tsx
+msgid "This component ships no license text. The reference text of its license, as published by SPDX, is shown instead."
+msgstr "This component ships no license text. The reference text of its license, as published by SPDX, is shown instead."
 
 #: src/onboarding/on-device-proposal.tsx
 msgid "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
