@@ -54,6 +54,8 @@ The "Upload audio" and "Upload transcript" menu items appear only in an empty no
 
 Syntheo adds the timestamped text to the note, then writes a summary if a summary server is set up and the note does not have one yet.
 
+In a VTT file, voice tags (`<v Alice>Hello</v>`) say who is speaking. Syntheo turns them into named speakers: it links each one to the participant or contact with the same name, or creates the contact, then adds it to the note's participants. Other formatting tags (`<i>`, `<b>`, `<c>`, timestamps…) are removed from the text. A file without voice tags gives a single anonymous speaker.
+
 ## If an import does not start
 
 - Check that the file is in a supported format.

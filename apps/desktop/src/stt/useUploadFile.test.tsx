@@ -159,6 +159,14 @@ vi.mock("~/stt/queries", () => ({
   createTranscript: createTranscriptMock,
 }));
 
+const resolveSubtitleSpeakerHumansMock = vi.hoisted(() =>
+  vi.fn(async () => new Map<string, string>()),
+);
+
+vi.mock("~/stt/subtitle-import-speakers", () => ({
+  resolveSubtitleSpeakerHumans: resolveSubtitleSpeakerHumansMock,
+}));
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -642,5 +650,77 @@ describe("useUploadFile", () => {
     expect(createTranscriptMock.mock.invocationCallOrder[0]).toBeLessThan(
       enhanceMock.mock.invocationCallOrder[0],
     );
+  });
+
+  test("names the speakers of imported subtitle voices (issue 785)", async () => {
+    resolveSubtitleSpeakerHumansMock.mockResolvedValueOnce(
+      new Map([
+        ["alice", "human-alice"],
+        ["bruno", "human-bruno"],
+      ]),
+    );
+    parseSubtitleMock.mockResolvedValue({
+      status: "ok",
+      data: {
+        tokens: [
+          { text: "Bonjour.", start_time: 0, end_time: 500, speaker: "Alice" },
+          { text: "Salut.", start_time: 500, end_time: 900, speaker: "Bruno" },
+        ],
+      },
+    });
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.processFile("/tmp/session.vtt", "transcript");
+    });
+
+    await waitFor(() => {
+      expect(createTranscriptMock).toHaveBeenCalledTimes(1);
+    });
+    expect(resolveSubtitleSpeakerHumansMock).toHaveBeenCalledWith({
+      sessionId: "session-1",
+      ownerUserId: "user-1",
+      speakers: [
+        expect.objectContaining({ name: "Alice", speakerIndex: 0 }),
+        expect.objectContaining({ name: "Bruno", speakerIndex: 1 }),
+      ],
+    });
+    const input = createTranscriptMock.mock.calls[0]?.[0] as {
+      words: Array<{ id: string; text: string }>;
+      speakerHints: Array<{ word_id: string; type: string; value: string }>;
+    };
+    const [alice, bruno] = input.words;
+    expect(
+      input.speakerHints.map((hint) => [
+        hint.word_id,
+        hint.type,
+        JSON.parse(hint.value),
+      ]),
+    ).toEqual([
+      [alice?.id, "provider_speaker_index", { channel: 2, speaker_index: 0 }],
+      [bruno?.id, "provider_speaker_index", { channel: 2, speaker_index: 1 }],
+      [
+        alice?.id,
+        "user_speaker_assignment",
+        {
+          human_id: "human-alice",
+          scope: "speaker",
+          channel: 2,
+          speaker_index: 0,
+        },
+      ],
+      [
+        bruno?.id,
+        "user_speaker_assignment",
+        {
+          human_id: "human-bruno",
+          scope: "speaker",
+          channel: 2,
+          speaker_index: 1,
+        },
+      ],
+    ]);
   });
 });
