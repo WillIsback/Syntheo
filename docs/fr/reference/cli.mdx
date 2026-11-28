@@ -134,7 +134,7 @@ Calcule la reprise entre une synthèse générée et la version envoyée ou publ
 - `--generated` et `--sent` : fichiers `.md`, `.txt` ou `.html` en UTF-8 (4 Mio au plus), ou `.docx` (16 Mio au plus, lu sans réseau ni entité externe). Le format suit l'extension. Un tableau HTML ou `.docx` est lu rangée par rangée, comme une ligne de tableau Markdown, et une cellule fusionnée est recopiée dans chaque rangée et chaque colonne qu'elle couvre.
 - `--dictionary` (facultatif) : un terme par ligne ; un remplacement court qui touche un de ces termes compte comme une correction lexicale.
 
-Le calcul retire la mise en forme, découpe les deux textes par les titres de la version générée (une ligne identique à un titre suffit dans la version envoyée ; dans un fichier `.txt`, une ligne à un mot près d'un titre pas encore retrouvé aussi), compare mot à mot, puis classe chaque différence :
+Le calcul retire la mise en forme, découpe les deux textes par les titres de la version générée (une ligne identique à un titre suffit dans la version envoyée quand ce titre y a perdu sa mise en forme, et une ligne du corps qui reprend un titre reste du corps ; dans un fichier `.txt`, une ligne à un mot près d'un titre pas encore retrouvé aussi), compare mot à mot, puis classe chaque différence :
 
 - **lexicale** : remplacement de 1 à 3 mots par 1 à 3 mots, dont l'un a la forme d'un nom propre ou d'un sigle, ou figure au dictionnaire ;
 - **fond** : tout le reste, y compris un nom propre ajouté ou supprimé seul.
