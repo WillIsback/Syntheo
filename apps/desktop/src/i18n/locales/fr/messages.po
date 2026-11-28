@@ -2800,6 +2800,10 @@ msgstr "Dernière exécution {relative} : {0}"
 msgid "Last run failed {relative}: {0}"
 msgstr "Dernière exécution échouée {relative} : {0}"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Last test:"
+msgstr "Dernier test :"
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Launch it from a note: the ⋯ menu, the capsule in Synthesis, or Ask the note (Ctrl+J)."
 msgstr "Lancez-la depuis une note : le menu ⋯, la capsule en Synthèse ou « Demander à la note » (Ctrl+J)."
@@ -6363,12 +6367,24 @@ msgid "The sent version still contains HTML codes (such as &eacute;) that could 
 msgstr "La version envoyée contient encore des codes HTML (comme &eacute;) qui n'ont pas pu être lus. Déposez le fichier en .docx, ou collez-le en texte brut."
 
 #: src/settings/ai/llm/image-input-setting.tsx
-msgid "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
-msgstr "Le serveur a accepté l'image de test, mais le modèle ne l'a pas décrite : il ne lit peut-être pas les images. Choisissez Oui ou Non pour trancher."
+msgid "The server accepted the test image, but the model did not describe it: it may not read images."
+msgstr "Le serveur a accepté l'image de test, mais le modèle ne l'a pas décrite : il ne lit peut-être pas les images."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "Le serveur a répondu par une erreur (HTTP {status}). Il démarre peut-être encore : patientez une minute, puis relancez le test."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image and “{model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model."
+msgstr "Le serveur a répondu sans décrire l'image de test et « {model} » n'est pas reconnu : ses images ne sont pas jointes. Choisissez Oui si votre serveur sert la partie vision du modèle."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image: going by its name, “{model}” reads images."
+msgstr "Le serveur a répondu sans décrire l'image de test : d'après son nom, « {model} » lit les images."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server answered without describing the test image."
+msgstr "Le serveur a répondu sans décrire l'image de test."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-Speech.cpp. Check the address, then test again."
@@ -6818,6 +6834,10 @@ msgstr "Cet enregistrement dépasse 6 heures : découpez-le en fichiers plus co
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "Cet enregistrement utilise la transcription par lots, la transcription n'est donc pas encore disponible pour le chat. Veuillez redemander après la fin de la transcription, ou passer à un modèle Pro pour une transcription en direct."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This result now applies."
+msgstr "Ce résultat s'applique désormais."
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
 msgstr "Ce serveur répond comme {detectedLabel}."
@@ -6825,6 +6845,18 @@ msgstr "Ce serveur répond comme {detectedLabel}."
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server has no diarization model loaded: transcripts will not tell speakers apart."
 msgstr "Ce serveur n'a pas chargé de modèle de diarisation : les transcriptions ne distingueront pas les intervenants."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: going by its name, “{model}” reads images."
+msgstr "Ce test n'est pas gardé : d'après son nom, « {model} » lit les images."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: the note's images are not attached."
+msgstr "Ce test n'est pas gardé : les images de la note ne sont pas jointes."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "This test is not kept: the result above still applies."
+msgstr "Ce test n'est pas gardé : le résultat ci-dessus reste en vigueur."
 
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
@@ -7619,6 +7651,14 @@ msgstr "Votre administrateur a désactivé la transcription sur ce poste."
 #: src/mesure/measure-dialog.tsx
 msgid "Your choice"
 msgstr "Votre choix"
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Your choice No still applies: the note's images are never attached."
+msgstr "Votre choix Non reste en vigueur : les images de la note ne sont jamais jointes."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Your choice Yes still applies: the note's images are always attached."
+msgstr "Votre choix Oui reste en vigueur : les images de la note sont toujours jointes."
 
 #: src/shared/long-load-gate.tsx
 msgid "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."

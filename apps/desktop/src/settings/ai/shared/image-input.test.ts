@@ -50,9 +50,12 @@ describe("detectImageInput, probe with the test image", () => {
     });
 
     await expect(detect(fetcher)).resolves.toEqual({
-      reads: true,
-      source: "probe",
-      checkedAt: NOW.toISOString(),
+      status: "detected",
+      detection: {
+        reads: true,
+        source: "probe",
+        checkedAt: NOW.toISOString(),
+      },
     });
     const probe = calls.find((call) => call.url === CHAT);
     const body = JSON.parse(String(probe?.init.body));
@@ -99,9 +102,12 @@ describe("detectImageInput, probe with the test image", () => {
       });
 
       await expect(detect(fetcher)).resolves.toEqual({
-        reads: false,
-        source: "probe",
-        checkedAt: NOW.toISOString(),
+        status: "detected",
+        detection: {
+          reads: false,
+          source: "probe",
+          checkedAt: NOW.toISOString(),
+        },
       });
     },
   );
@@ -119,7 +125,9 @@ describe("detectImageInput, probe with the test image", () => {
   ])("gives no result on another failure (%s)", async (_, route) => {
     const { fetcher } = server({ [CHAT]: route as Route });
 
-    await expect(detect(fetcher)).resolves.toBeNull();
+    await expect(detect(fetcher)).resolves.toMatchObject({
+      status: "unclear",
+    });
   });
 
   it("gives up after the timeout", async () => {
@@ -138,7 +146,7 @@ describe("detectImageInput, probe with the test image", () => {
         metadataTimeoutMs: 5,
         probeTimeoutMs: 5,
       }),
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ status: "unclear", reason: "unreachable" });
   });
 });
 
@@ -261,9 +269,13 @@ describe("probeImageInput, always sends the test image", () => {
       status: "unclear",
       reason,
     });
-    // Automatique ne garde rien non plus : le nom du modèle tranche.
+    // Automatique ne garde rien non plus : le nom du modèle tranche, et la
+    // raison reste connue pour le texte de la carte (issue 784).
     const again = server({ [CHAT]: respond });
-    await expect(detect(again.fetcher)).resolves.toBeNull();
+    await expect(detect(again.fetcher)).resolves.toEqual({
+      status: "unclear",
+      reason,
+    });
   });
 
   it("reports an unreachable server", async () => {
@@ -292,8 +304,8 @@ describe("detectImageInput, server metadata", () => {
     });
 
     await expect(detect(fetcher)).resolves.toMatchObject({
-      reads: true,
-      source: "metadata",
+      status: "detected",
+      detection: { reads: true, source: "metadata" },
     });
     expect(calls.some((call) => call.url === CHAT)).toBe(false);
   });
@@ -312,8 +324,8 @@ describe("detectImageInput, server metadata", () => {
     });
 
     await expect(detect(fetcher)).resolves.toMatchObject({
-      reads: false,
-      source: "metadata",
+      status: "detected",
+      detection: { reads: false, source: "metadata" },
     });
   });
 
@@ -326,8 +338,8 @@ describe("detectImageInput, server metadata", () => {
     });
 
     await expect(detect(fetcher)).resolves.toMatchObject({
-      reads: true,
-      source: "metadata",
+      status: "detected",
+      detection: { reads: true, source: "metadata" },
     });
   });
 });

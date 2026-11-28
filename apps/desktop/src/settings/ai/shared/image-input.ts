@@ -185,6 +185,22 @@ export type ImageProbeResult =
   | { status: "refused"; detection: ImageInputDetection }
   | { status: "unclear"; reason: ImageProbeUnclearReason };
 
+/**
+ * Résultat d'Automatique. Sans réponse nette, la raison reste connue : un
+ * serveur qui a répondu sans décrire l'image (issue 784) n'est pas un
+ * serveur injoignable, et le texte de la carte le dit.
+ */
+export type ImageDetectionResult =
+  | { status: "detected"; detection: ImageInputDetection }
+  | { status: "unclear"; reason: ImageProbeUnclearReason };
+
+/** Le serveur a répondu (2xx) sans que le modèle décrive l'image. */
+export function serverAnsweredWithoutImage(
+  reason: ImageProbeUnclearReason,
+): boolean {
+  return reason === "unrelated" || reason === "no-answer";
+}
+
 type ServerTarget = { baseUrl: string; apiKey: string; model: string };
 
 function prepare(
@@ -217,26 +233,31 @@ function prepare(
 
 /**
  * Automatique : le modèle lit-il les images ? Les métadonnées du serveur
- * d'abord, sinon l'envoi de l'image de test. `null` quand rien n'a répondu
- * nettement : l'appelant garde alors le repli sur le nom du modèle.
+ * d'abord, sinon l'envoi de l'image de test. « unclear » quand rien n'a
+ * répondu nettement : l'appelant garde alors le repli sur le nom du modèle.
  */
 export async function detectImageInput(
   server: ServerTarget,
   options: DetectOptions = {},
-): Promise<ImageInputDetection | null> {
+): Promise<ImageDetectionResult> {
   const { base, model, send, at } = prepare(server, options);
-  if (!base || !model) return null;
+  if (!base || !model) return { status: "unclear", reason: "unreachable" };
   const metadataTimeoutMs = options.metadataTimeoutMs ?? METADATA_TIMEOUT_MS;
 
   const fromMetadata = await readMetadata(base, model, (url, init) =>
     send(url, init, metadataTimeoutMs),
   );
   if (fromMetadata !== null) {
-    return { reads: fromMetadata, source: "metadata", checkedAt: at() };
+    return {
+      status: "detected",
+      detection: { reads: fromMetadata, source: "metadata", checkedAt: at() },
+    };
   }
 
   const probed = await probeImageInput(server, options);
-  return probed.status === "unclear" ? null : probed.detection;
+  return probed.status === "unclear"
+    ? probed
+    : { status: "detected", detection: probed.detection };
 }
 
 /**
