@@ -205,10 +205,12 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
           ) : item.type === "folder" ? (
             <Folder className="mention-type-icon mention-type-folder" />
           ) : null}
-          <span className="mention-label">{item.label}</span>
-          {item.context ? (
-            <span className="mention-context">{item.context}</span>
-          ) : null}
+          <span className="mention-name">
+            <span className="mention-label">{item.label}</span>
+            {item.context ? (
+              <span className="mention-context">{item.context}</span>
+            ) : null}
+          </span>
           {item.description ? (
             <span className="mention-description">{item.description}</span>
           ) : null}
