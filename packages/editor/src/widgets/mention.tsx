@@ -32,6 +32,14 @@ export interface MentionItem {
   title?: string;
 }
 
+// Issue 815 : seul le compteur d'un dossier (« 3 réunions ») reste entier ;
+// le dossier d'une note cède encore la place à son titre.
+export function mentionDescriptionClass(item: MentionItem): string {
+  return item.type === "folder"
+    ? "mention-description mention-count"
+    : "mention-description";
+}
+
 // Mêmes résultats que la palette `Ctrl+K`, tronqués à cette longueur.
 export const MENTION_DISPLAY_LIMIT = 8;
 
@@ -212,7 +220,9 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
             ) : null}
           </span>
           {item.description ? (
-            <span className="mention-description">{item.description}</span>
+            <span className={mentionDescriptionClass(item)}>
+              {item.description}
+            </span>
           ) : null}
         </button>
       ))}

@@ -70,14 +70,20 @@
 .mention-description {
   margin-left: auto;
   padding-left: 0.5rem;
-  /* Kept whole while the row has room: the name box shrinks first. */
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   max-width: 50%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.75rem;
   color: var(--color-muted-foreground, #a3a3a3);
+}
+
+/* Meeting count of a folder (issue 815): kept whole while the row has room,
+ * the name box shrinks first. A note's folder path still shares the space. */
+.mention-description.mention-count {
+  flex-shrink: 0;
 }
 
 .mention-type-icon {

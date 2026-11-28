@@ -43,9 +43,15 @@ describe("mention.css : nom et parent d'un sous-dossier", () => {
     expect(context["flex-shrink"] ?? "1").not.toBe("0");
   });
 
-  it("le compteur de droite n'est pas coupé tant que la ligne a de la place", () => {
+  it("le compteur d'un dossier n'est pas coupé tant que la ligne a de la place", () => {
+    const count = declarations(".mention-description.mention-count");
+    expect(count["flex-shrink"]).toBe("0");
+  });
+
+  it("le dossier d'une note partage encore la place avec son titre", () => {
     const description = declarations(".mention-description");
-    expect(description["flex-shrink"]).toBe("0");
+    expect(description["flex-shrink"]).toBe("1");
+    expect(description["min-width"]).toBe("0");
     expect(description["max-width"]).toBe("50%");
   });
 });
