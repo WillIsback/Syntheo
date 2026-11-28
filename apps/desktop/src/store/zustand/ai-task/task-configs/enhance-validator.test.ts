@@ -29,14 +29,13 @@ describe("createEnhanceValidator", () => {
 
   it.each([
     "# Data File Status and Upload Testing",
-    "# Data File",
-    "# data file status & upload testing",
+    "# data file status & upload testing\n",
     "Here is the summary:\n# Data File Status and Upload Testing",
     // Issue 417 : les balises de provenance ne comptent pas.
-    "# ⟦Data File",
+    "# ⟦Data File Status and Upload Testing",
     "⟦# Data File Status⟧ and Upload Testing",
     // Issue 779 : un titre de niveau 2 ne relance plus la génération.
-    "## Data File Status",
+    "## Data File Status and Upload Testing\n",
     "# Data File Status and Upload Testing\n\n- Upl",
   ])("accepts valid heading input: %s", (input) => {
     expect(createEnhanceValidator(template)(input)).toEqual({ valid: true });
@@ -45,7 +44,7 @@ describe("createEnhanceValidator", () => {
   it.each([
     "Here is the summary:\n\nThe team",
     "**Data File Status**\n\nThe",
-    "# Something Entirely Different",
+    "# Something Entirely Different\n",
     "### Data File Status",
   ])("rejects invalid heading input: %s", (input) => {
     expect(createEnhanceValidator(template)(input)).toMatchObject({
@@ -53,8 +52,19 @@ describe("createEnhanceValidator", () => {
     });
   });
 
-  it.each(["Here is the summary", "Voici le compte rendu :\n\n"])(
-    "waits for more text while a one-line preamble may precede the heading: %s",
+  it.each([
+    "Here is the summary",
+    "Voici le compte rendu :\n\n",
+    // Issue 779 : « # » ou « ## » arrivé en jeton seul après l'introduction.
+    "Voici le compte rendu :\n\n#",
+    "Voici le compte rendu :\n\n##",
+    // Ligne de titre pas finie et plus courte que le titre attendu.
+    "# Data File",
+    "# ⟦Data File",
+    "## Data File Status",
+    "# Something Entirely Different",
+  ])(
+    "waits for more text while the start cannot be judged yet: %s",
     (input) => {
       expect(createEnhanceValidator(template)(input)).toEqual({
         pending: true,
@@ -76,6 +86,39 @@ describe("createEnhanceValidator", () => {
       valid: false,
     });
   });
+
+  // Issue 779 : un début de ligne compatible ne suffit plus à valider un
+  // titre faux, le seuil étant calculé sur le titre entier.
+  it.each([
+    { section: "Points clés et décisions", input: "# Points divers\n" },
+    { section: "Points clés et décisions", input: "# Prochaines étapes\n" },
+    { section: "Résumé", input: "Voici le compte rendu :\n\n# Ordre\n" },
+  ])(
+    "rejects a wrong heading once its line is complete: $input",
+    ({ section, input }) => {
+      const validator = createEnhanceValidator({
+        title: "",
+        description: null,
+        sections: [{ title: section, description: null }],
+      });
+      expect(validator(input)).toMatchObject({ valid: false });
+    },
+  );
+
+  it.each([
+    { section: "Résumé", input: "# Points divers et autres" },
+    { section: "Résumé", input: "# Résumés de la réunion" },
+  ])(
+    "judges an unfinished heading line as long as the expected title: $input",
+    ({ section, input }) => {
+      const validator = createEnhanceValidator({
+        title: "",
+        description: null,
+        sections: [{ title: section, description: null }],
+      });
+      expect(validator(input)).not.toHaveProperty("pending");
+    },
+  );
 
   it.each([
     {

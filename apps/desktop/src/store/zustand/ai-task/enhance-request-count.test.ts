@@ -45,17 +45,21 @@ function tokenize(text: string): string[] {
   return text.match(/.{1,4}/gsu) ?? [];
 }
 
-function createModel(output: string) {
+// Une chaîne est découpée par `tokenize` ; un tableau donne les jetons tels
+// quels, pour reproduire un découpage précis (par exemple « # » seul).
+function createModel(output: string | string[]) {
   return new MockLanguageModelV4({
     doStream: async () => ({
       stream: simulateReadableStream({
         chunks: [
           { type: "text-start", id: "1" },
-          ...tokenize(output).map((delta) => ({
-            type: "text-delta",
-            id: "1",
-            delta,
-          })),
+          ...(typeof output === "string" ? tokenize(output) : output).map(
+            (delta) => ({
+              type: "text-delta",
+              id: "1",
+              delta,
+            }),
+          ),
           { type: "text-end", id: "1" },
           {
             type: "finish",
@@ -76,7 +80,10 @@ function createModel(output: string) {
   });
 }
 
-async function generateSummary(output: string, sectionTitle: string | null) {
+async function generateSummary(
+  output: string | string[],
+  sectionTitle: string | null,
+) {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   const model = createModel(output);
 
@@ -147,6 +154,124 @@ describe("summary generation request count", () => {
     "sends one stream request for an acceptable start: $name",
     async ({ output, section }) => {
       expect(await generateSummary(output, section)).toBe(1);
+    },
+  );
+
+  // Jetons fournis à la main : le découpage par 4 caractères ne produit
+  // jamais un « # » isolé après l'introduction.
+  it.each([
+    {
+      name: "a lone # token after the preamble",
+      tokens: [
+        "Voici",
+        " le",
+        " compte",
+        " rendu",
+        " :",
+        "\n\n",
+        "#",
+        " Rés",
+        "umé",
+        "\n\n",
+        "-",
+        " Budget",
+        " validé.\n",
+      ],
+      section: "Résumé",
+    },
+    {
+      name: "a lone ## token after the preamble, no template",
+      tokens: [
+        "Voici",
+        " le",
+        " compte",
+        " rendu",
+        " :",
+        "\n\n",
+        "##",
+        " Déc",
+        "isions",
+        "\n\n",
+        "-",
+        " Budget",
+        " validé.\n",
+      ],
+      section: null,
+    },
+    {
+      name: "the expected heading split token by token",
+      tokens: [
+        "#",
+        " Points",
+        " cl",
+        "és",
+        " et",
+        " déc",
+        "isions",
+        "\n\n",
+        "-",
+        " Budget",
+        " validé.\n",
+      ],
+      section: "Points clés et décisions",
+    },
+  ])(
+    "sends one stream request for hand-split tokens: $name",
+    async ({ tokens, section }) => {
+      expect(await generateSummary(tokens, section)).toBe(1);
+    },
+  );
+
+  it.each([
+    {
+      name: "a wrong heading split token by token",
+      tokens: [
+        "#",
+        " Ord",
+        "re",
+        " du",
+        " jour",
+        "\n\n",
+        "-",
+        " Budget",
+        " validé.\n",
+      ],
+      section: "Résumé",
+    },
+    {
+      name: "a wrong heading after the preamble",
+      tokens: [
+        "Voici",
+        " le",
+        " compte",
+        " rendu",
+        " :",
+        "\n\n",
+        "# O",
+        "rdre",
+        " du",
+        " jour",
+        "\n\n",
+        "-",
+        " Budget",
+        " validé.\n",
+      ],
+      section: "Résumé",
+    },
+    {
+      name: "a wrong heading sharing its first word",
+      tokens: ["#", " Point", "s", " divers", "\n\n", "-", " Budget.\n"],
+      section: "Points clés et décisions",
+    },
+    {
+      name: "a wrong heading of another length",
+      tokens: ["# Pro", "chain", "es", " étapes", "\n\n", "-", " Budget.\n"],
+      section: "Points clés et décisions",
+    },
+  ])(
+    "retries once for a wrong heading in hand-split tokens: $name",
+    async ({ tokens, section }) => {
+      expect(await generateSummary(tokens, section)).toBe(2);
     },
   );
 

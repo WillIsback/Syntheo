@@ -10,6 +10,13 @@ export type EarlyValidationResult =
 
 export type EarlyValidatorFn = (textSoFar: string) => EarlyValidationResult;
 
+// Plafond de l'attente `pending` (issue 779). Au-delà, le début de réponse
+// est accepté tel quel, comme un flux qui se termine pendant l'attente : un
+// nouvel essai coûterait une seconde requête au serveur LLM pour une réponse
+// déjà longue, et un validateur qui ne tranche toujours pas après autant de
+// texte n'a pas trouvé de faute franche.
+export const MAX_PENDING_CHARS = 500;
+
 export async function* withEarlyValidationRetry<
   TOOLS extends ToolSet = ToolSet,
 >(
@@ -83,6 +90,9 @@ export async function* withEarlyValidationRetry<
               const result = validator(accumulatedText);
 
               if ("pending" in result) {
+                if (accumulatedText.length >= MAX_PENDING_CHARS) {
+                  yield* flushBuffer();
+                }
                 continue;
               }
 

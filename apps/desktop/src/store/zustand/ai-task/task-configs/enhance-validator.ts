@@ -18,6 +18,8 @@ const MAX_PREAMBLE_CHARS = 200;
 // Titre de niveau 1 ou 2 en tête de réponse.
 const LEADING_HEADING = /^#{1,2} /;
 const LEADING_HEADING_MARKER = /^#{1,2}\s*/;
+// Dièses seuls : le jeton suivant dira s'il s'agit d'un titre (« # Résumé »).
+const HEADING_MARKER_ONLY = /^#+$/;
 
 export function normalizeForComparison(text: string): string {
   return (
@@ -25,7 +27,7 @@ export function normalizeForComparison(text: string): string {
       // « Résumé » et « Resume » se comparent pareil : accents retirés, pas
       // les lettres qui les portent.
       .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
+      .replace(/\p{M}/gu, "")
       .toLowerCase()
       .replace(/&/g, "and")
       .replace(/[^a-z0-9\s]/g, "")
@@ -70,15 +72,19 @@ function mayStillBePreamble(text: string): boolean {
 
 function requireLeadingHeading(): PipeStep {
   return (text) => {
-    if (LEADING_HEADING.test(text.trim())) {
+    const trimmed = text.trim();
+    if (LEADING_HEADING.test(trimmed)) {
       return { valid: true };
     }
-    if (mayStillBePreamble(text)) {
+    // « # » ou « ## » arrivé en jeton seul, souvent juste après une
+    // introduction : rien ne permet encore de trancher.
+    if (HEADING_MARKER_ONLY.test(trimmed) || mayStillBePreamble(text)) {
       return { pending: true };
     }
     return {
       valid: false,
-      feedback: "Output must start with a markdown h1 heading (# Title).",
+      feedback:
+        "Output must start with a markdown heading (# Title or ## Title).",
     };
   };
 }
@@ -90,24 +96,34 @@ function matchSectionHeading(title: string): EarlyValidatorFn {
   return (text) => {
     const trimmed = text.trim();
 
-    if (
-      expectedStart.startsWith(trimmed) ||
-      trimmed.startsWith(expectedStart)
-    ) {
+    if (trimmed.startsWith(expectedStart)) {
       return { valid: true };
     }
 
-    // Seule la ligne du titre compte, pas le début de la section qui suit ;
-    // une ligne encore incomplète se compare au début du titre attendu.
+    // Seule la ligne du titre compte, pas le début de la section qui suit.
     const [headingLine = ""] = trimmed
       .replace(LEADING_HEADING_MARKER, "")
       .split("\n");
-    const lineComplete = trimmed.includes("\n");
+    // `trim` retirerait le saut de ligne qui clôt le titre.
+    const lineComplete = text.trimStart().includes("\n");
     const actualNormalized = normalizeForComparison(headingLine);
-    const expected = lineComplete
-      ? expectedNormalized
-      : expectedNormalized.slice(0, actualNormalized.length);
-    const distance = levenshtein(expected, actualNormalized);
+
+    // Le validateur ne juge qu'une fois : un début de titre plus court que le
+    // titre attendu (« # Points » pour « Points clés et décisions ») ne dit
+    // rien de la suite (« # Points divers »). On attend la fin de la ligne ;
+    // withEarlyValidationRetry borne cette attente.
+    if (!lineComplete && actualNormalized.length < expectedNormalized.length) {
+      return { pending: true };
+    }
+
+    // Ligne finie : titre entier contre titre entier. Ligne en cours mais
+    // déjà aussi longue que le titre attendu : on compare ce début-là. Dans
+    // les deux cas le titre attendu est comparé en entier, et le seuil porte
+    // sur sa longueur.
+    const actual = lineComplete
+      ? actualNormalized
+      : actualNormalized.slice(0, expectedNormalized.length);
+    const distance = levenshtein(expectedNormalized, actual);
     const threshold = Math.floor(expectedNormalized.length * 0.3);
     if (distance <= threshold) {
       return { valid: true };
