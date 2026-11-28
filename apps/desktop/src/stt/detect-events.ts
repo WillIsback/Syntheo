@@ -406,7 +406,8 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
                 action_variant: null,
                 options: null,
                 // Une seule question : ignorer une application se fait dans
-                // les réglages des réunions (issue 808).
+                // Paramètres › Moi › Notifications, « Exclure les applications
+                // de la détection » (issue 808).
                 footer: null,
                 icon: notificationIcon,
               });
