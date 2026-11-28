@@ -7,6 +7,7 @@ import {
   isAgentRecordingPath,
   RecordingImportWorker,
 } from "./recording-import";
+import { selectTranscriptionProvider } from "./transcription-route";
 
 const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -175,6 +176,7 @@ it("transcribes the recording read once in memory, never its path", async () => 
   });
   expect(mocks.openRecordingImport).toHaveBeenCalledWith("/audio.wav");
   expect(mocks.transcribe).toHaveBeenCalledWith("", {
+    allowRealtimeStream: true,
     promotion: { scope: "whole_session" },
     audioUploadId: "upload-1",
   });
@@ -184,6 +186,34 @@ it("transcribes the recording read once in memory, never its path", async () => 
   });
   expect(job.state().status).toBe("done");
   expect(mocks.discardAudioUpload).toHaveBeenCalledWith("upload-1");
+  job.view.unmount();
+  job.client.clear();
+});
+
+// Issue 793 : sans modèle par lot (serveur NVIDIA, NeMo-Speech.cpp), l'import
+// d'un agent doit passer par le flux temps réel, comme un fichier déposé.
+it("transcribes an agent import with a server that has no batch mode", async () => {
+  vi.useFakeTimers();
+  const job = setupJob(false);
+  mocks.transcribe.mockImplementation(
+    async (_path: string, options?: { allowRealtimeStream?: boolean }) => {
+      const provider = selectTranscriptionProvider(
+        "nvidia",
+        "nemotron-3.5-asr-streaming-0.6b",
+        options?.allowRealtimeStream === true,
+      );
+      if (!provider) throw new Error("no transcription provider");
+    },
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(job.state().status).toBe("summarizing");
+  await act(async () => {
+    job.finishSummary();
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(job.state().status).toBe("done");
   job.view.unmount();
   job.client.clear();
 });
