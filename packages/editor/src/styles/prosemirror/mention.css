@@ -34,11 +34,23 @@
 }
 
 .mention-label {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.875rem;
   line-height: 1rem;
+}
+
+/* Parent of a subfolder: gives way before the label shrinks. */
+.mention-context {
+  min-width: 0;
+  flex-shrink: 1000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, #a3a3a3);
 }
 
 .mention-description {
