@@ -79,6 +79,56 @@ describe("withEarlyValidationRetry", () => {
     expect(validator).toHaveBeenCalledWith("Hello");
   });
 
+  it("keeps buffering on a pending verdict without sending a new request", async () => {
+    const chunks: TextStreamPart<ToolSet>[] = [
+      { type: "text-delta", text: "Intro line", id: "1" },
+      { type: "text-delta", text: ":\n\n", id: "1" },
+      { type: "text-delta", text: "# Heading", id: "1" },
+      { type: "text-delta", text: " and more", id: "1" },
+    ];
+    const executeStream = vi.fn((signal: AbortSignal) =>
+      createMockStream(chunks, signal),
+    );
+    const validator: EarlyValidatorFn = vi.fn((text) =>
+      text.includes("#")
+        ? { valid: true as const }
+        : { pending: true as const },
+    );
+    const onRetry = vi.fn();
+
+    const results = await collectStream(
+      withEarlyValidationRetry(executeStream, validator, {
+        minChar: 5,
+        maxChar: 30,
+        maxRetries: 2,
+        onRetry,
+      }),
+    );
+
+    expect(results).toEqual(chunks);
+    expect(executeStream).toHaveBeenCalledTimes(1);
+    expect(onRetry).not.toHaveBeenCalled();
+    expect(validator).toHaveBeenCalledTimes(3);
+  });
+
+  it("flushes a still-pending buffer when the stream ends", async () => {
+    const chunks: TextStreamPart<ToolSet>[] = [
+      { type: "text-delta", text: "Only an intro", id: "1" },
+    ];
+    const executeStream = vi.fn((signal: AbortSignal) =>
+      createMockStream(chunks, signal),
+    );
+
+    const results = await collectStream(
+      withEarlyValidationRetry(executeStream, () => ({ pending: true }), {
+        minChar: 5,
+      }),
+    );
+
+    expect(results).toEqual(chunks);
+    expect(executeStream).toHaveBeenCalledTimes(1);
+  });
+
   it("should retry when validation fails before maxChar", async () => {
     let attemptCount = 0;
 

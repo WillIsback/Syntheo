@@ -1,8 +1,14 @@
 import type { TextStreamPart, ToolSet } from "ai";
 
-export type EarlyValidatorFn = (
-  textSoFar: string,
-) => { valid: true } | { valid: false; feedback: string };
+// `pending` : le début de la réponse ne suffit pas encore pour juger (par
+// exemple une courte introduction avant le premier titre) ; le flux reste
+// en mémoire jusqu'au morceau suivant, sans nouvelle requête.
+export type EarlyValidationResult =
+  | { valid: true }
+  | { valid: false; feedback: string }
+  | { pending: true };
+
+export type EarlyValidatorFn = (textSoFar: string) => EarlyValidationResult;
 
 export async function* withEarlyValidationRetry<
   TOOLS extends ToolSet = ToolSet,
@@ -75,6 +81,10 @@ export async function* withEarlyValidationRetry<
 
             if (trimmedLength >= minChar) {
               const result = validator(accumulatedText);
+
+              if ("pending" in result) {
+                continue;
+              }
 
               if (!result.valid) {
                 if (attempt < maxRetries - 1) {

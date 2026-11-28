@@ -10,6 +10,11 @@ describe("normalizeForComparison", () => {
     expect(normalizeForComparison("Status & Upload")).toBe("status and upload");
     expect(normalizeForComparison("  Hello,  World!  ")).toBe("hello world");
   });
+
+  it("drops accents instead of the accented letters", () => {
+    expect(normalizeForComparison("Résumé")).toBe("resume");
+    expect(normalizeForComparison("Décisions clés")).toBe("decisions cles");
+  });
 });
 
 describe("createEnhanceValidator", () => {
@@ -30,16 +35,46 @@ describe("createEnhanceValidator", () => {
     // Issue 417 : les balises de provenance ne comptent pas.
     "# ⟦Data File",
     "⟦# Data File Status⟧ and Upload Testing",
+    // Issue 779 : un titre de niveau 2 ne relance plus la génération.
+    "## Data File Status",
+    "# Data File Status and Upload Testing\n\n- Upl",
   ])("accepts valid heading input: %s", (input) => {
     expect(createEnhanceValidator(template)(input)).toEqual({ valid: true });
   });
 
   it.each([
-    "Here is the summary",
-    "## Data File Status",
+    "Here is the summary:\n\nThe team",
+    "**Data File Status**\n\nThe",
     "# Something Entirely Different",
+    "### Data File Status",
   ])("rejects invalid heading input: %s", (input) => {
-    expect(createEnhanceValidator(template)(input).valid).toBe(false);
+    expect(createEnhanceValidator(template)(input)).toMatchObject({
+      valid: false,
+    });
+  });
+
+  it.each(["Here is the summary", "Voici le compte rendu :\n\n"])(
+    "waits for more text while a one-line preamble may precede the heading: %s",
+    (input) => {
+      expect(createEnhanceValidator(template)(input)).toEqual({
+        pending: true,
+      });
+    },
+  );
+
+  it("matches section headings regardless of accents", () => {
+    const frenchTemplate = {
+      title: "",
+      description: null,
+      sections: [{ title: "Résumé", description: null }],
+    };
+    const validator = createEnhanceValidator(frenchTemplate);
+
+    expect(validator("# Resume\n\n- Budget")).toEqual({ valid: true });
+    expect(validator("## Résumé\n\n- Budget")).toEqual({ valid: true });
+    expect(validator("# Ordre du jour\n\n- Budget")).toMatchObject({
+      valid: false,
+    });
   });
 
   it.each([

@@ -175,6 +175,12 @@ IMPORTANT: Previous attempt failed. ${previousFeedback}`;
       maxChar: 30,
       maxRetries: 2,
       onRetry: (attempt, feedback) => {
+        // Issue 779 : chaque nouvel essai envoie une seconde requête au
+        // serveur LLM ; le journal en garde la raison.
+        console.warn("[enhance] early validation failed, retrying", {
+          attempt,
+          feedback,
+        });
         onProgress({ type: "retrying", attempt, reason: feedback });
       },
       onRetrySuccess: () => {
