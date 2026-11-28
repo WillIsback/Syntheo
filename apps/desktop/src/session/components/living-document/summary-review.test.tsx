@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     Promise.resolve(),
   ),
   proposals: [] as Array<Record<string, unknown>>,
+  enhancedNote: null as Record<string, unknown> | null,
 }));
 
 vi.mock("streamdown", () => ({
@@ -35,6 +36,7 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("~/session/queries", () => ({
   usePendingSessionProposals: () => mocks.proposals,
+  useEnhancedNote: () => mocks.enhancedNote,
 }));
 
 vi.mock("~/session/proposal-review", async () => {
@@ -175,5 +177,47 @@ describe("useSummaryProposal", () => {
       currentMarkdown: "Avant",
       proposedMarkdown: "Après",
     });
+  });
+});
+
+describe("useSummaryProposal with an attached image", () => {
+  beforeEach(() => {
+    usePendingEditStore.setState({ edits: new Map() });
+    mocks.proposals = [];
+  });
+
+  it("names the attachment of a stored proposal by its id (CLI, MCP)", () => {
+    mocks.enhancedNote = {
+      id: "summary-1",
+      content: JSON.stringify({
+        type: "doc",
+        content: [
+          {
+            type: "image",
+            attrs: { attachmentId: "capture 1.png", alt: "Tableau blanc" },
+          },
+        ],
+      }),
+    };
+    mocks.proposals = [
+      {
+        id: "proposal-1",
+        sessionId: "session-1",
+        kind: "summary_replace",
+        targetId: "summary-1",
+        status: "pending",
+        currentMarkdown:
+          '## Décisions\n\n![Tableau blanc](<> "char-editor-width=80")',
+        proposedMarkdown: "## Décisions",
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useSummaryProposal("session-1", "summary-1"),
+    );
+    expect(result.current?.currentMarkdown).toBe(
+      '## Décisions\n\n![Tableau blanc](attachment://capture%201.png "char-editor-width=80")',
+    );
+    mocks.enhancedNote = null;
   });
 });

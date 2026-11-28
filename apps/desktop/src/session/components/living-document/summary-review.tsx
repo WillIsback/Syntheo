@@ -18,7 +18,8 @@ import {
   diffMarkdownLines,
   type MarkdownDiffChunk,
 } from "~/session/proposal-review";
-import { usePendingSessionProposals } from "~/session/queries";
+import { useEnhancedNote, usePendingSessionProposals } from "~/session/queries";
+import { withSummaryAttachmentImages } from "~/session/summary-markdown";
 import { summaryRehypePlugins } from "~/shared/safe-markdown";
 
 type SummaryProposal = {
@@ -29,7 +30,10 @@ type SummaryProposal = {
 
 // Proposition de réécriture en attente sur le compte-rendu affiché : celle
 // du chat (instantanée, dans le store) ou, à défaut, celle enregistrée en
-// base (CLI, MCP, ou après un redémarrage).
+// base (CLI, MCP, ou après un redémarrage). Le texte actuel enregistré par
+// le CLI ou le MCP vient de la sérialisation Rust, qui n'écrit pas
+// l'identifiant d'une image jointe : il est rapproché du corps de la note
+// pour que l'image s'affiche dans la relecture (issue 697).
 export function useSummaryProposal(
   sessionId: string,
   enhancedNoteId: string,
@@ -52,6 +56,7 @@ export function useSummaryProposal(
       proposal.status === "pending" &&
       proposal.targetId === enhancedNoteId,
   );
+  const noteBody = useEnhancedNote(stored ? enhancedNoteId : "")?.content;
 
   return useMemo(() => {
     if (edit) {
@@ -64,11 +69,14 @@ export function useSummaryProposal(
     return stored
       ? {
           id: stored.id,
-          currentMarkdown: stored.currentMarkdown,
+          currentMarkdown: withSummaryAttachmentImages(
+            stored.currentMarkdown,
+            noteBody,
+          ),
           proposedMarkdown: stored.proposedMarkdown,
         }
       : null;
-  }, [edit, stored]);
+  }, [edit, stored, noteBody]);
 }
 
 // Revue d'une proposition dans l'étape Synthèse : le diff est rendu en

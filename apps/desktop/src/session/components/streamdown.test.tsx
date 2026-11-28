@@ -9,7 +9,10 @@ import {
 
 import { streamdownComponents } from "./streamdown";
 
-import { summaryBodyToMarkdown } from "~/session/summary-markdown";
+import {
+  summaryBodyToMarkdown,
+  withSummaryAttachmentImages,
+} from "~/session/summary-markdown";
 import {
   safeRehypePlugins,
   summaryRehypePlugins,
@@ -132,5 +135,70 @@ describe("summaryBodyToMarkdown", () => {
 
   it("renvoie un corps Markdown tel quel", () => {
     expect(summaryBodyToMarkdown("# Titre", "markdown")).toBe("# Titre");
+  });
+});
+
+describe("withSummaryAttachmentImages", () => {
+  const noteBody = JSON.stringify({
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "image",
+            attrs: { attachmentId: "capture 1.png", alt: "Tableau [blanc]" },
+          },
+        ],
+      },
+      {
+        type: "image",
+        attrs: { src: "https://example.com/a.png", alt: "Web" },
+      },
+      { type: "image", attrs: { sharedAttachmentId: "shared-1", alt: "Vue" } },
+    ],
+  });
+
+  it("rapproche les images du Markdown Rust des pièces jointes de la note", () => {
+    const markdown = [
+      '![Tableau \\[blanc\\]](<> "char-editor-width=80")',
+      "![Web](https://example.com/a.png)",
+      "![Vue](asset://localhost/sessions/s1/attachments/vue.png)",
+    ].join("\n\n");
+
+    expect(withSummaryAttachmentImages(markdown, noteBody)).toBe(
+      [
+        '![Tableau \\[blanc\\]](attachment://capture%201.png "char-editor-width=80")',
+        "![Web](https://example.com/a.png)",
+        "![Vue](attachment://shared-1)",
+      ].join("\n\n"),
+    );
+  });
+
+  it("affiche l'image jointe et bloque toujours une adresse sans correspondance", () => {
+    const markdown = withSummaryAttachmentImages(
+      [
+        "![Tableau \\[blanc\\]](<>)",
+        "![Intruse](asset://localhost/etc/secret.png)",
+        "![Autre](file:///etc/secret.png)",
+      ].join("\n\n"),
+      noteBody,
+    );
+    expect(markdown).toContain("asset://localhost/etc/secret.png");
+    expect(markdown).toContain("file:///etc/secret.png");
+
+    const { container } = renderMarkdown(markdown);
+    const images = container.querySelectorAll("img");
+    expect(images).toHaveLength(1);
+    expect(images[0]?.getAttribute("src")).toBe(KNOWN_SRC);
+    expect(container.textContent).toContain("Intruse");
+    expect(container.textContent).toContain("Autre");
+  });
+
+  it("laisse le Markdown tel quel sans corps de note lisible", () => {
+    expect(withSummaryAttachmentImages("![A](<>)", null)).toBe("![A](<>)");
+    expect(withSummaryAttachmentImages("![A](<>)", "pas du JSON")).toBe(
+      "![A](<>)",
+    );
   });
 });

@@ -82,3 +82,68 @@ export function summaryBodyToMarkdown(body: string, format: string): string {
     return "";
   }
 }
+
+type NoteImage = { alt: string; attachmentId: string | null };
+
+function collectNoteImages(value: unknown, images: NoteImage[]): void {
+  if (!value || typeof value !== "object") return;
+  const node = value as JsonNode;
+  if (node.type === "image") {
+    const alt = node.attrs?.alt;
+    images.push({
+      alt: typeof alt === "string" ? alt : "",
+      attachmentId: imageAttachmentId(node),
+    });
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) collectNoteImages(child, images);
+  }
+}
+
+// `![alt](destination "titre")` tel qu'écrit par json2md ou par la
+// sérialisation Rust (`<>` pour une destination vide ou avec espaces).
+const MARKDOWN_IMAGE =
+  /!\[((?:\\.|[^\\\]])*)\]\(\s*(?:<(?:\\.|[^\\>\n])*>|[^\s()]*)((?:\s+(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*'))?)\s*\)/g;
+
+function unescapeMarkdown(text: string): string {
+  return text.replace(/\\([!-/:-@[-`{-~])/g, "$1");
+}
+
+/**
+ * Markdown d'une synthèse enregistré ailleurs (proposition du CLI ou du MCP,
+ * calculée côté Rust ; issue 697) : chaque image y est rapprochée, dans
+ * l'ordre et par son texte alternatif, des images du corps de la note.
+ * Une image jointe de la note est alors désignée par `attachment://<id>`,
+ * quelle que soit l'adresse écrite dans le Markdown. Une image sans
+ * correspondance garde son adresse, que le rendu continue de bloquer.
+ */
+export function withSummaryAttachmentImages(
+  markdown: string,
+  noteBody: string | null | undefined,
+): string {
+  if (!markdown || !noteBody) return markdown;
+  const images: NoteImage[] = [];
+  try {
+    collectNoteImages(JSON.parse(noteBody), images);
+  } catch {
+    return markdown;
+  }
+  if (images.length === 0) return markdown;
+
+  let next = 0;
+  return markdown.replace(
+    MARKDOWN_IMAGE,
+    (token, rawAlt: string, title: string) => {
+      const alt = unescapeMarkdown(rawAlt);
+      const index = images.findIndex(
+        (image, position) => position >= next && image.alt === alt,
+      );
+      if (index < 0) return token;
+      next = index + 1;
+      const { attachmentId } = images[index];
+      return attachmentId
+        ? `![${rawAlt}](${attachmentImageSrc(attachmentId)}${title})`
+        : token;
+    },
+  );
+}
