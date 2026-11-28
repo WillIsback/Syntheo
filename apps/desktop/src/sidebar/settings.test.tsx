@@ -277,6 +277,24 @@ describe("SettingsNav", () => {
     expect(footer.textContent).not.toContain("unreachable");
   });
 
+  // Issue 786 : une route absente ou une erreur du serveur n'est pas
+  // « injoignable » ; la barre d'état reprend la raison de la carte.
+  it("tells a missing route and a server error apart from an unreachable server", () => {
+    mocks.serverStates = {
+      stt: { status: "failed", failure: { ok: false, reason: "not_found" } },
+      llm: {
+        status: "failed",
+        failure: { ok: false, reason: "server_error", status: 503 },
+      },
+    };
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Transcription · route not found");
+    expect(footer.textContent).toContain("Synthesis · server error");
+    expect(footer.textContent).not.toContain("unreachable");
+  });
+
   // Issue 707 : synthèse désactivée par réglage géré (intelligence_disabled),
   // aucune sonde ne part ; le menu le dit au lieu de « non testée ».
   it("shows the synthesis as disabled when the administrator turned it off", () => {

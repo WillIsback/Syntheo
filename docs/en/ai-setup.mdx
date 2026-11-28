@@ -65,7 +65,11 @@ The status pill takes one of these values:
 | "Connected · … ms" | The server answers; the pill shows the measured latency. For synthesis, it shows the number of available models instead ("Connected · … models available"). |
 | "Unreachable" | The server did not answer. |
 | "Key refused" | The server refused the API key. |
+| "Route not found" | The server answers, but not on the expected route: the address does not lead to the API (for example without `/v1` for synthesis). |
+| "Server error" | The server answered with an error (HTTP 5xx); it may still be starting. |
 | "Invalid address" | An address saved earlier is no longer accepted (see the note above). While typing, a refused address is not saved: the reason shows under the field, for example "Enter a valid base URL.". |
+
+The reminder at the bottom of the settings menu gives the same reason, for example "Transcription · route not found".
 
 If something fails, a message under the card title says what to do, for example: "The server did not answer at localhost:8000/v1. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 
@@ -193,6 +197,8 @@ API keys are stored in the system keychain, never in plain text in the local dat
 | "Use HTTPS: plain HTTP is only accepted on this computer or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
 | The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
 | The pill shows "Key refused" | Check the key in "Advanced", then test again. |
+| The pill shows "Route not found" | Check the address (for synthesis, it ends with `/v1`), then test again. |
+| The pill shows "Server error" | The server may still be starting: wait a minute, then test again. |
 | The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |
 | Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect and replays a short outage from memory; after a longer one, the missing passage will not be transcribed, since no audio is saved to disk. |
 | Cannot start listening | No transcription server is configured, or the chosen model is a "file" model. |

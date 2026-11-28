@@ -2684,7 +2684,7 @@ msgstr "Consigne"
 msgid "Interface language"
 msgstr "Langue de l'interface"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Invalid address"
 msgstr "Adresse invalide"
 
@@ -2723,7 +2723,7 @@ msgstr "Conserver cette version"
 msgid "Keep unencrypted HTTP"
 msgstr "Garder le HTTP non chiffré"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Key refused"
 msgstr "Clé refusée"
 
@@ -4786,6 +4786,10 @@ msgstr "Vérifier la synthèse"
 msgid "Right Command"
 msgstr "Commande droite"
 
+#: src/settings/ai/shared/server-failure-label.ts
+msgid "Route not found"
+msgstr "Route absente"
+
 #: src/automations/labels.ts
 msgid "Run a command"
 msgstr "Lancer une commande"
@@ -5127,6 +5131,10 @@ msgstr "Adresse du serveur"
 #: src/settings/ai/llm/server-card.tsx
 msgid "Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)"
 msgstr "Adresse du serveur (compatible OpenAI : vLLM, Ollama, llama.cpp, LM Studio)"
+
+#: src/settings/ai/shared/server-failure-label.ts
+msgid "Server error"
+msgstr "Erreur du serveur"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Server status"
@@ -5815,20 +5823,16 @@ msgid "Synthesis"
 msgstr "Synthèse"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · {reason}"
+msgstr "Synthèse · {reason}"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · connected"
 msgstr "Synthèse · connectée"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · disabled"
 msgstr "Synthèse · désactivée"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · invalid address"
-msgstr "Synthèse · adresse invalide"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · key refused"
-msgstr "Synthèse · clé refusée"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
@@ -5841,10 +5845,6 @@ msgstr "Synthèse · non testée"
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · testing…"
 msgstr "Synthèse · test en cours…"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Synthesis · unreachable"
-msgstr "Synthèse · injoignable"
 
 #: src/settings/appearance/theme.tsx
 msgid "System"
@@ -6929,20 +6929,16 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · {reason}"
+msgstr "Transcription · {reason}"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · checking…"
 msgstr "Transcription · vérification…"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connectée"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · invalid address"
-msgstr "Transcription · adresse invalide"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · key refused"
-msgstr "Transcription · clé refusée"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · models need an update"
@@ -6967,10 +6963,6 @@ msgstr "Transcription · test en cours…"
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · this computer is not ready"
 msgstr "Transcription · ce poste n'est pas prêt"
-
-#: src/sidebar/settings-server-status.tsx
-msgid "Transcription · unreachable"
-msgstr "Transcription · injoignable"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Transcription failed"
@@ -7161,7 +7153,7 @@ msgstr "Détacher"
 msgid "Unpin contact"
 msgstr "Désépingler le contact"
 
-#: src/settings/ai/shared/server-card.tsx
+#: src/settings/ai/shared/server-failure-label.ts
 msgid "Unreachable"
 msgstr "Injoignable"
 
