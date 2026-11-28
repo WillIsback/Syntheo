@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { commands as fsSyncCommands } from "@syntheo/plugin-fs-sync";
 import { commands as settingsCommands } from "@syntheo/plugin-settings";
+import { commands as transcriptionCommands } from "@syntheo/plugin-transcription";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { executeTransaction, liveQueryClient } from "~/db";
@@ -9,6 +10,7 @@ import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
 import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
+import { discardAudioUpload } from "~/stt/audio-upload-stream";
 import { useRunBatch } from "~/stt/useRunBatch";
 
 const workerId = crypto.randomUUID();
@@ -172,6 +174,7 @@ async function processImport(
     ]).catch(console.error);
   }, 10000);
   let phase = "importing";
+  let uploadId: string | null = null;
   try {
     const imported = await fsSyncCommands.audioImport(
       job.meeting_id,
@@ -183,10 +186,20 @@ async function processImport(
     if (!isAgentRecordingPath(imported.data)) {
       throw new Error("Unsupported recording format");
     }
+    // Issue 744 : le fichier est ouvert une seule fois côté Rust ; la
+    // validation porte sur le descripteur ouvert, qui est lu en mémoire. La
+    // transcription reprend ce contenu et ne relit jamais le chemin, qui
+    // pourrait avoir été remplacé depuis la validation.
+    const opened = await transcriptionCommands.openRecordingImport(
+      imported.data,
+    );
+    if (opened.status === "error") throw new Error(opened.error);
+    uploadId = opened.data;
     phase = "transcribing";
     await update(phase);
-    await runBatch(imported.data, {
+    await runBatch("", {
       promotion: { scope: "whole_session" },
+      audioUploadId: uploadId,
     });
     phase = "summarizing";
     await update(phase);
@@ -206,5 +219,7 @@ async function processImport(
     );
   } finally {
     clearInterval(timer);
+    // Sans effet si le batch a déjà repris le contenu.
+    if (uploadId) await discardAudioUpload(uploadId);
   }
 }

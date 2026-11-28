@@ -64,6 +64,7 @@ export const commands = {
 	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
 	appendAudioUpload: (uploadId: string, dataBase64: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|append_audio_upload", { uploadId, dataBase64 })),
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
+	openRecordingImport: (filePath: string) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|open_recording_import", { filePath })),
 	/**  Sonde le poste pour `engine`. */
 	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
 	/**  État de la source « Sur ce poste » : politique, compagnon et modèles. */

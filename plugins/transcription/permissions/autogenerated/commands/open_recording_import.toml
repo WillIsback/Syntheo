@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-open-recording-import"
+description = "Enables the open_recording_import command without any pre-configured scope."
+commands.allow = ["open_recording_import"]
+
+[[permission]]
+identifier = "deny-open-recording-import"
+description = "Denies the open_recording_import command without any pre-configured scope."
+commands.deny = ["open_recording_import"]

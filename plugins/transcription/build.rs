@@ -46,6 +46,7 @@ const COMMANDS: &[&str] = &[
     "begin_audio_upload",
     "append_audio_upload",
     "discard_audio_upload",
+    "open_recording_import",
     "probe_local_transcription",
     "on_device_status",
     "on_device_download_models",
