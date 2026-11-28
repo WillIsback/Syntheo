@@ -19,6 +19,21 @@ export function SafeMarkdownImage(
   return props.alt ? <span>{props.alt}</span> : null;
 }
 
+// Durcissement de Streamdown (rehype-harden), mais une image refusée ne laisse
+// que son texte alternatif, comme le rendu `img` pour une adresse distante
+// (issue 801) : le réglage par défaut l'entoure d'un libellé anglais
+// « [Image blocked: …] » pour `asset:`, `file:`, `javascript:` ou une adresse
+// vide. Les adresses acceptées restent les mêmes.
+function buildHardenPlugin() {
+  const harden = defaultRehypePlugins.harden;
+  if (!Array.isArray(harden) || harden.length < 2) return harden;
+  const [hardenPlugin, hardenOptions] = harden as [
+    unknown,
+    Record<string, unknown>,
+  ];
+  return [hardenPlugin, { ...hardenOptions, imageBlockPolicy: "text-only" }];
+}
+
 // Mêmes plugins que Streamdown, mais les `id` et `name` du HTML brut sont
 // préfixés : un élément ne peut plus masquer une propriété de `document`
 // (clobbering).
@@ -43,7 +58,7 @@ function buildSafeRehypePlugins({
       sanitizePlugin,
       { ...sanitizeSchema, protocols, clobberPrefix: "user-content-" },
     ],
-    defaultRehypePlugins.harden,
+    buildHardenPlugin(),
   ] as NonNullable<StreamdownProps["rehypePlugins"]>;
 }
 
