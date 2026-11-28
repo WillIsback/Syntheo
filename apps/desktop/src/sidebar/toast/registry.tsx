@@ -116,7 +116,13 @@ export function createToastRegistry({
         // Issue 778 : tout toast persistant se ferme pour la session.
         lifecycle: { type: "persistent", dismissal: "session" },
       },
-      condition: () => onDeviceNotReady && !isAiTranscriptionTabActive,
+      // Issue 787 : quand les modèles sont à mettre à jour, le toast
+      // précédent dit déjà cet état ; le fermer ne doit pas faire apparaître
+      // celui-ci.
+      condition: () =>
+        onDeviceNotReady &&
+        !onDeviceModelsUpdate &&
+        !isAiTranscriptionTabActive,
     },
     {
       toast: {
@@ -132,10 +138,13 @@ export function createToastRegistry({
         // l'onglet Synthèse le dit aussi (« Configurez les synthèses par IA »).
         lifecycle: { type: "persistent", dismissal: "session" },
       },
+      // Issue 787 : à 910×600, il recouvrait aussi « Revenir au serveur »
+      // dans Paramètres › Transcription, où il n'a rien à proposer.
       condition: () =>
         hasUsableSttConfigured &&
         !hasUsableLlmConfigured &&
-        !isAiIntelligenceTabActive,
+        !isAiIntelligenceTabActive &&
+        !isAiTranscriptionTabActive,
     },
   ];
 }

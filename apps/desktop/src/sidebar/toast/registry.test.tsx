@@ -108,6 +108,26 @@ describe("sidebar toast registry", () => {
     ).toBeNull();
   });
 
+  // Issue 787 : fermer « …doivent être mis à jour » faisait apparaître
+  // aussitôt « La transcription sur ce poste n'est pas prête » pour le même
+  // état ; il fallait fermer deux fois.
+  it("does not follow a closed models update with a not-ready notice", () => {
+    expect(
+      showToast(
+        { onDeviceNotReady: true, onDeviceModelsUpdate: true },
+        (toast) => toast.id === "on-device-models-update",
+      ),
+    ).toBeNull();
+  });
+
+  // Issue 787 : à 910×600, « Modèle de langue requis » recouvrait
+  // « Revenir au serveur » dans Paramètres › Transcription.
+  it("keeps the missing-llm notice off the transcription settings", () => {
+    expect(
+      showToast({ hasLLMConfigured: false, isAiTranscriptionTabActive: true }),
+    ).toBeNull();
+  });
+
   it("never shows sign-in or upgrade prompts (no account)", () => {
     // Fully configured on-prem providers: nothing to promote.
     expect(showToast()).toBeNull();
